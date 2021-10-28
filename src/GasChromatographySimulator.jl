@@ -1,10 +1,12 @@
 module GasChromatographySimulator
 
+using Reexport
 using Interpolations
 using QuadGK
-using DifferentialEquations
+@reexport using DifferentialEquations
 using ForwardDiff
-using DataFrames
+@reexport using DataFrames
+@reexport using CSV
 
 # some constants
 Tst = 273.15            # K
@@ -58,6 +60,7 @@ Base.@kwdef struct Options
                         # combined as a system of ODEs (true)
 end
 
+# test
 struct Par
     sys::System
     prog::Program
@@ -130,7 +133,7 @@ function gf_exp(x,a::Array{<:Real,2}, Tcontrol::String)
     return f
 end
 
-function Temperature_interpolation(time_steps::Array{Float64,1}, temp_steps::Array{Float64,1}, gradient_function::Function, L::Float64)
+function temperature_interpolation(time_steps::Array{Float64,1}, temp_steps::Array{Float64,1}, gradient_function::Function, L::Float64)
 	T(x) = temp_steps .+ gradient_function(x) 
 	nx = 0.0:1e-3:L # mm exact
 	nt = cumsum(time_steps)
@@ -144,9 +147,15 @@ function Temperature_interpolation(time_steps::Array{Float64,1}, temp_steps::Arr
 	return T_itp
 end
 
+function pressure_interpolation(time_steps::Array{Float64,1}, press_steps::Array{Float64,1})
+    p_itp = LinearInterpolation((cumsum(time_steps), ), press_steps, extrapolation_bc=Flat())
+    return p_itp
+end
+
+# test
 function load_solute_database(db_path::String, db::String, sp::String, gas::String, solutes::Array{String,1}, t₀::Array{Float64,1}, τ₀::Array{Float64,1})
 	# load the information about a solute from a data base and collecting these informations in the 
-    # structure SubstanceGC2
+    # structure Substance
     # 
 	# db_path ... Path to the database file
 	# db ... Name of the database
@@ -214,7 +223,7 @@ function load_solute_database(db_path::String, db::String, sp::String, gas::Stri
 	return sub
 end
 
-function diffusivity(M::Float64, Cn<:Real, Hn<:Real, On<:Real, Nn<:Real, Rn<:Real, gas::String)
+function diffusivity(M::Float64, Cn::Real, Hn::Real, On::Real, Nn::Real, Rn::Real, gas::String)
     # calculates diffusitivity Dag of an analyte in a gas
     # from the (simplified) molecular formula of the solute
     # using the Fuller-Schettler-Giddings equation
@@ -226,7 +235,6 @@ function diffusivity(M::Float64, Cn<:Real, Hn<:Real, On<:Real, Nn<:Real, Rn<:Rea
     # Nn ... number of nitrogens
     # Rn ... number of ring structures
     # gas ... the used mobile phase gas
-    p_norm = 101300
     if gas=="H2"
         Vg = 6.12
         Mg = 2.02
@@ -243,73 +251,8 @@ function diffusivity(M::Float64, Cn<:Real, Hn<:Real, On<:Real, Nn<:Real, Rn<:Rea
         error("Unknown selection of gas. Choose one of these: He, H2, N2 or Ar.")
     end
     Va = 15.9*Cn + 2.31*Hn + 6.11*On + 4.54*Nn - 18.3*Rn
-    Dag = p_norm*sqrt(1/M+1/Mg)/(Vg^(1/3)+Va^(1/3))^2*1e-7 # m²/s
+    Dag = pn*sqrt(1/M+1/Mg)/(Vg^(1/3)+Va^(1/3))^2*1e-7 # m²/s
     return Dag
-end
-
-function solver_selection(solver::String)
-    if solver=="OwrenZen5"
-        alg = OwrenZen5()
-    elseif solver=="Tsit5"
-        alg = Tsit5()
-    elseif solver=="BS3"
-        alg = BS3()
-    elseif solver=="Vern7"
-        alg = Vern7()
-    #elseif solver=="Rodas4" 
-    #    alg = Rodas4() # StackOverflowError
-    #elseif solver=="Rodas5"
-    #    alg = Rodas5() # StackOverflowError
-    #elseif solver=="Rodas4P"
-    #    alg = Rodas4P() # StackOverflowError
-    elseif solver=="KenCarp4"
-        alg = KenCarp4()
-    elseif solver=="TRBDF2"
-        alg = TRBDF2()
-    #elseif solver=="CVODE_BDF"
-    #    alg = CVODE_BDF() # not defined
-    elseif solver=="AutoTsit5Rosenbrock23"
-        alg = AutoTsit5(Rosenbrock23())
-    elseif solver=="AutoVern7Rodas5"
-        alg = AutoVern7(Rodas5())
-    elseif solver=="OwrenZen3"
-        alg = OwrenZen3()
-    elseif solver=="OwrenZen4"
-        alg = OwrenZen4()
-    elseif solver=="Vern8"
-        alg = Vern8()
-    elseif solver=="Vern9"
-        alg = Vern9()
-    elseif solver=="Feagin12"
-        alg = Feagin12()
-    elseif solver=="Feagin14"
-        alg = Feagin14()# DomainError sqrt(neg. number), abstol & reltol smaller
-    elseif solver=="VCABM"
-        alg = VCABM()
-    elseif solver=="RK4"
-        alg = RK4()
-    #elseif solver=="Rosenbrock23"
-    #    alg = Rosenbrock23() # StackOverflowError
-    elseif solver=="ABDF2"
-        alg = ABDF2()
-    #elseif solver=="Kvaerno5"
-    #    alg = Kvaerno5() # DomainError sqrt(neg. number)
-    #elseif solver=="lsoda"
-    #    alg = lsoda() # misc. Error
-    else
-        error("Solver $(solver) is not included. Recommended solvers are OwrenZen3, OwrenZen4 and OwrenZen5.")
-    end
-    return alg
-end
-
-function change_initial(par::ParGC2, init_t::Array{Float64,1}, init_τ::Array{Float64,1})
-	# copys the parameters `par` and changes the values of par.sub[i].τ₀ and par.sub[i].t₀ to init_τ[i] resp. init_t[i]
-	newsub = Array{Substance}(undef, length(par.sub))
-	for i=1:length(par.sub)
-		newsub[i] = Substance(par.sub[i].name, par.sub[i].CAS, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀, par.sub[i].ann, par.sub[i].Dag, init_t[i], init_τ[i])
-	end
-	newpar = Par(par.sys, par.prog, newsub, par.opt)
-	return newpar
 end
 
 # functions of the physical model
@@ -401,6 +344,7 @@ function diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=fal
 end
 
 # solving functions
+# test
 function solve_system_multithreads(par; ng=false)
 	n = length(par.sub)
 	sol = Array{Any}(undef, n)
@@ -410,6 +354,7 @@ function solve_system_multithreads(par; ng=false)
 	return sol
 end
 
+# test
 function solve_multithreads(par; ng=false)
     n = length(par.sub)
     sol = Array{Any}(undef, n)
@@ -532,6 +477,7 @@ function peakode(z, t, τ², sys, prog, sub, opt; ng=false)
 end
 
 # examine the results
+# test
 function peaklist(sol, p)
 	n = length(p.sub)
     # sol is solution from ODE system
@@ -569,6 +515,7 @@ function peaklist(sol, p)
     return df
 end
 
+# test
 function peaklist(sol, peak, p)
 	n = length(p.sub)
     Name = Array{String}(undef, n)
@@ -584,8 +531,8 @@ function peaklist(sol, peak, p)
         Name[i] = p.sub[i].name
         if sol[i].t[end]==p.sys.L
             tR[i] = sol[i].u[end]
-            TR[i] = p.T_itp(p.sys.L, tR[i]) - 273.15 
-            uR[i] = velocity(p.sys.L, tR[i], p.prog.T_itp, p.prog.pin_itp, p.prog.pout_itp, p.sys.L, p.sys.d, p.sys.df, p.sys.gas, p.sub[i].ΔCp, p.sub[i].Tchar, p.sub[i].θchar, p.sub[i].φ₀)
+            TR[i] = p.prog.T_itp(p.sys.L, tR[i]) - 273.15 
+            uR[i] = 1/residency(p.sys.L, tR[i], p.prog.T_itp, p.prog.pin_itp, p.prog.pout_itp, p.sys.L, p.sys.d, p.sys.df, p.sys.gas, p.sub[i].ΔCp, p.sub[i].Tchar, p.sub[i].θchar, p.sub[i].φ₀)
             τR[i] = sqrt(peak[i].u[end])
             σR[i] = τR[i]*uR[i]
             kR[i] = retention_factor(p.sys.L, tR[i], p.prog.T_itp, p.sys.d, p.sys.df, p.sub[i].ΔCp, p.sub[i].Tchar, p.sub[i].θchar, p.sub[i].φ₀)
@@ -606,7 +553,8 @@ function peaklist(sol, peak, p)
     return df
 end
 
-function sol_extraction(sol, p)#::VGGC.ParGC2)
+# test
+function sol_extraction(sol, p)
     # extract the points z=t, t=u1, τ²=u2 from the solution of
     # the ODE system
 	n = length(p.sub)
@@ -630,6 +578,7 @@ function sol_extraction(sol, p)#::VGGC.ParGC2)
     return df_sol
 end
 
+# test
 function sol_extraction(sol_tz, peak_τz, p)
     # extract the points z=t, t=u, from the solution of
     # the first ODE (sol_tz)
