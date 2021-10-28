@@ -3,7 +3,7 @@ using Pkg
 Pkg.activate("/Users/janleppert/Documents/GitHub/GasChromatographySimulator")
 using GasChromatographySimulator
 #using DifferentialEquations
-
+a = 1+ 1
 # Options
 opt = GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true)
 
