@@ -3,13 +3,18 @@ using GasChromatographySimulator
 
 makedocs(
     sitename = "GasChromatographySimulator",
-    format = Documenter.HTML(),
+    pages = [
+        "Index" => "index.md",
+        "Another page" => "anotherPage.md",
+    ],
+    format = Documenter.HTML(prettyurls = false),
     modules = [GasChromatographySimulator]
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
-#=deploydocs(
-    repo = "<repository url>"
-)=#
+deploydocs(
+    repo = "github.com/JanLeppert/GasChromatographySimulator.jl",
+    devbranch = "main"
+)
