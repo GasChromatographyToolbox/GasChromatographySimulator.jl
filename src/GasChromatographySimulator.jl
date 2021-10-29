@@ -15,6 +15,26 @@ Tn = 25.0 + Tst         # K
 pn = 101300             # Pa
 
 # structures
+"""
+    System(L, d, a_d, df, a_df, sp, gas)
+
+    Structure describing the GC system. The system consists of a
+    capillary (called column) of length `L` and inner diameter `d`. The capillary is coated
+    with thin film (thickness `df`) of a stationary phase `sp`. A mobile phase
+    consisting of a `gas` moves through the capillary. The diameter `d` and film
+    thickness `d_f` are described as functions to enable the option of gradients of
+    diameter or film thickness.
+
+    # Arguments
+    * `L`: Length of the capillary measured in m (meter)
+    * `d`: A function `d(x, a_d)` of `x`, the position along the capillary,
+    describing the diameter in m (meter).
+    * `a_d`: Parameters of the diameter function. 
+    * `d_f`: A function `d_f(x, a_df)` of `x`, describing the film thickness in m
+    (meter).
+    * `sp`: The name of the stationary phase.
+    * `gas`: THe name of the mobile phase. Allowed values: He, H2 or N2.
+"""
 struct System{Fd<:Function, Fdf<:Function}
     L::Float64              # column length in m
     d::Fd                   # column internal diameter in m as function of x
@@ -23,19 +43,44 @@ struct System{Fd<:Function, Fdf<:Function}
     a_df::Array{Float64}    # parameters of the film thickness function df(x)
     sp::String              # stationary phase of the column
     gas::String             # gas of the mobile phase ["He", "H2", "N2"]
+    System(L, d, a_d, df, a_df, sp, gas) = (gas!="He" && gas!="H2" && gas!="N2") ? error("Wrong selection for 'gas'. Choose 'He', 'H2' or 'N2'.") : new{typeof(d), typeof(df)}(L, d, a_d, df, a_df, sp, gas)
 end
 
+"""
+    Program(time_steps, temp_steps, pin_steps,
+    pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
+
+    Structure to describe the temperature and pressure program of a GC system. The
+    function `gf` describes an optional thermal gradient.
+
+    Description of the setup ...
+
+    # Arguments
+    * `time_steps`: Time steps in s (seconds). 
+    * `temp_steps`: Temperature steps in °C (degree celsius).
+    * `pin_steps`: Inlet pressure steps in Pa(a) (pascal, absolute).
+    * `pout_steps`: Outlet pressure steps in Pa(a) (pascal, absolute).
+    * `gf`: Gradient function `gf(x, a_gf)`, describes the thermal gradient.
+    * `a_gf`: Parameters of the gradient function.
+    * `T_itp`: Interpolated (linear) temperature `T(x,t)`, constructed from
+      `time_steps`, `temp_steps` and `gf`.
+    * `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`, constructed from
+      `time_steps` and `pin_steps`.
+    * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`, constructed
+      from `time_steps` and `pout_steps`.  
+"""
 struct Program{Fgf<:Function}
-    Δti::Array{Float64, 1}                  # vector time steps for the temperature program
-    Ti::Array{Float64, 1}                   # vector temperature steps for the temperature program 
-    pin::Array{Float64, 1}                  # vector inlet pressure steps for the pressure program
-    pout::Array{Float64, 1}                 # vector outlet pressure steps for the pressure program
+    time_steps::Array{Float64, 1}                  # vector time steps for the temperature program
+    temp_steps::Array{Float64, 1}                   # vector temperature steps for the temperature program 
+    pin_steps::Array{Float64, 1}                  # vector inlet pressure steps for the pressure program
+    pout_steps::Array{Float64, 1}                 # vector outlet pressure steps for the pressure program
     gf::Fgf                                 # function of x of the gradient form
     a_gf::Array{Float64}                    # parameters of the gradient function gf(x)
   	T_itp::Interpolations.Extrapolation     # interpolation function of T(x,t)
     pin_itp::Interpolations.Extrapolation   # interpolation function of pin(t)
     pout_itp::Interpolations.Extrapolation	# interpolation function of pout(t)
     # add inner constructor to check the lengths of the Arrays and of the result of gf
+    Program(ts, Ts, pis, pos, gf, agf, T, pin, po) = (length(ts)!=length(Ts) || length(ts)!=length(gf(0.0)) || length(ts)!=length(pis) || length(ts)!=length(pos)) || length(ts)!=size(agf)[1] ? error("Mismatch between length(time_steps) = $(length(ts)), length(temp_steps) = $(length(Ts)), length(pin_steps) = $(length(pis)), length(pout_steps) = $(length(pos)), length(gf(0.0)) = $(length(gf(0.0))) and size(a_gf)[1] = $(size(agf)[1]).") : new{typeof(gf)}(ts, Ts, pis, pos, gf, agf, T, pin, po)
 end
 
 struct Substance
@@ -66,6 +111,40 @@ struct Par
     prog::Program
     sub::Array{Substance,1}
     opt::Options
+end
+
+function constructor_System(L::Float64, d::Float64, df::Float64, sp::String, gas::String)
+    # function to construct the System structure
+    # for the case of constant diameter and constant film thickness
+    d_func(x) = gf_const(x, [d])
+    df_func(x) = gf_const(x, [df])
+    sys = System(L, d_func, [d], df_func, [df], sp, gas)
+    return sys
+end
+
+function constructor_Program(time_steps::Array{Float64, 1}, temp_steps::Array{Float64, 1}, pin_steps::Array{Float64, 1}, pout_steps::Array{Float64, 1}, ΔT_steps::Array{Float64, 1}, x₀_steps::Array{Float64, 1}, L₀_steps::Array{Float64, 1}, α_steps::Array{Float64, 1}, Tcontrol::String, L::Float64)
+    # function to construct the Program structure
+    # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
+    a_gf = [ΔT_steps x₀_steps L₀_steps α_steps]
+    gf(x) = gf_exp(x, a_gf, Tcontrol)
+    T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
+    pin_itp = pressure_interpolation(time_steps, pin_steps)
+    pout_itp = pressure_interpolation(time_steps, pout_steps)
+    prog = Program(time_steps, temp_steps, pin_steps, pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
+    return prog
+end
+
+function constructor_Program(time_steps::Array{Float64, 1}, temp_steps::Array{Float64, 1}, pin_steps::Array{Float64, 1}, pout_steps::Array{Float64, 1}, L::Float64)
+    # function to construct the Program structure
+    # without a thermal gradient
+    # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
+    a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) L.*ones(length(time_steps)) zeros(length(time_steps))]
+    gf(x) = gf_exp(x, a_gf, "inlet")
+    T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
+    pin_itp = pressure_interpolation(time_steps, pin_steps)
+    pout_itp = pressure_interpolation(time_steps, pout_steps)
+    prog = Program(time_steps, temp_steps, pin_steps, pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
+    return prog
 end
 
 # gradient functions
