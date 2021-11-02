@@ -44,7 +44,7 @@ init_τ = zeros(length(solutes))
 sub = GasChromatographySimulator.load_solute_database(db_path, db, sys.sp, sys.gas, solutes, init_t, init_τ)
 
 # parameters
-par = GasChromatographySimulator.Par(sys, prog, sub, opt)
+par = GasChromatographySimulator.Parameters(sys, prog, sub, opt)
 
 # solving
 # for odesys:

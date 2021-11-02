@@ -76,8 +76,8 @@ sub_d[2] = GasChromatographySimulator.Substance("solute 2",
                                                 0.0)
 
 # parameters
-par = GasChromatographySimulator.Par(sys, prog, sub, opt)
-par_d = GasChromatographySimulator.Par(sys, prog, sub_d, opt)
+par = GasChromatographySimulator.Parameters(sys, prog, sub, opt)
+par_d = GasChromatographySimulator.Parameters(sys, prog, sub_d, opt)
 
 # solving
 # for odesys:

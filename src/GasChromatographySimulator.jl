@@ -106,7 +106,7 @@ Base.@kwdef struct Options
 end
 
 # test
-struct Par
+struct Parameters
     sys::System
     prog::Program
     sub::Array{Substance,1}
