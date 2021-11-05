@@ -113,7 +113,7 @@ struct Parameters
     opt::Options
 end
 
-function constructor_System(L::Float64, d::Float64, df::Float64, sp::String, gas::String)
+function constructor_System(L, d, df, sp, gas)
     # function to construct the System structure
     # for the case of constant diameter and constant film thickness
     d_func(x) = gf_const(x, [d])
@@ -122,7 +122,7 @@ function constructor_System(L::Float64, d::Float64, df::Float64, sp::String, gas
     return sys
 end
 
-function constructor_Program(time_steps::Array{Float64, 1}, temp_steps::Array{Float64, 1}, pin_steps::Array{Float64, 1}, pout_steps::Array{Float64, 1}, ΔT_steps::Array{Float64, 1}, x₀_steps::Array{Float64, 1}, L₀_steps::Array{Float64, 1}, α_steps::Array{Float64, 1}, Tcontrol::String, L::Float64)
+function constructor_Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, ΔT_steps::Array{<:Real, 1}, x₀_steps::Array{<:Real, 1}, L₀_steps::Array{<:Real, 1}, α_steps::Array{<:Real, 1}, Tcontrol, L)
     # function to construct the Program structure
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
     a_gf = [ΔT_steps x₀_steps L₀_steps α_steps]
@@ -134,7 +134,7 @@ function constructor_Program(time_steps::Array{Float64, 1}, temp_steps::Array{Fl
     return prog
 end
 
-function constructor_Program(time_steps::Array{Float64, 1}, temp_steps::Array{Float64, 1}, pin_steps::Array{Float64, 1}, pout_steps::Array{Float64, 1}, L::Float64)
+function constructor_Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, L)
     # function to construct the Program structure
     # without a thermal gradient
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
@@ -212,7 +212,7 @@ function gf_exp(x,a::Array{<:Real,2}, Tcontrol::String)
     return f
 end
 
-function temperature_interpolation(time_steps::Array{Float64,1}, temp_steps::Array{Float64,1}, gradient_function::Function, L::Float64)
+function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Array{<:Real,1}, gradient_function::Function, L::Float64)
 	T(x) = temp_steps .+ gradient_function(x) 
 	nx = 0.0:1e-3:L # mm exact
 	nt = cumsum(time_steps)
@@ -226,7 +226,7 @@ function temperature_interpolation(time_steps::Array{Float64,1}, temp_steps::Arr
 	return T_itp
 end
 
-function pressure_interpolation(time_steps::Array{Float64,1}, press_steps::Array{Float64,1})
+function pressure_interpolation(time_steps::Array{<:Real,1}, press_steps::Array{<:Real,1})
     p_itp = LinearInterpolation((cumsum(time_steps), ), press_steps, extrapolation_bc=Flat())
     return p_itp
 end
