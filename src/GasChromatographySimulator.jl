@@ -36,7 +36,7 @@ pn = 101300             # Pa
     * `gas`: THe name of the mobile phase. Allowed values: He, H2 or N2.
 """
 struct System{Fd<:Function, Fdf<:Function}
-    L::Float64              # column length in m
+    L                       # column length in m
     d::Fd                   # column internal diameter in m as function of x
     a_d::Array{Float64,1}   # parameters of the diameters function d(x)
     df::Fdf                 # column film thickness in m as function of x
@@ -70,12 +70,12 @@ end
       from `time_steps` and `pout_steps`.  
 """
 struct Program{Fgf<:Function}
-    time_steps::Array{<:Real, 1}                  # vector time steps for the temperature program
-    temp_steps::Array{<:Real, 1}                   # vector temperature steps for the temperature program 
-    pin_steps::Array{<:Real, 1}                  # vector inlet pressure steps for the pressure program
-    pout_steps::Array{<:Real, 1}                 # vector outlet pressure steps for the pressure program
+    time_steps::Array{<:Real, 1}            # vector time steps for the temperature program
+    temp_steps::Array{<:Real, 1}            # vector temperature steps for the temperature program 
+    pin_steps::Array{<:Real, 1}             # vector inlet pressure steps for the pressure program
+    pout_steps::Array{<:Real, 1}            # vector outlet pressure steps for the pressure program
     gf::Fgf                                 # function of x of the gradient form
-    a_gf::Array{<:Real}                    # parameters of the gradient function gf(x)
+    a_gf::Array{<:Real}                     # parameters of the gradient function gf(x)
   	T_itp::Interpolations.Extrapolation     # interpolation function of T(x,t)
     pin_itp::Interpolations.Extrapolation   # interpolation function of pin(t)
     pout_itp::Interpolations.Extrapolation	# interpolation function of pout(t)
@@ -86,20 +86,20 @@ end
 struct Substance
     name::String        # name of solute
     CAS::String         # CAS registry number
-    Tchar<:Real      # characteristic temperature in K
-    θchar<:Real      # characteristic thermal constant in °C
-    ΔCp<:Real        # 3rd parameter
-    φ₀<:Real         # dimless film thickness for which Tchar, θchar and ΔCp were estimated
+    Tchar               # characteristic temperature in K
+    θchar               # characteristic thermal constant in °C
+    ΔCp                 # 3rd parameter
+    φ₀                  # dimless film thickness for which Tchar, θchar and ΔCp were estimated
     ann::String         # annotations, e.g. the source of the data from which Tchar, θchar and ΔCp were estimated
-    Dag<:Real        # diffusion coefficient of analyt in a gas, calculate from structure (or from measurements)
-    t₀<:Real         # initial time in s  	
-    τ₀<:Real         # initial peak width in s   
+    Dag                 # diffusion coefficient of analyt in a gas, calculate from structure (or from measurements)
+    t₀                  # initial time in s  	
+    τ₀                  # initial peak width in s   
 end
 
 Base.@kwdef struct Options
     alg                 # algorithmen for the ODE solver
-    abstol::Float64     # absolute tolerance for ODE solver
-    reltol::Float64     # relative tolerance for ODE solver 
+    abstol              # absolute tolerance for ODE solver
+    reltol              # relative tolerance for ODE solver 
     Tcontrol::String    # temperature control at 'inlet' (top) or 'outlet' (bottom) of the column
 	odesys::Bool  		# calculate the two ODEs (migration and peak-width) separately (false) or 
                         # combined as a system of ODEs (true)
