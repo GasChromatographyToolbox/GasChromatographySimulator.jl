@@ -212,7 +212,7 @@ function gf_exp(x,a::Array{<:Real,2}, Tcontrol::String)
     return f
 end
 
-function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Array{<:Real,1}, gradient_function::Function, L::Float64)
+function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Array{<:Real,1}, gradient_function::Function, L)
 	T(x) = temp_steps .+ gradient_function(x) 
 	nx = 0.0:1e-3:L # mm exact
 	nt = cumsum(time_steps)
@@ -232,7 +232,7 @@ function pressure_interpolation(time_steps::Array{<:Real,1}, press_steps::Array{
 end
 
 # test
-function load_solute_database(db_path::String, db::String, sp::String, gas::String, solutes::Array{String,1}, t₀::Array{Float64,1}, τ₀::Array{Float64,1})
+function load_solute_database(db_path, db, sp, gas, solutes, t₀, τ₀)
 	# load the information about a solute from a data base and collecting these informations in the 
     # structure Substance
     # 
@@ -302,7 +302,7 @@ function load_solute_database(db_path::String, db::String, sp::String, gas::Stri
 	return sub
 end
 
-function diffusivity(M::Float64, Cn::Real, Hn::Real, On::Real, Nn::Real, Rn::Real, gas::String)
+function diffusivity(M, Cn, Hn, On, Nn, Rn, gas)
     # calculates diffusitivity Dag of an analyte in a gas
     # from the (simplified) molecular formula of the solute
     # using the Fuller-Schettler-Giddings equation
