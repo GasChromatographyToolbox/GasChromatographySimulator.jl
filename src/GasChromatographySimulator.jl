@@ -353,7 +353,7 @@ function flow_restriction(x, t, T_itp, d, gas; ng=false)
     return κ
 end
 
-function viscosity(x, t, T_itp, gas::String)
+function viscosity(x, t, T_itp, gas)
     # using empiric model from Blumberg.2010
     if gas=="He"
         ηst = 18.63e-6
@@ -397,7 +397,7 @@ function retention_factor(x, t, T_itp, d, df, ΔCp, Tchar, θchar, φ₀)
     # version
     # for now only the ideal thermodynamic model
     T = T_itp(x, t)
-    φ::Float64 = df(x)/d(x)
+    φ = df(x)/d(x)
     C = ΔCp/R
     lnk₀ = (C + Tchar/θchar) * (Tchar/T - 1) + C*log(T/Tchar)
     k = φ/φ₀*exp(lnk₀)
