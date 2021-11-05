@@ -70,12 +70,12 @@ end
       from `time_steps` and `pout_steps`.  
 """
 struct Program{Fgf<:Function}
-    time_steps::Array{Float64, 1}                  # vector time steps for the temperature program
-    temp_steps::Array{Float64, 1}                   # vector temperature steps for the temperature program 
-    pin_steps::Array{Float64, 1}                  # vector inlet pressure steps for the pressure program
-    pout_steps::Array{Float64, 1}                 # vector outlet pressure steps for the pressure program
+    time_steps::Array{<:Real, 1}                  # vector time steps for the temperature program
+    temp_steps::Array{<:Real, 1}                   # vector temperature steps for the temperature program 
+    pin_steps::Array{<:Real, 1}                  # vector inlet pressure steps for the pressure program
+    pout_steps::Array{<:Real, 1}                 # vector outlet pressure steps for the pressure program
     gf::Fgf                                 # function of x of the gradient form
-    a_gf::Array{Float64}                    # parameters of the gradient function gf(x)
+    a_gf::Array{<:Real}                    # parameters of the gradient function gf(x)
   	T_itp::Interpolations.Extrapolation     # interpolation function of T(x,t)
     pin_itp::Interpolations.Extrapolation   # interpolation function of pin(t)
     pout_itp::Interpolations.Extrapolation	# interpolation function of pout(t)
@@ -86,14 +86,14 @@ end
 struct Substance
     name::String        # name of solute
     CAS::String         # CAS registry number
-    Tchar::Float64      # characteristic temperature in K
-    θchar::Float64      # characteristic thermal constant in °C
-    ΔCp::Float64        # 3rd parameter
-    φ₀::Float64         # dimless film thickness for which Tchar, θchar and ΔCp were estimated
+    Tchar<:Real      # characteristic temperature in K
+    θchar<:Real      # characteristic thermal constant in °C
+    ΔCp<:Real        # 3rd parameter
+    φ₀<:Real         # dimless film thickness for which Tchar, θchar and ΔCp were estimated
     ann::String         # annotations, e.g. the source of the data from which Tchar, θchar and ΔCp were estimated
-    Dag::Float64        # diffusion coefficient of analyt in a gas, calculate from structure (or from measurements)
-    t₀::Float64         # initial time in s  	
-    τ₀::Float64         # initial peak width in s   
+    Dag<:Real        # diffusion coefficient of analyt in a gas, calculate from structure (or from measurements)
+    t₀<:Real         # initial time in s  	
+    τ₀<:Real         # initial peak width in s   
 end
 
 Base.@kwdef struct Options
