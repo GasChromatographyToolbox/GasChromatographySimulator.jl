@@ -232,12 +232,11 @@ function pressure_interpolation(time_steps::Array{<:Real,1}, press_steps::Array{
 end
 
 # test
-function load_solute_database(db_path, db, sp, gas, solutes, t₀, τ₀)
+function load_solute_database(db::DataFrame, sp::String, gas::String, solutes::Array{<:AbstractString,1}, τ₀::Array{Float64,1}, t₀::Array{Float64,1})
 	# load the information about a solute from a data base and collecting these informations in the 
-    # structure Substance
+    # structure SubstanceGC2
     # 
-	# db_path ... Path to the database file
-	# db ... Name of the database
+	# db ... Dataframe of the database
 	# sp ... Name of the stationary phase
 	# gas ... Name of the used mobile phase gas
 	# solutes ... Names of the solutes for which the informations should be used
@@ -246,20 +245,19 @@ function load_solute_database(db_path, db, sp, gas, solutes, t₀, τ₀)
 	#
 	# at the moment only the new database config is supported (new data is appended in new rows)
 	# also, if for a solute no data is available in the database no error is given!!!
-	df_solute_db = DataFrame(CSV.File(string(db_path,"/",db), header=1, silencewarnings=true))
-	if size(df_solute_db)[2]>14
+	if size(db)[2]>14
 		# old database config (additional stationary phases are appended in new columns, only one row for a solute)
         error("Data format not supported. Use the appended database structure.")
 	else
 		# new database config (simpler, additional stationary phases are appended in new rows, multiple entrys for a solute)
 		# 1. Filter the stationary phase
-		phases_db = unique(df_solute_db.Phase)
+		phases_db = unique(db.Phase)
 		if isa(findfirst(phases_db.==sp), Nothing) && sp!=""
 			error("Unknown selction of stationary phase. Choose one of these: $phases_db")
 		elseif sp=="" # no stationary phase is selected, like for transferlines
-			df_solute_db_filtered = df_solute_db[!,1:8] # use only the data of the first 8 columns
+			db_filtered = db[!,1:8] # use only the data of the first 8 columns
 			# 2. Filter the solutes, not using multiple entrys
-			df_solute_db_filtered_1=unique(df_solute_db_filtered[in(solutes).(df_solute_db_filtered.Name),:])
+			db_filtered_1=unique(db_filtered[in(solutes).(db_filtered.Name),:])
 			# use placeholder values
 			Tchar = ones(length(solutes))
 			θchar = ones(length(solutes))
@@ -267,28 +265,30 @@ function load_solute_database(db_path, db, sp, gas, solutes, t₀, τ₀)
 			φ₀ = ones(length(solutes))
 			Annotation = fill("no sp", length(solutes))
 		else
-			df_solute_db_filtered = filter([:Phase] => x -> x==sp, df_solute_db)
+			db_filtered = filter([:Phase] => x -> x==sp, db)
 			# 2. Filter the solutes
-			df_solute_db_filtered_1=df_solute_db_filtered[in(solutes).(df_solute_db_filtered.Name),:]
+			db_filtered_1=db_filtered[in(solutes).(db_filtered.Name),:]
 			# values
-			Tchar = df_solute_db_filtered_1.Tchar.+Tst
-			θchar = df_solute_db_filtered_1.thetachar
-			ΔCp = df_solute_db_filtered_1.DeltaCp
-			φ₀ = df_solute_db_filtered_1.phi0
-			Annotation = df_solute_db_filtered_1.Annotation
+			Tchar = db_filtered_1.Tchar.+Tst
+			θchar = db_filtered_1.thetachar
+			ΔCp = db_filtered_1.DeltaCp
+			φ₀ = db_filtered_1.phi0
+			Annotation = db_filtered_1.Annotation
 		end
 		# 3. Construct the sub()-structure
-		sub = Array{Substance}(undef, size(df_solute_db_filtered_1)[1])
-		for i=1:size(df_solute_db_filtered_1)[1]
-			Dag = diffusivity(df_solute_db_filtered_1.Molmass[i], 
-											df_solute_db_filtered_1.Cnumber[i], 
-											df_solute_db_filtered_1.Hnumber[i], 
-											df_solute_db_filtered_1.Onumber[i], 
-											df_solute_db_filtered_1.Nnumber[i], 
-											df_solute_db_filtered_1.Ringnumber[i], 
+		#sub = Array{SubstanceGC2}(undef, size(db_filtered_1)[1])
+        sub = Array{SubstanceGC2}(undef, length(solutes))
+		#for i=1:size(db_filtered_1)[1]
+        for i=1:length(solutes)
+			Dag = diffusivity(db_filtered_1.Molmass[i], 
+											db_filtered_1.Cnumber[i], 
+											db_filtered_1.Hnumber[i], 
+											db_filtered_1.Onumber[i], 
+											db_filtered_1.Nnumber[i], 
+											db_filtered_1.Ringnumber[i], 
 											gas)
-			sub[i] = Substance(df_solute_db_filtered_1.Name[i],
-										df_solute_db_filtered_1.CAS[i],
+			sub[i] = SubstanceGC2(db_filtered_1.Name[i],
+										db_filtered_1.CAS[i],
 										Tchar[i], 
 										θchar[i], 
 										ΔCp[i], 
@@ -299,6 +299,23 @@ function load_solute_database(db_path, db, sp, gas, solutes, t₀, τ₀)
 										t₀[i])
 		end
 	end
+	return sub
+end
+
+#test
+function load_solute_database(db_path::String, db::String, sp::String, gas::String, solutes::Array{<:AbstractString,1}, t₀::Array{Float64,1}, τ₀::Array{Float64,1})
+	# load the information about a solute from a data base and collecting these informations in the 
+    # structure Substance
+    # 
+	# db_path ... Path to the database file
+	# db ... Name of the database
+	# sp ... Name of the stationary phase
+	# gas ... Name of the used mobile phase gas
+	# solutes ... Names of the solutes for which the informations should be used
+    # τ₀ ... initial values of the peak width for the solutes
+    # t₀ ... initial values of the time for the solutes
+	db_dataframe = DataFrame(CSV.File(string(db_path,"/",db), header=1, silencewarnings=true))
+    sub = load_solute_database(db_dataframe, sp, gas, solutes, τ₀, t₀)
 	return sub
 end
 
