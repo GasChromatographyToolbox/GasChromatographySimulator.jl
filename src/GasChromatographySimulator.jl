@@ -1,7 +1,7 @@
 module GasChromatographySimulator
 
 using Reexport
-using Interpolations
+@reexport using Interpolations
 using QuadGK
 @reexport using DifferentialEquations
 using ForwardDiff
