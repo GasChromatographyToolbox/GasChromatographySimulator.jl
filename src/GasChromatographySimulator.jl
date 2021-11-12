@@ -275,10 +275,7 @@ function load_solute_database(db::DataFrame, sp::String, gas::String, solutes::A
 			φ₀ = db_filtered_1.phi0
 			Annotation = db_filtered_1.Annotation
 		end
-		# 3. Construct the sub()-structure
-		#sub = Array{SubstanceGC2}(undef, size(db_filtered_1)[1])
-        sub = Array{SubstanceGC2}(undef, length(solutes))
-		#for i=1:size(db_filtered_1)[1]
+        sub = Array{Substance}(undef, length(solutes))
         for i=1:length(solutes)
 			Dag = diffusivity(db_filtered_1.Molmass[i], 
 											db_filtered_1.Cnumber[i], 
@@ -287,7 +284,7 @@ function load_solute_database(db::DataFrame, sp::String, gas::String, solutes::A
 											db_filtered_1.Nnumber[i], 
 											db_filtered_1.Ringnumber[i], 
 											gas)
-			sub[i] = SubstanceGC2(db_filtered_1.Name[i],
+			sub[i] = Substance(db_filtered_1.Name[i],
 										db_filtered_1.CAS[i],
 										Tchar[i], 
 										θchar[i], 
