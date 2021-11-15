@@ -116,8 +116,8 @@ end
 function constructor_System(L, d, df, sp, gas)
     # function to construct the System structure
     # for the case of constant diameter and constant film thickness
-    d_func(x) = gf_const(x, [d])
-    df_func(x) = gf_const(x, [df])
+    d_func(x) = gradient(x, [d])
+    df_func(x) = gradient(x, [df])
     sys = System(L, d_func, [d], df_func, [df], sp, gas)
     return sys
 end
@@ -126,7 +126,7 @@ function constructor_Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:R
     # function to construct the Program structure
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
     a_gf = [ΔT_steps x₀_steps L₀_steps α_steps]
-    gf(x) = gf_exp(x, a_gf, Tcontrol)
+    gf(x) = gradient(x, a_gf; Tcontrol=Tcontrol)
     T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
     pin_itp = pressure_interpolation(time_steps, pin_steps)
     pout_itp = pressure_interpolation(time_steps, pout_steps)
@@ -139,7 +139,7 @@ function constructor_Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:R
     # without a thermal gradient
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
     a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) L.*ones(length(time_steps)) zeros(length(time_steps))]
-    gf(x) = gf_exp(x, a_gf, "inlet")
+    gf(x) = gradient(x, a_gf)
     T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
     pin_itp = pressure_interpolation(time_steps, pin_steps)
     pout_itp = pressure_interpolation(time_steps, pout_steps)
@@ -148,64 +148,51 @@ function constructor_Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:R
 end
 
 # gradient functions
-function gf_const(x,a::Array{<:Real,1})
-    # fixed parameter values
-    f = a[1]
-    return f
-end
-
-function gf_const(x,a::Array{<:Real,2})
-    # parameters can change (in time)
-    f = a[:,1]
-    return f
-end
-
-function gf_linear(x,a::Array{<:Real,1})
-    # fixed parameter values
-    f₀ = a[1] # start value
-    x₀ = a[2] # shift in x 
-    L₀ = a[3] # length of the linear segment
-    # gradient is -f₀/L₀
-    f = f₀ * (1 - (x-x₀) / L₀)
-end
-
-function gf_linear(x,a::Array{<:Real,2})
-    # parameters can change (in time)
-    f₀ = a[:,1] # start value
-    x₀ = a[:,2] # shift in x 
-    L₀ = a[:,3] # length of the linear segment
-    # gradient is -f₀/L₀
-    f = f₀ .* (1 .- (x.-x₀) ./ L₀)
-end
-
-function gf_exp(x,a::Array{<:Real,1})
-    # fixed parameter values
-    f₀ = a[1] # start value
-    x₀ = a[2] # shift in x 
-    L₀ = a[3] # length of the linear segment
-    α  = a[4] # exponential factor, α=0 -> linear
-    f = f₀ .* (1 .- exp.(α.*(1 .- (x.-x₀) ./ L₀)) + (1 .- (x.-x₀) ./ L₀) .* exp.(α))
-end
-
-function gf_exp(x,a::Array{<:Real,2}, Tcontrol::String)
-    # parameters can change (in time)
-    f₀ = a[:,1] # start value
-    x₀ = a[:,2] # shift in x (e.g. to correct for the real position of IR-sensors)
-    L₀ = a[:,3] # length of the linear segment
-    α  = a[:,4] # exponential factor, α=0 -> linear
-    f = Array{Float64}(undef, length(α))
-    for i=1:length(α)
-        if α[i]<=0 # concave function, weak change at beginning and strong change at end of column
-            if Tcontrol=="inlet"
-                f[i] = f₀[i] .* (.- exp.(α[i].*(1 .- (x.-x₀[i]) ./ L₀[i])) + (1 .- (x.-x₀[i]) ./ L₀[i]) .* exp.(α[i]))
-            elseif Tcontrol=="outlet"
-                f[i] = f₀[i] .* (1 .- exp.(α[i].*(1 .- (x.-x₀[i]) ./ L₀[i])) + (1 .- (x.-x₀[i]) ./ L₀[i]) .* exp.(α[i]))
+function gradient(x, a; Tcontrol="inlet")
+    if size(a) == (1,)
+        # constant value, no gradient
+        f = a[1]
+    elseif size(a) > (1,)
+        if  length(size(a))==1
+            if length(a)==4
+                # for diameter or film thickness, values of parameters 'a' are fixed
+                # over time
+                f₀ = a[1] # start value
+                x₀ = a[2] # shift in x 
+                L₀ = a[3] # length of the linear segment
+                α  = a[4] # exponential factor, α=0 -> linear
+                if α<=0 # concave/linear, weak change at beginning and strong change at end of column
+                    f = f₀ .* (1 .- exp.(α.*(1 .- (x.-x₀) ./ L₀)) + (1 .- (x.-x₀) ./ L₀) .* exp.(α))
+                elseif α>0 # convex function, strong change at beginning and weak change at end of the column
+                    f = f₀ .* (exp.(-α.*(x.-x₀) ./ L₀) .- (x.-x₀) ./ L₀ .* exp.(-α))
+                end
+            # other functions ...
             end
-        elseif α[i]>0 # convex function, strong change at beginning and weak change at end of the column
-            if Tcontrol=="inlet"
-                f[i] = f₀[i] .* (exp.(-α[i].*(x.-x₀[i]) ./ L₀[i]) .- (x.-x₀[i]) ./ L₀[i] .* exp.(-α[i]) .- 1)
-            elseif Tcontrol=="outlet"
-                f[i] = f₀[i] .* (exp.(-α[i].*(x.-x₀[i]) ./ L₀[i]) .- (x.-x₀[i]) ./ L₀[i] .* exp.(-α[i]))
+        elseif length(size(a)) == 2
+            if size(a)[2] == 4
+                # for thermal gradient, values of parameters 'a[i,:]' can change
+                # over time
+                f₀ = a[:,1] # start value
+                x₀ = a[:,2] # shift in x (e.g. to correct for the real position of IR-sensors)
+                L₀ = a[:,3] # length of the linear segment
+                α  = a[:,4] # exponential factor, α=0 -> linear
+                f = Array{Float64}(undef, length(α))
+                for i=1:length(α)
+                    if α[i]<=0 # concave function, weak change at beginning and strong change at end of column
+                        if Tcontrol=="inlet"
+                            f[i] = f₀[i] .* (.- exp.(α[i].*(1 .- (x.-x₀[i]) ./ L₀[i])) + (1 .- (x.-x₀[i]) ./ L₀[i]) .* exp.(α[i]))
+                        elseif Tcontrol=="outlet"
+                            f[i] = f₀[i] .* (1 .- exp.(α[i].*(1 .- (x.-x₀[i]) ./ L₀[i])) + (1 .- (x.-x₀[i]) ./ L₀[i]) .* exp.(α[i]))
+                        end
+                    elseif α[i]>0 # convex function, strong change at beginning and weak change at end of the column
+                        if Tcontrol=="inlet"
+                            f[i] = f₀[i] .* (exp.(-α[i].*(x.-x₀[i]) ./ L₀[i]) .- (x.-x₀[i]) ./ L₀[i] .* exp.(-α[i]) .- 1)
+                        elseif Tcontrol=="outlet"
+                            f[i] = f₀[i] .* (exp.(-α[i].*(x.-x₀[i]) ./ L₀[i]) .- (x.-x₀[i]) ./ L₀[i] .* exp.(-α[i]))
+                        end
+                    end
+                end
+            # other functions ...
             end
         end
     end
