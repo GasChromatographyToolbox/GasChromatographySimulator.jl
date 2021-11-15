@@ -170,7 +170,7 @@ function gradient(x, a; Tcontrol="inlet")
             end
         elseif length(size(a)) == 2
             if a==zeros(size(a))
-                f = 0
+                f = zeros(size(a)[1])
                 #if size(a)[2] == 1
                 # for thermal gradient, no change in time  of values of the
                 # parameters
