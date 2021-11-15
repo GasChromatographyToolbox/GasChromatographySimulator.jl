@@ -122,6 +122,17 @@ function constructor_System(L, d, df, sp, gas)
     return sys
 end
 
+function constructor_Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, a_gf::Array{<:Real, 2}, Tcontrol, L)
+    # function to construct the Program structure
+    # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
+    gf(x) = gradient(x, a_gf; Tcontrol=Tcontrol)
+    T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
+    pin_itp = pressure_interpolation(time_steps, pin_steps)
+    pout_itp = pressure_interpolation(time_steps, pout_steps)
+    prog = Program(time_steps, temp_steps, pin_steps, pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
+    return prog
+end
+
 function constructor_Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, ΔT_steps::Array{<:Real, 1}, x₀_steps::Array{<:Real, 1}, L₀_steps::Array{<:Real, 1}, α_steps::Array{<:Real, 1}, Tcontrol, L)
     # function to construct the Program structure
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
