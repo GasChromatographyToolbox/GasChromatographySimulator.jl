@@ -319,6 +319,12 @@ function load_solute_database(db_path::String, db::String, sp::String, gas::Stri
 	return sub
 end
 
+function all_solutes(sp, db)
+	db_filter = filter([:Phase] => x -> x==sp, db)
+	solutes = string.(db_filter.Name)
+	return solutes
+end
+
 function diffusivity(M, Cn, Hn, On, Nn, Rn, gas)
     # calculates diffusitivity Dag of an analyte in a gas
     # from the (simplified) molecular formula of the solute
@@ -395,6 +401,52 @@ function viscosity(x, t, T_itp, gas)
     η = ηst*(T/Tst)^(ξ₀ + ξ₁*(T-Tst)/Tst)
     return η
 end
+
+function viscosity(T::Float64, gas::String)
+    # using empiric model from Blumberg.2010
+    if gas=="He"
+        ηst = 18.63e-6
+        ξ₀ = 0.6958
+        ξ₁ = -0.0071
+    elseif gas=="H2"
+        ηst = 8.382e-6
+        ξ₀ = 0.6892
+        ξ₁ = 0.005
+    elseif gas=="N2"
+        ηst = 16.62e-6
+        ξ₀ = 0.7665
+        ξ₁ = -0.0378
+    elseif gas=="Ar"
+        ηst = 21.04e-6
+        ξ₀ = 0.8131
+        ξ₁ = -0.0426
+    else
+        error("Unknown selection of gas. Choose one of these: He, H2, N2 or Ar.")
+    end
+    η = ηst*(T/Tst)^(ξ₀ + ξ₁*(T-Tst)/Tst)
+    return η
+end
+
+function holdup_time(T::Float64, pin::Float64, pout::Float64, L::Float64, d::Float64, gas::String)
+    # hold-up time at temperature T (non-gradient)
+	η = viscosity(T, gas)
+	tM = 128/3*L^2/d^2*η*(pin^3-pout^3)/(pin^2-pout^2)^2
+	return tM
+end
+
+function holdup_time(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
+    # hold-up time at time t in a temperature program with potential thermal gradient
+    if ng==true
+        η = viscosity(L, t, T_itp, gas)
+        tM = 128/3*L^2/d(L)^2*η*(pin_itp(t)^3-pout_itp(t)^3)/(pin_itp(t)^2-pout_itp(t)^2)^2
+    else
+        κL = flow_restriction(L, t, T_itp, d, gas; ng=false)
+        integral = quadgk(y -> d(y)^2*pressure(y, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)/T_itp(y, t), 0, L)[1]
+        tM = 64*κL/(pin_itp(t)^2-pout_itp(t)^2)*integral
+    end
+    return tM
+end
+
 
 function mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
     pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng)

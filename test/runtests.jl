@@ -73,3 +73,18 @@ sol_migr_ng, sol_peak_ng = GasChromatographySimulator.solve_multithreads(par, ng
 pl_migr_ng = GasChromatographySimulator.peaklist(sol_migr_ng, sol_peak_ng, par)
 @test abs.(1 .- pl_migr_ng.tR./pl_migr.tR)[1] < 1e-5
 @test abs.(1 .- pl_migr_ng.τR./pl_migr.τR)[2] < 1e-4
+
+# test of holdup_time:
+t = rand()*cumsum(time_steps)[end]
+T_test = par.prog.T_itp(0.0, t)
+η_T = GasChromatographySimulator.viscosity(T_test, "He")
+η_t = GasChromatographySimulator.viscosity(0.0, t, par.prog.T_itp, par.sys.gas)
+
+@test η_T == η_t
+
+tM_T = GasChromatographySimulator.holdup_time(T_test, par.prog.pin_itp(t), par.prog.pout_itp(t), L, a_d[1], gas)
+tM_t = GasChromatographySimulator.holdup_time(t, par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas; ng=false)
+tM_t_ng = GasChromatographySimulator.holdup_time(t, par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas; ng=true)
+
+@test (tM_T - tM_t)/tM_t < 1e-10
+@test (tM_t_ng - tM_t)/tM_t < 1e-10
