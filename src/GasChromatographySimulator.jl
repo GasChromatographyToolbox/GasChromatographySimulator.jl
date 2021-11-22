@@ -447,6 +447,25 @@ function holdup_time(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
     return tM
 end
 
+function flow(T::Float64, L::Float64, d::Float64, pin::Float64, pout::Float64, gas::String)
+	# normalized Flow at temperature T (non-gradient)
+	η = GasChromatographySimulator.viscosity(T, gas)
+	F = π/256 * Tn/pn * d^4/L * (pin^2-pout^2)/(η*T)
+	return F
+end
+
+function flow(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
+	# normalized Flow at time t in a temperature program with potential thermal
+	# gradient
+    # TODO: test for gradient in d(x)
+    if ng==true
+	    η = GasChromatographySimulator.viscosity(L, t, T_itp, gas)
+	    F = π/256 * Tn/pn * d(L)^4/L * (pin_itp(t)^2-pout_itp(t)^2)/(η*T_itp(L,t))
+    else
+        κL = flow_restriction(L, t, T_itp, d, gas; ng=false)
+        F = π/256 * Tn/pn * (pin_itp(t)^2-pout_itp(t)^2)/κL
+	return F
+end
 
 function mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
     pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng)
