@@ -142,3 +142,10 @@ tM_t_ng = GasChromatographySimulator.holdup_time(t, par.prog.T_itp, par.prog.pin
 
 (tM_T - tM_t)/tM_t < 1e-10
 (tM_t_ng - tM_t)/tM_t < 1e-10
+
+F_T = GasChromatographySimulator.flow(T_test, L, a_d[1], par.prog.pin_itp(t), par.prog.pout_itp(t), gas)
+F_t = GasChromatographySimulator.flow(t, par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas; ng=false)
+F_t_ng = GasChromatographySimulator.flow(t, par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas; ng=true)
+
+(F_T - F_t)/F_t < 1e-10
+(F_t_ng - F_t)/F_t < 1e-10
