@@ -103,6 +103,11 @@ Base.@kwdef struct Options
     Tcontrol::String    # temperature control at 'inlet' (top) or 'outlet' (bottom) of the column
 	odesys::Bool  		# calculate the two ODEs (migration and peak-width) separately (false) or 
                         # combined as a system of ODEs (true)
+                        # ??? add 'ng' as option ???
+                        # for compatibility with previous code make constructor
+                        # Options(alg, abstol, reltol, Tcontrol, odesys) =
+                        # Options(alg, abstol, reltol, Tcontrol, odesys, false)
+                        # (ng=false as default)
 end
 
 # test
@@ -512,6 +517,17 @@ function diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=fal
 end
 
 # solving functions
+function simulate(par; ng=false)
+    if par.opt.odesys==true
+        sol = solve_system_multithreads(par)
+    	pl = GasChromatographySimulator.peaklist(sol, par)
+        return pl, sol
+	else
+		sol, peak = solve_multithreads(par)
+    	pl = GasChromatographySimulator.peaklist(sol, peak, par)
+        return pl, sol, peak
+	end
+end
 # test
 function solve_system_multithreads(par; ng=false)
 	n = length(par.sub)
