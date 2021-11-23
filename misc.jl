@@ -6,7 +6,7 @@ using GasChromatographySimulator
 1+1
 # Options
 opt = GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true)
-
+GasChromatographySimulator.Options() == opt
 # System
 L = 10.0
 a_d = [0.25e-3]
@@ -88,13 +88,21 @@ par_d = GasChromatographySimulator.Parameters(sys, prog, sub_d, opt)
     round.(pl_odesys.tR, digits=3) == [97.943, 140.416]
     round.(pl_odesys.τR, digits=3) == [0.581, 0.540]
     
-    sol_odesys_ng = GasChromatographySimulator.solve_system_multithreads(par, ng=true)
-    pl_odesys_ng = GasChromatographySimulator.peaklist(sol_odesys_ng, par)
+    opt_ng = GasChromatographySimulator.Options(ng=true)
+    par_ng = GasChromatographySimulator.Parameters(sys, prog_c_ng, sub, opt_ng)
+    sol_odesys_ng = GasChromatographySimulator.solve_system_multithreads(par_ng)
+    pl_odesys_ng = GasChromatographySimulator.peaklist(sol_odesys_ng, par_ng)
     # non-gradient separation should give the 'same' results with both methods (ng=false and ng=true)
     abs.(1 .- pl_odesys_ng.tR./pl_odesys.tR)[1] < 1e-5
     abs.(1 .- pl_odesys_ng.tR./pl_odesys.tR)[2] < 1e-5
     abs.(1 .- pl_odesys_ng.τR./pl_odesys.τR)[1] < 1e-4
     abs.(1 .- pl_odesys_ng.τR./pl_odesys.τR)[2] < 1e-4
+
+    pl_odesys_ng.tR ≈ pl_odesys.tR
+    pl_odesys_ng.τR ≈ pl_odesys.τR
+
+    isapprox(pl_odesys_ng.tR, pl_odesys.tR; rtol=1e-6)
+    isapprox(pl_odesys_ng.τR, pl_odesys.τR; rtol=1e-4)
 
     sol_odesys_d = GasChromatographySimulator.solve_system_multithreads(par_d)
     pl_odesys_d = GasChromatographySimulator.peaklist(sol_odesys_d, par_d)
@@ -103,14 +111,17 @@ par_d = GasChromatographySimulator.Parameters(sys, prog, sub_d, opt)
     round.(pl_odesys_d.tR, digits=3) == [145.656, 188.478]
     round.(pl_odesys_d.τR, digits=3) == [0.506, 0.483]
     
-    sol_odesys_d_ng = GasChromatographySimulator.solve_system_multithreads(par_d, ng=true)
-    pl_odesys_d_ng = GasChromatographySimulator.peaklist(sol_odesys_d_ng, par_d)
+    par_d_ng = GasChromatographySimulator.Parameters(sys, prog, sub_d, opt_ng)
+    sol_odesys_d_ng = GasChromatographySimulator.solve_system_multithreads(par_d_ng)
+    pl_odesys_d_ng = GasChromatographySimulator.peaklist(sol_odesys_d_ng, par_d_ng)
     # non-gradient separation should give the 'same' results with both methods (ng=false and ng=true)
     abs.(1 .- pl_odesys_d_ng.tR./pl_odesys_d.tR)[1] < 1e-5
     abs.(1 .- pl_odesys_d_ng.tR./pl_odesys_d.tR)[2] < 1e-5
     abs.(1 .- pl_odesys_d_ng.τR./pl_odesys_d.τR)[1] < 1e-4
     abs.(1 .- pl_odesys_d_ng.τR./pl_odesys_d.τR)[2] < 1e-4
 
+    pl_odesys_d_ng.tR ≈ pl_odesys_d.tR
+    pl_odesys_d_ng.τR ≈ pl_odesys_d.τR
 # for migration and peakvariance separatly:
     sol_migr, sol_peak = GasChromatographySimulator.solve_multithreads(par)
     pl_migr = GasChromatographySimulator.peaklist(sol_migr, sol_peak, par)
@@ -119,8 +130,8 @@ par_d = GasChromatographySimulator.Parameters(sys, prog, sub_d, opt)
     round.(pl_migr.tR, digits=3) == [97.944, 140.403]
     round.(pl_migr.τR, digits=3) == [0.578, 0.540]
 
-    sol_migr_ng, sol_peak_ng = GasChromatographySimulator.solve_multithreads(par, ng=true)
-    pl_migr_ng = GasChromatographySimulator.peaklist(sol_migr_ng, sol_peak_ng, par)
+    sol_migr_ng, sol_peak_ng = GasChromatographySimulator.solve_multithreads(par_ng)
+    pl_migr_ng = GasChromatographySimulator.peaklist(sol_migr_ng, sol_peak_ng, par_ng)
     abs.(1 .- pl_migr_ng.tR./pl_migr.tR)[1] < 1e-5
     abs.(1 .- pl_migr_ng.tR./pl_migr.tR)[2] < 1e-5
     abs.(1 .- pl_migr_ng.τR./pl_migr.τR)[1] < 1e-4
@@ -143,9 +154,15 @@ tM_t_ng = GasChromatographySimulator.holdup_time(t, par.prog.T_itp, par.prog.pin
 (tM_T - tM_t)/tM_t < 1e-10
 (tM_t_ng - tM_t)/tM_t < 1e-10
 
+tM_T ≈ tM_t
+tM_t_ng ≈ tM_t
+
 F_T = GasChromatographySimulator.flow(T_test, L, a_d[1], par.prog.pin_itp(t), par.prog.pout_itp(t), gas)
 F_t = GasChromatographySimulator.flow(t, par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas; ng=false)
 F_t_ng = GasChromatographySimulator.flow(t, par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas; ng=true)
 
 (F_T - F_t)/F_t < 1e-10
 (F_t_ng - F_t)/F_t < 1e-10
+
+F_T  ≈  F_t
+F_t_ng  ≈  F_t

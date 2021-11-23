@@ -2,6 +2,7 @@ using Test, GasChromatographySimulator
 
 # Options
 opt = GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true)
+@test GasChromatographySimulator.Options() == opt
 
 # System
 L = 10.0
@@ -55,11 +56,14 @@ pl_odesys = GasChromatographySimulator.peaklist(sol_odesys, par)
 @test round.(pl_odesys.tR, digits=3) == [97.943, 140.416]
 @test round.(pl_odesys.τR, digits=3) == [0.581, 0.540]
 
-sol_odesys_ng = GasChromatographySimulator.solve_system_multithreads(par, ng=true)
-pl_odesys_ng = GasChromatographySimulator.peaklist(sol_odesys_ng, par)
-# non-gradient separation should give the 'same' results with both methods (ng=false and ng=true)
-@test abs.(1 .- pl_odesys_ng.tR./pl_odesys.tR)[1] < 1e-5
-@test abs.(1 .- pl_odesys_ng.τR./pl_odesys.τR)[2] < 1e-4
+opt_ng = GasChromatographySimulator.Options(ng=true)
+par_ng = GasChromatographySimulator.Parameters(sys, prog_c_ng, sub, opt_ng)
+sol_odesys_ng = GasChromatographySimulator.solve_system_multithreads(par_ng)
+pl_odesys_ng = GasChromatographySimulator.peaklist(sol_odesys_ng, par_ng)
+# non-gradient separation should give the 'same' results with both methods
+# (ng=false and ng=true)
+@test isapprox(pl_odesys_ng.tR, pl_odesys.tR; rtol=1e-6)
+@test isapprox(pl_odesys_ng.τR, pl_odesys.τR; rtol=1e-4)
 
 # for migration and peakvariance separatly:
 sol_migr, sol_peak = GasChromatographySimulator.solve_multithreads(par)
@@ -69,10 +73,10 @@ pl_migr = GasChromatographySimulator.peaklist(sol_migr, sol_peak, par)
 @test round.(pl_migr.tR, digits=3) == [97.944, 140.403]
 @test round.(pl_migr.τR, digits=3) == [0.578, 0.540]
 
-sol_migr_ng, sol_peak_ng = GasChromatographySimulator.solve_multithreads(par, ng=true)
-pl_migr_ng = GasChromatographySimulator.peaklist(sol_migr_ng, sol_peak_ng, par)
-@test abs.(1 .- pl_migr_ng.tR./pl_migr.tR)[1] < 1e-5
-@test abs.(1 .- pl_migr_ng.τR./pl_migr.τR)[2] < 1e-4
+sol_migr_ng, sol_peak_ng = GasChromatographySimulator.solve_multithreads(par_ng)
+pl_migr_ng = GasChromatographySimulator.peaklist(sol_migr_ng, sol_peak_ng, par_ng)
+@test isapprox(pl_migr_ng.tR, pl_migr.tR; rtol=1e-5)
+@test isapprox(pl_migr_ng.τR, pl_migr.τR; rtol=1e-4)
 
 # test of holdup_time:
 t = rand()*cumsum(time_steps)[end]
@@ -86,5 +90,14 @@ tM_T = GasChromatographySimulator.holdup_time(T_test, par.prog.pin_itp(t), par.p
 tM_t = GasChromatographySimulator.holdup_time(t, par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas; ng=false)
 tM_t_ng = GasChromatographySimulator.holdup_time(t, par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas; ng=true)
 
-@test (tM_T - tM_t)/tM_t < 1e-10
-@test (tM_t_ng - tM_t)/tM_t < 1e-10
+@test tM_T ≈ tM_t
+@test tM_t_ng ≈ tM_t
+
+F_T = GasChromatographySimulator.flow(T_test, L, a_d[1], par.prog.pin_itp(t), par.prog.pout_itp(t), gas)
+F_t = GasChromatographySimulator.flow(t, par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas; ng=false)
+F_t_ng = GasChromatographySimulator.flow(t, par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas; ng=true)
+
+@test F_T  ≈  F_t
+@test F_t_ng  ≈  F_t
+
+println("Test run successful.")

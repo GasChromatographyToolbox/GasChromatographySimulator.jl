@@ -108,6 +108,17 @@ Base.@kwdef struct Options
                         # Options(alg, abstol, reltol, Tcontrol, odesys) =
                         # Options(alg, abstol, reltol, Tcontrol, odesys, false)
                         # (ng=false as default)
+    ng::Bool
+end
+
+function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false)
+    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng)
+    return opt
+end
+
+function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false)
+    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng)
+    return opt
 end
 
 # test
@@ -162,6 +173,8 @@ function constructor_Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:R
     prog = Program(time_steps, temp_steps, pin_steps, pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
     return prog
 end
+
+
 
 # gradient functions
 function gradient(x, a; Tcontrol="inlet")
@@ -517,7 +530,7 @@ function diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=fal
 end
 
 # solving functions
-function simulate(par; ng=false)
+function simulate(par)
     if par.opt.odesys==true
         sol = solve_system_multithreads(par)
     	pl = GasChromatographySimulator.peaklist(sol, par)
@@ -529,33 +542,33 @@ function simulate(par; ng=false)
 	end
 end
 # test
-function solve_system_multithreads(par; ng=false)
+function solve_system_multithreads(par)
 	n = length(par.sub)
 	sol = Array{Any}(undef, n)
 	Threads.@threads for i=1:n
-		sol[i] = solving_odesystem_r(par.sys, par.prog, par.sub[i], par.opt; ng=ng)
+		sol[i] = solving_odesystem_r(par.sys, par.prog, par.sub[i], par.opt)
 	end
 	return sol
 end
 
 # test
-function solve_multithreads(par; ng=false)
+function solve_multithreads(par)
     n = length(par.sub)
     sol = Array{Any}(undef, n)
     peak = Array{Any}(undef, n)
     Threads.@threads for i=1:n
-        sol[i] = solving_migration(par.sys, par.prog, par.sub[i], par.opt; ng=ng)
-        peak[i] = solving_peakvariance(sol[i], par.sys, par.prog, par.sub[i], par.opt; ng=ng)
+        sol[i] = solving_migration(par.sys, par.prog, par.sub[i], par.opt)
+        peak[i] = solving_peakvariance(sol[i], par.sys, par.prog, par.sub[i], par.opt)
     end
     return sol, peak
 end
 
-function solving_migration(sys, prog, sub, opt; ng=false)
+function solving_migration(sys, prog, sub, opt)
     #---------------------------------------------------------------------------
     # solves the differential equations for migration t(z) of a solute with the
     # parameters p
     #---------------------------------------------------------------------------
-	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.ΔCp, sub.Tchar, sub.θchar, sub.φ₀; ng=ng)
+	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.ΔCp, sub.Tchar, sub.θchar, sub.φ₀; ng=opt.ng)
     t₀ = sub.t₀
     zspan = (0.0,sys.L)
     prob_tz = ODEProblem(f_tz, t₀, zspan)
@@ -563,7 +576,7 @@ function solving_migration(sys, prog, sub, opt; ng=false)
     return solution_tz
 end
 
-function solving_peakvariance(solution_tz, sys, prog, sub, opt; ng=false)
+function solving_peakvariance(solution_tz, sys, prog, sub, opt)
     #---------------------------------------------------------------------------
     # solves the differential equations for development of the peak variance
     # σ²(z) of a solute with migration solution solution_tz and the
@@ -572,7 +585,7 @@ function solving_peakvariance(solution_tz, sys, prog, sub, opt; ng=false)
     #---------------------------------------------------------------------------
     t(z) = solution_tz(z)
     p = [sys, prog, sub, opt]
-    f_τ²z(τ²,p,z) = peakode(z, t(z), τ², sys, prog, sub, opt; ng=ng)
+    f_τ²z(τ²,p,z) = peakode(z, t(z), τ², sys, prog, sub, opt)
     τ²₀ = sub.τ₀^2
     zspan = (0.0, sys.L)
     prob_τ²z = ODEProblem(f_τ²z, τ²₀, zspan, p)
@@ -580,14 +593,14 @@ function solving_peakvariance(solution_tz, sys, prog, sub, opt; ng=false)
     return solution_τ²z
 end
 
-function solving_odesystem_r(sys, prog, sub, opt; ng=false)
+function solving_odesystem_r(sys, prog, sub, opt)
     #---------------------------------------------------------------------------
     # solves the differential equations for migration t(z) of a solute with the
     # parameters p
     #---------------------------------------------------------------------------
     t₀ = [sub.t₀; sub.τ₀^2]
     zspan = (0.0,sys.L)
-	p = [sys, prog, sub, opt, ng]
+	p = [sys, prog, sub, opt]
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
     #try
         solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
@@ -607,14 +620,13 @@ function odesystem_r!(dt, t, p, z)
 	prog = p[2]
 	sub = p[3]
 	opt = p[4]
-    ng = p[5]
-    dt[1] = residency(z, t[1], prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.ΔCp, sub.Tchar, sub.θchar, sub.φ₀; ng=ng)
-    dt[2] = peakode(z, t[1], t[2], sys, prog, sub, opt; ng=ng)
+    dt[1] = residency(z, t[1], prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.ΔCp, sub.Tchar, sub.θchar, sub.φ₀; ng=opt.ng)
+    dt[2] = peakode(z, t[1], t[2], sys, prog, sub, opt)
 end
 
-function peakode(z, t, τ², sys, prog, sub, opt; ng=false)
+function peakode(z, t, τ², sys, prog, sub, opt)
 	# alternative function
-    if ng==true
+    if opt.ng==true
         r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.ΔCp, sub.Tchar, sub.θchar, sub.φ₀; ng=true)
         H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.ΔCp, sub.Tchar, sub.θchar, sub.φ₀, sub.Dag; ng=true)
         ∂r∂t_ng(z,t) = ForwardDiff.gradient(r_ng, [z, t])[2]
