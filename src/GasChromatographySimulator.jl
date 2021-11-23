@@ -96,7 +96,7 @@ struct Substance
     τ₀                  # initial peak width in s   
 end
 
-Base.@kwdef struct Options
+struct Options
     alg                 # algorithmen for the ODE solver
     abstol              # absolute tolerance for ODE solver
     reltol              # relative tolerance for ODE solver 
