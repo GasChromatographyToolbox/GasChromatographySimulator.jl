@@ -23,7 +23,11 @@ time_steps = [0.0, 60.0, 600.0, 300.0]
 temp_steps = [40.0, 40.0, 300.0, 300.0]
 pin_steps = [200.0, 200.0, 300.0, 300.0].*1000.0 .+ 101300
 pout_steps = [101.3, 101.3, 101.3, 101.3].*1000.0
-a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) sys.L.*ones(length(time_steps)) zeros(length(time_steps))]
+ΔT_steps = zeros(length(time_steps))
+x₀_steps = zeros(length(time_steps))
+L₀_steps = L.*ones(length(time_steps))
+α_steps = zeros(length(time_steps))
+a_gf = [ΔT_steps x₀_steps L₀_steps α_steps]
 gf(x) = GasChromatographySimulator.gradient(x, a_gf)
 T_itp = GasChromatographySimulator.temperature_interpolation(time_steps, temp_steps, gf, sys.L)
 pin_itp = GasChromatographySimulator.pressure_interpolation(time_steps, pin_steps)
@@ -99,5 +103,47 @@ F_t_ng = GasChromatographySimulator.flow(t, par.prog.T_itp, par.prog.pin_itp, pa
 
 @test F_T  ≈  F_t
 @test F_t_ng  ≈  F_t
+
+# test with different tolerances 
+opt_6_3 = GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true)
+opt_6_4 = GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-4, "inlet", true)
+opt_8_3 = GasChromatographySimulator.Options(OwrenZen5(), 1e-8, 1e-3, "inlet", true)
+opt_8_4 = GasChromatographySimulator.Options(OwrenZen5(), 1e-8, 1e-4, "inlet", true)
+# change somthing small, e.g. stretch the temperature program by a small nummber
+# n = 1.000001 and compare the results for the same tolerances
+# program with a gradient:
+prog_0 = GasChromatographySimulator.constructor_Program(time_steps, temp_steps, pin_steps, pout_steps, 40.0.*ones(length(time_steps)), x₀_steps, L₀_steps, -3.0.*ones(length(time_steps)), opt.Tcontrol, sys.L)
+
+par_6_3_0 = GasChromatographySimulator.Parameters(sys, prog_0, sub, opt_6_3)
+par_6_4_0 = GasChromatographySimulator.Parameters(sys, prog_0, sub, opt_6_4)
+par_8_3_0 = GasChromatographySimulator.Parameters(sys, prog_0, sub, opt_8_3)
+par_8_4_0 = GasChromatographySimulator.Parameters(sys, prog_0, sub, opt_8_4)
+
+pl_6_3_0 = GasChromatographySimulator.simulate(par_6_3_0)[1]
+pl_6_4_0 = GasChromatographySimulator.simulate(par_6_4_0)[1]
+pl_8_3_0 = GasChromatographySimulator.simulate(par_8_3_0)[1]
+pl_8_4_0 = GasChromatographySimulator.simulate(par_8_4_0)[1]
+
+prog_1 = GasChromatographySimulator.constructor_Program(1.000001.*time_steps, temp_steps, pin_steps, pout_steps, 40.0.*ones(length(time_steps)), x₀_steps, L₀_steps, -3.0.*ones(length(time_steps)), opt.Tcontrol, sys.L)
+par_6_3_1 = GasChromatographySimulator.Parameters(sys, prog_1, sub, opt_6_3)
+par_6_4_1 = GasChromatographySimulator.Parameters(sys, prog_1, sub, opt_6_4)
+par_8_3_1 = GasChromatographySimulator.Parameters(sys, prog_1, sub, opt_8_3)
+par_8_4_1 = GasChromatographySimulator.Parameters(sys, prog_1, sub, opt_8_4)
+
+pl_6_3_1 = GasChromatographySimulator.simulate(par_6_3_1)[1]
+pl_6_4_1 = GasChromatographySimulator.simulate(par_6_4_1)[1]
+pl_8_3_1 = GasChromatographySimulator.simulate(par_8_3_1)[1]
+pl_8_4_1 = GasChromatographySimulator.simulate(par_8_4_1)[1]
+
+pl_6_3_0.tR .- pl_6_3_1.tR
+pl_6_4_0.tR .- pl_6_4_1.tR
+pl_8_3_0.tR .- pl_8_3_1.tR
+pl_8_4_0.tR .- pl_8_4_1.tR
+
+pl_6_3_0.tR .- pl_6_3_1.tR == pl_6_4_0.tR .- pl_6_4_1.tR
+pl_6_3_0.tR .- pl_6_3_1.tR == pl_8_3_0.tR .- pl_8_3_1.tR
+pl_6_3_0.tR .- pl_6_3_1.tR == pl_8_4_0.tR .- pl_8_4_1.tR
+# how to interprete theses resultd
+
 
 println("Test run successful.")
