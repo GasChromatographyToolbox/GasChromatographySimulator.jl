@@ -1,7 +1,8 @@
 using Documenter
 using GasChromatographySimulator
 
-makedocs(
+makedocs(sitename = "GasChromatographySimulator.jl")
+#=makedocs(
     sitename = "GasChromatographySimulator",
     pages = [
         "Index" => "index.md",
@@ -18,3 +19,4 @@ deploydocs(
     repo = "github.com/JanLeppert/GasChromatographySimulator.jl",
     devbranch = "main"
 )
+=#
