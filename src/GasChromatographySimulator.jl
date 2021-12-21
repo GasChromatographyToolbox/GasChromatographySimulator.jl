@@ -20,19 +20,12 @@ pn = 101300             # Pa
 
 Structure describing the GC system. 
 
-The system consists of a capillary (called column) of length `L` and inner
-diameter `d`. The capillary is coated with thin film (thickness `df`) of a
-stationary phase `sp`. A mobile phase consisting of a `gas` moves through
-the capillary. The diameter `d` and film thickness `d_f` are described as
-functions to enable the option of gradients of diameter or film thickness.
-
 # Arguments
+
 * `L`: Length of the capillary measured in m (meter)
-* `d`: A function `d(x, a_d)` of `x`, the position along the capillary,
-describing the diameter in m (meter).
+* `d`: A function `d(x, a_d)` of `x`, the position along the capillary, describing the diameter in m (meter).
 * `a_d`: Parameters of the diameter function. 
-* `d_f`: A function `d_f(x, a_df)` of `x`, describing the film thickness in m
-(meter).
+* `d_f`: A function `d_f(x, a_df)` of `x`, describing the film thickness in m (meter).
 * `sp`: The name of the stationary phase.
 * `gas`: The name of the mobile phase. Allowed values: He, H2 or N2.
 """
@@ -51,27 +44,22 @@ end
     Program(time_steps, temp_steps, pin_steps,
     pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
 
-    Structure to describe the temperature and pressure program of a GC system. The
-    function `gf` describes an optional thermal gradient.
+Structure to describe the temperature and pressure program of a GC system. The
+function `gf` describes an optional thermal gradient.
 
-    Description of the setup ...
+# Arguments
+* `time_steps`: Time steps in s (seconds). 
+* `temp_steps`: Temperature steps in °C (degree celsius).
+* `pin_steps`: Inlet pressure steps in Pa(a) (pascal, absolute).
+* `pout_steps`: Outlet pressure steps in Pa(a) (pascal, absolute).
+* `gf`: Gradient function `gf(x, a_gf)`, describes the thermal gradient.
+* `a_gf`: Parameters of the gradient function.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`, constructed from `time_steps`, `temp_steps` and `gf`.
+* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`, constructed from `time_steps` and `pin_steps`.
+* `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`, constructed from `time_steps` and `pout_steps`.  
 
-    # Arguments
-    * `time_steps`: Time steps in s (seconds). 
-    * `temp_steps`: Temperature steps in °C (degree celsius).
-    * `pin_steps`: Inlet pressure steps in Pa(a) (pascal, absolute).
-    * `pout_steps`: Outlet pressure steps in Pa(a) (pascal, absolute).
-    * `gf`: Gradient function `gf(x, a_gf)`, describes the thermal gradient.
-    * `a_gf`: Parameters of the gradient function.
-    * `T_itp`: Interpolated (linear) temperature `T(x,t)`, constructed from
-      `time_steps`, `temp_steps` and `gf`.
-    * `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`, constructed from
-      `time_steps` and `pin_steps`.
-    * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`, constructed
-      from `time_steps` and `pout_steps`.  
-
-    The length of the arrays `time_steps`, `temp_steps`, `pin_steps` and `a_gf`
-    have to be the same.
+Note: The length of the arrays `time_steps`, `temp_steps`, `pin_steps` and `a_gf`
+have to be the same.
 """
 struct Program{Fgf<:Function}
     time_steps::Array{<:Real, 1}            # vector time steps for the temperature program
@@ -90,32 +78,32 @@ end
 """
     Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Dag, t₀, τ₀)
 
-    Structure to describe the properties of a solute, which migrates through the
-    GC system. These datas are in most cases read from a database with the
-    function `load_solute_database()`.
+Structure to describe the properties of a solute, which migrates through the
+GC system. These datas are in most cases read from a database with the
+function `load_solute_database()`.
 
-    Description of the setup ...
-
-    # Arguments
-    * `name`: Name of the solute. 
-    * `CAS`: CAS number of the solute.
-    * `Tchar`: Characterisic temperature (in K). One of the three
-      distribution-centric thermodynamic parameters describing the retention of
-      this solute on the given stationary phase.
-    * `θchar`: Characterisic parameters (in °C). One of the three
+# Arguments
+* `name`: Name of the solute. 
+* `CAS`: CAS number of the solute.
+* `Tchar`: Characterisic temperature (in K). One of the three
+  distribution-centric thermodynamic parameters describing the retention of this
+  solute on the given stationary phase.
+* `θchar`: Characterisic parameters (in °C). One of the three
+distribution-centric thermodynamic parameters describing the retention of
+this solute on the given stationary phase.
+* `ΔCp`: Change of the isobaric heat capacity moving from the mobile to the
+    stationary phase (in J mol⁻¹ K⁻¹). One of the three
     distribution-centric thermodynamic parameters describing the retention of
     this solute on the given stationary phase.
-    * `ΔCp`: Change of the isobaric heat capacity moving from the mobile to the
-      stationary phase (in J mol⁻¹ K⁻¹). One of the three
-      distribution-centric thermodynamic parameters describing the retention of
-      this solute on the given stationary phase.
-    * `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the
-      thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
-    * `ann`: Annotations. In most cases the source of the data is noted here.
-    * `Dag`: The diffusitivity of the solute `a` in the mobile phase `g` (in
-      ...). It is calculated by the function `diffusitivity()`.
-    * `t₀`: Initial time of the solute (in s) at the start of the simulation.
-    * `τ₀`: Initial peak width of the solute (in s) at the start of the simulation.  
+* `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the
+    thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
+* `ann`: Annotations. In most cases the source of the data is noted here.
+* `Dag`: The diffusitivity of the solute `a` in the mobile phase `g` (in
+    ...). It is calculated by the function `diffusitivity()`.
+* `t₀`: Initial time of the solute (in s) at the start of the simulation.
+* `τ₀`: Initial peak width of the solute (in s) at the start of the simulation. 
+
+See also: [`load_solute_database`](@ref)
 """
 struct Substance
     name::String        # name of solute
@@ -133,29 +121,29 @@ end
 """
     Options(alg, abstol, reltol, Tcontrol, odesys, ng)
 
-    Structure describing some general options for the simulation. 
+Structure describing some general options for the simulation. 
 
-    # Arguments
-    * `alg`: The algorithm used for the ODE solver. The algorithms
-      `OwrenZen3()`, `OwrenZen4()` and `OwrenZen5()` are recommended.
-    * `abstol`: The absolute tolerance for the ODE solver. Recommended value
-      1e-6 to 1e-8.
-    * `reltol`: The relative tolerance for the ODE solver. Recommended value
-    1e-3 to 1e-5. 
-    * `Tcontrol`: Option defining at which point of the column the temperature
-      program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
-    * `odesys`: Combine the ODEs for migration and peak-width into a system of
-      ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
-    * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
-      or with a gradient (`ng = false`). This distinction is made because of
-      partly manuall differentiation (problem of automatic differentiation with
-      integrals, e.g. in the `flow_restriction()` function. -> **TODO**: test
-      package Quadrature.jl as alternative to QuadGK.jl for integration)
+# Arguments
+* `alg`: The algorithm used for the ODE solver. The algorithms
+    `OwrenZen3()`, `OwrenZen4()` and `OwrenZen5()` are recommended.
+* `abstol`: The absolute tolerance for the ODE solver. Recommended value
+    1e-6 to 1e-8.
+* `reltol`: The relative tolerance for the ODE solver. Recommended value
+1e-3 to 1e-5. 
+* `Tcontrol`: Option defining at which point of the column the temperature
+    program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
+* `odesys`: Combine the ODEs for migration and peak-width into a system of
+    ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`)
+    or with a gradient (`ng = false`). This distinction is made because of
+    partly manuall differentiation (problem of automatic differentiation with
+    integrals, e.g. in the `flow_restriction()` function. -> **TODO**: test
+    package Quadrature.jl as alternative to QuadGK.jl for integration)
 
-    **TODO**: add option for the retention model ('ABC', 'K-centric')
+**TODO**: add option for the retention model ('ABC', 'K-centric')
 
-    For more informations about the arguments `alg`, `abstol` and `reltol` see
-    the documentation of the DifferentialEquations.jl package.
+For more informations about the arguments `alg`, `abstol` and `reltol` see
+the documentation of the DifferentialEquations.jl package.
 """
 struct Options
     alg                 # algorithmen for the ODE solver
@@ -175,16 +163,16 @@ end
 """
     Parameters(sys, prog, sub, opt)
 
-    Structure describing all parameters for the simulation of a GC system. 
+Structure describing all parameters for the simulation of a GC system. 
 
-    # Arguments
-    * `sys`: Structure `Systems` describing the parameters of the GC column and
-      mobile phase gas.
-    * `prog`: Structure `Program` describing the temperature and pressure
-      program of a GC system.
-    * `sub`: An array of the structure `Substance` describing the parameters of
-      the solutes which are separated in the GC simulation. 
-    * `opt`: Structure `Options` describing additional option parameters.
+# Arguments
+* `sys`: Structure `Systems` describing the parameters of the GC column and
+    mobile phase gas.
+* `prog`: Structure `Program` describing the temperature and pressure
+    program of a GC system.
+* `sub`: An array of the structure `Substance` describing the parameters of
+    the solutes which are separated in the GC simulation. 
+* `opt`: Structure `Options` describing additional option parameters.
 """
 struct Parameters
     sys::System
@@ -199,19 +187,19 @@ end
 """
     System(L, d, df, sp, gas)
 
-    Construct the structure `Systems` with given values for the case
-    of constant diameter `d` and film thickness `df`. 
+Construct the structure `Systems` with given values for the case
+of constant diameter `d` and film thickness `df`. 
 
-    # Arguments
-    * `L`: Length of the capillary measured in m (meter).
-    * `d`: Diameter of the capillary measured in m (meter). 
-    * `d_f`: Film thickness of the capillary measured in m (meter).
-    * `sp`: The name of the stationary phase.
-    * `gas`: The name of the mobile phase. Allowed values: He, H2 or N2.
+# Arguments
+* `L`: Length of the capillary measured in m (meter).
+* `d`: Diameter of the capillary measured in m (meter). 
+* `d_f`: Film thickness of the capillary measured in m (meter).
+* `sp`: The name of the stationary phase.
+* `gas`: The name of the mobile phase. Allowed values: He, H2 or N2.
 
-    # Examples
-    ```julia
-	julia> System(10.0, 0.1e-3, 0.1e-6, "DB5", "He")
+# Examples
+```julia
+julia> System(10.0, 0.1e-3, 0.1e-6, "DB5", "He")
 	```
 """
 function System(L, d, df, sp, gas)
@@ -226,34 +214,34 @@ end
 """
     Program(time_steps, temp_steps, pin_steps, pout_steps, a_gf, Tcontrol, L)
 
-    Construct the structure `Program` with given values. 
+Construct the structure `Program` with given values. 
 
-    # Arguments
-    * `time_steps`: Time steps in s (seconds). 
-    * `temp_steps`: Temperature steps in °C (degree celsius).
-    * `pin_steps`: Inlet pressure steps in Pa(a) (pascal, absolute).
-    * `pout_steps`: Outlet pressure steps in Pa(a) (pascal, absolute).
-    * `a_gf`: Parameters of the gradient function.
-    * `Tcontrol`: Option defining at which point of the column the temperature
-    program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
-    * `L`: Length of the capillary measured in m (meter).
+# Arguments
+* `time_steps`: Time steps in s (seconds). 
+* `temp_steps`: Temperature steps in °C (degree celsius).
+* `pin_steps`: Inlet pressure steps in Pa(a) (pascal, absolute).
+* `pout_steps`: Outlet pressure steps in Pa(a) (pascal, absolute).
+* `a_gf`: Parameters of the gradient function.
+* `Tcontrol`: Option defining at which point of the column the temperature
+program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
+* `L`: Length of the capillary measured in m (meter).
 
-    The length of the arrays `time_steps`, `temp_steps`, `pin_steps`, `pout_steps` and `a_gf`
-    have to be the same.
+The length of the arrays `time_steps`, `temp_steps`, `pin_steps`, `pout_steps` and `a_gf`
+have to be the same.
 
-    The arguments `Tcontrol` and `L` are used to construct the thermal gradient
-    function `gf(x)` and the temperature interpolation `T_itp(x,t)`.
+The arguments `Tcontrol` and `L` are used to construct the thermal gradient
+function `gf(x)` and the temperature interpolation `T_itp(x,t)`.
 
-    # Examples
-    ```julia
-	julia> Program([0.0, 60.0, 300.0, 120.0],
-            [40.0, 40.0, 320.0, 320.0],
-            300000.0.*ones(4),
-            zeros(4),
-	        [[20.0, 20.0, 20.0, 20.0] zeros(4) 10.0.*ones(4) [0.0, -2.0, -5.0, -5.0]],
-            "inlet",
-            10.0)
-	```
+# Examples
+```julia
+julia> Program([0.0, 60.0, 300.0, 120.0],
+        [40.0, 40.0, 320.0, 320.0],
+        300000.0.*ones(4),
+        zeros(4),
+        [[20.0, 20.0, 20.0, 20.0] zeros(4) 10.0.*ones(4) [0.0, -2.0, -5.0, -5.0]],
+        "inlet",
+        10.0)
+```
 """
 function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, a_gf::Array{<:Real, 2}, Tcontrol, L)
     # function to construct the Program structure
@@ -269,40 +257,40 @@ end
 """
     Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, Tcontrol, L) 
 
-    Construct the structure `Program` with given values. 
+Construct the structure `Program` with given values. 
 
-    # Arguments
-    * `time_steps`: Time steps in s (seconds). 
-    * `temp_steps`: Temperature steps in °C (degree celsius).
-    * `pin_steps`: Inlet pressure steps in Pa(a) (pascal, absolute).
-    * `pout_steps`: Outlet pressure steps in Pa(a) (pascal, absolute).
-    * `ΔT_steps`: Parameters of the gradient function. Temperature difference in °C.
-    * `x₀_steps`: Parameters of the gradient function. Spatial offset of the gradient in m.
-    * `L₀_steps`: Parameters of the gradient function. Distance over which the temperature difference in ΔT_steps is measured, in m.
-    * `α_steps`: Parameters of the gradient function. Factor describing the gradient profile. 
-    * `Tcontrol`: Option defining at which point of the column the temperature
-    program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
-    * `L`: Length of the capillary measured in m (meter).
+# Arguments
+* `time_steps`: Time steps in s (seconds). 
+* `temp_steps`: Temperature steps in °C (degree celsius).
+* `pin_steps`: Inlet pressure steps in Pa(a) (pascal, absolute).
+* `pout_steps`: Outlet pressure steps in Pa(a) (pascal, absolute).
+* `ΔT_steps`: Parameters of the gradient function. Temperature difference in °C.
+* `x₀_steps`: Parameters of the gradient function. Spatial offset of the gradient in m.
+* `L₀_steps`: Parameters of the gradient function. Distance over which the temperature difference in ΔT_steps is measured, in m.
+* `α_steps`: Parameters of the gradient function. Factor describing the gradient profile. 
+* `Tcontrol`: Option defining at which point of the column the temperature
+program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
+* `L`: Length of the capillary measured in m (meter).
 
-    The length of the arrays `time_steps`, `temp_steps`, `pin_steps`, `pout_steps`, `ΔT_steps`, `x₀_steps`, `L₀_steps` and `α_steps`
-    have to be the same.
-    
-    The arguments `Tcontrol` and `L` are used to construct the thermal gradient
-    function `gf(x)` and the temperature interpolation `T_itp(x,t)`.
+The length of the arrays `time_steps`, `temp_steps`, `pin_steps`, `pout_steps`, `ΔT_steps`, `x₀_steps`, `L₀_steps` and `α_steps`
+have to be the same.
 
-    # Examples
-    ```julia
-	julia> Program([0.0, 60.0, 300.0, 120.0],
-            [40.0, 40.0, 320.0, 320.0],
-            300000.0.*ones(4),
-            zeros(4),
-	        [20.0, 20.0, 20.0, 20.0],
-            zeros(4),
-            10.0.*ones(4),
-            [0.0, -2.0, -5.0, -5.0],
-            "inlet",
-            10.0)
-	```
+The arguments `Tcontrol` and `L` are used to construct the thermal gradient
+function `gf(x)` and the temperature interpolation `T_itp(x,t)`.
+
+# Examples
+```julia
+julia> Program([0.0, 60.0, 300.0, 120.0],
+        [40.0, 40.0, 320.0, 320.0],
+        300000.0.*ones(4),
+        zeros(4),
+        [20.0, 20.0, 20.0, 20.0],
+        zeros(4),
+        10.0.*ones(4),
+        [0.0, -2.0, -5.0, -5.0],
+        "inlet",
+        10.0)
+```
 """
 function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, ΔT_steps::Array{<:Real, 1}, x₀_steps::Array{<:Real, 1}, L₀_steps::Array{<:Real, 1}, α_steps::Array{<:Real, 1}, Tcontrol, L)
     # function to construct the Program structure
@@ -319,29 +307,29 @@ end
 """
     Program(time_steps, temp_steps, pin_steps, pout_steps, L)
 
-    Construct the structure `Program` with given values for the case
-    without a thermal gradient. 
+Construct the structure `Program` with given values for the case
+without a thermal gradient. 
 
-    # Arguments
-    * `time_steps::Array{<:Real, 1}`: Time steps in s (seconds). 
-    * `temp_steps::Array{<:Real, 1}`: Temperature steps in °C (degree celsius).
-    * `pin_steps::Array{<:Real, 1}`: Inlet pressure steps in Pa(a) (pascal, absolute).
-    * `pout_steps::Array{<:Real, 1}`: Outlet pressure steps in Pa(a) (pascal, absolute).
-    * `L`: Length of the capillary measured in m (meter).
+# Arguments
+* `time_steps::Array{<:Real, 1}`: Time steps in s (seconds). 
+* `temp_steps::Array{<:Real, 1}`: Temperature steps in °C (degree celsius).
+* `pin_steps::Array{<:Real, 1}`: Inlet pressure steps in Pa(a) (pascal, absolute).
+* `pout_steps::Array{<:Real, 1}`: Outlet pressure steps in Pa(a) (pascal, absolute).
+* `L`: Length of the capillary measured in m (meter).
 
-    The length of the arrays `time_steps`, `temp_steps`, `pin_steps` and `pout_steps`
-    have to be the same.
-    
-    The argument `L` is used to construct the temperature interpolation `T_itp(x,t)`.
+The length of the arrays `time_steps`, `temp_steps`, `pin_steps` and `pout_steps`
+have to be the same.
 
-    # Examples
-    ```julia
-	julia> Program([0.0, 60.0, 300.0, 120.0],
-            [40.0, 40.0, 320.0, 320.0],
-            300000.0.*ones(4),
-            zeros(4),
-            10.0)
-	```
+The argument `L` is used to construct the temperature interpolation `T_itp(x,t)`.
+
+# Examples
+```julia
+julia> Program([0.0, 60.0, 300.0, 120.0],
+        [40.0, 40.0, 320.0, 320.0],
+        300000.0.*ones(4),
+        zeros(4),
+        10.0)
+```
 """
 function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, L)
     # function to construct the Program structure
@@ -359,36 +347,36 @@ end
 """
     Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false)
 
-    Construct the structure `Options` with default values. 
+Construct the structure `Options` with default values. 
 
-    # Arguments
-    * `alg`: The algorithm used for the ODE solver. The algorithms
-      `OwrenZen3()`, `OwrenZen4()` and `OwrenZen5()` are recommended.
-    * `abstol`: The absolute tolerance for the ODE solver. Recommended value
-      1e-6 to 1e-8.
-    * `reltol`: The relative tolerance for the ODE solver. Recommended value
-    1e-3 to 1e-5. 
-    * `Tcontrol`: Option defining at which point of the column the temperature
-      program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
-    * `odesys`: Combine the ODEs for migration and peak-width into a system of
-      ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
-    * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
-      or with a gradient (`ng = false`). This distinction is made because of
-      partly manuall differentiation (problem of automatic differentiation with
-      integrals, e.g. in the `flow_restriction()` function. -> TODO: test
-      package Quadrature.jl as alternative to QuadGK.jl for integration)
+# Arguments
+* `alg`: The algorithm used for the ODE solver. The algorithms
+    `OwrenZen3()`, `OwrenZen4()` and `OwrenZen5()` are recommended.
+* `abstol`: The absolute tolerance for the ODE solver. Recommended value
+    1e-6 to 1e-8.
+* `reltol`: The relative tolerance for the ODE solver. Recommended value
+1e-3 to 1e-5. 
+* `Tcontrol`: Option defining at which point of the column the temperature
+    program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
+* `odesys`: Combine the ODEs for migration and peak-width into a system of
+    ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`)
+    or with a gradient (`ng = false`). This distinction is made because of
+    partly manuall differentiation (problem of automatic differentiation with
+    integrals, e.g. in the `flow_restriction()` function. -> TODO: test
+    package Quadrature.jl as alternative to QuadGK.jl for integration)
 
-    For more informations about the arguments `alg`, `abstol` and `reltol` see
-    the documentation of the DifferentialEquations.jl package.
+For more informations about the arguments `alg`, `abstol` and `reltol` see
+the documentation of the DifferentialEquations.jl package.
 
-    # Examples
-    ```julia
-	julia> Options()
-	```
+# Examples
+```julia
+julia> Options()
+```
 
-    ```julia
-	julia> Options(abstol=1e-8, Tcontrol="outlet")
-	```
+```julia
+julia> Options(abstol=1e-8, Tcontrol="outlet")
+```
 """
 function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false)
     opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng)
@@ -398,36 +386,36 @@ end
 """
     Options(alg, abstol, reltol, Tcontrol, odesys; ng=false)
 
-    Construct the structure `Options` with given values. 
+Construct the structure `Options` with given values. 
 
-    # Arguments
-    * `alg`: The algorithm used for the ODE solver. The algorithms
-      `OwrenZen3()`, `OwrenZen4()` and `OwrenZen5()` are recommended.
-    * `abstol`: The absolute tolerance for the ODE solver. Recommended value
-      1e-6 to 1e-8.
-    * `reltol`: The relative tolerance for the ODE solver. Recommended value
-    1e-3 to 1e-5. 
-    * `Tcontrol`: Option defining at which point of the column the temperature
-      program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
-    * `odesys`: Combine the ODEs for migration and peak-width into a system of
-      ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
-    * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
-      or with a gradient (`ng = false`). This distinction is made because of
-      partly manuall differentiation (problem of automatic differentiation with
-      integrals, e.g. in the `flow_restriction()` function. -> TODO: test
-      package Quadrature.jl as alternative to QuadGK.jl for integration)
+# Arguments
+* `alg`: The algorithm used for the ODE solver. The algorithms
+    `OwrenZen3()`, `OwrenZen4()` and `OwrenZen5()` are recommended.
+* `abstol`: The absolute tolerance for the ODE solver. Recommended value
+    1e-6 to 1e-8.
+* `reltol`: The relative tolerance for the ODE solver. Recommended value
+1e-3 to 1e-5. 
+* `Tcontrol`: Option defining at which point of the column the temperature
+    program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
+* `odesys`: Combine the ODEs for migration and peak-width into a system of
+    ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`)
+    or with a gradient (`ng = false`). This distinction is made because of
+    partly manuall differentiation (problem of automatic differentiation with
+    integrals, e.g. in the `flow_restriction()` function. -> TODO: test
+    package Quadrature.jl as alternative to QuadGK.jl for integration)
 
-    For more informations about the arguments `alg`, `abstol` and `reltol` see
-    the documentation of the DifferentialEquations.jl package.
+For more informations about the arguments `alg`, `abstol` and `reltol` see
+the documentation of the DifferentialEquations.jl package.
 
-    # Examples
-    ```julia
-	julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true)
-	```
+# Examples
+```julia
+julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true)
+```
 
-    ```julia
-	julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true; ng=true)
-	```
+```julia
+julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true; ng=true)
+```
 """
 function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false)
     opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng)
@@ -444,46 +432,42 @@ constructor_Options = Options
 """
     gradient(x, a; Tcontrol="inlet")
 
-    Defines the gradient of the column diameter, film thickness or
-    temperature along the GC column.  
+Defines the gradient of the column diameter, film thickness or
+temperature along the GC column.  
 
-    # Arguments
-    * `x`: Position along the GC column, in m.
-    * `a`: Parameters of the gradient function
+# Arguments
+* `x`: Position along the GC column, in m.
+* `a`: Parameters of the gradient function
 
-    The form of `a` decides the actual used function for the gradient. The
-    following options are realized:
-    * `a` is a single value (e.g. Float or Int): The gradient function is
-      constant for all positions `x` with the value of `a`. 
-    * `a` is a 1D-array of length = 4: The gradient function is a exponential
-      function. The 4 values of `a`:
-        `a = [f₀, x₀, L₀, α]` 
-        with 
-        * `f₀`: Start value at `x = x₀`.
-        * `x₀`: Shift in `x` position.
-        * `L₀`: Distance over which the value drops from f₀ to 0.
-        * `α`: Factor describing the gradient profile.
-        if `α <= 0` 
-          `f = f₀ .* (1 .- exp.(α.*(1 .- (x.-x₀) ./ L₀)) + (1 .- (x.-x₀) ./ L₀)
-          .* exp.(α))`
-        if `α > 0`
-            `f = f₀ .* (exp.(-α.*(x.-x₀) ./ L₀) .- (x.-x₀) ./ L₀ .* exp.(-α))` 
-    * `a` is a 2D-array with size = (n, 4): The gradient function is an
-      exponential function. The 4 entrys have the same meaning as above, but their
-      values can change over the times defined in the `time_steps` of the
-      Program structure. At these `time_steps[i]` the gradient function is
-      described by the corresponding parameters `a[i,:]`. Between the
-      `time_steps[i]` and `time_steps[j]` the value of the gradient function at position `x` is linear
-      interpolated from the gradien functions defined by `a[i,:]` and `a[j,:]`.
+The form of `a` decides the actual used function for the gradient. The
+following options are realized:
+* `a` is a single value (e.g. Float or Int): The gradient function is constant for all positions `x` with the value of `a`. 
+* `a` is a 1D-array of length = 4: The gradient function is a exponential function. The 4 values of `a`: `a = [f₀, x₀, L₀, α]` with 
+    * `f₀`: Start value at `x = x₀`.
+    * `x₀`: Shift in `x` position.
+    * `L₀`: Distance over which the value drops from f₀ to 0.
+    * `α`: Factor describing the gradient profile.
+    if `α <= 0` 
+        `f = f₀ .* (1 .- exp.(α.*(1 .- (x.-x₀) ./ L₀)) + (1 .- (x.-x₀) ./ L₀)
+        .* exp.(α))`
+    if `α > 0`
+        `f = f₀ .* (exp.(-α.*(x.-x₀) ./ L₀) .- (x.-x₀) ./ L₀ .* exp.(-α))` 
+* `a` is a 2D-array with size = (n, 4): The gradient function is an
+    exponential function. The 4 entrys have the same meaning as above, but their
+    values can change over the times defined in the `time_steps` of the
+    Program structure. At these `time_steps[i]` the gradient function is
+    described by the corresponding parameters `a[i,:]`. Between the
+    `time_steps[i]` and `time_steps[j]` the value of the gradient function at position `x` is linear
+    interpolated from the gradien functions defined by `a[i,:]` and `a[j,:]`.
 
-    # Examples
-    ```julia
-	julia> d(x) = gradient(x, 0.1e-3)
-	```
+# Examples
+```julia
+julia> d(x) = gradient(x, 0.1e-3)
+```
 
-    ```julia
-	julia> gf(x) = gradient(x, [[20.0, 20.0, 20.0, 20.0] zeros(4) 10.0.*ones(4) [0.0, -2.0, -5.0, -5.0]])
-	```
+```julia
+julia> gf(x) = gradient(x, [[20.0, 20.0, 20.0, 20.0] zeros(4) 10.0.*ones(4) [0.0, -2.0, -5.0, -5.0]])
+```
 """
 # gradient functions
 function gradient(x, a; Tcontrol="inlet")
@@ -545,28 +529,25 @@ end
 """
     temperature_interpolation(time_steps, temp_steps, gradient_function, L)
 
-    Construct the temperature function depending on position `x` and
-  time `t`.  
+Construct the temperature function depending on position `x` and
+time `t`.  
 
-    # Arguments
-    * `time_steps::Array{<:Real,1}`: Time steps in s (seconds). 
-    * `temp_steps::Array{<:Real,1}`: Temperature steps in °C (degree celsius).
-    * `gf::Function`: Gradient function `gf(x, a_gf)`, describes the thermal gradient.
-    * `L::Float64`: Length of the capillary measured in m (meter).
+# Arguments
+* `time_steps::Array{<:Real,1}`: Time steps in s (seconds). 
+* `temp_steps::Array{<:Real,1}`: Temperature steps in °C (degree celsius).
+* `gf::Function`: Gradient function `gf(x, a_gf)`, describes the thermal gradient.
+* `L::Float64`: Length of the capillary measured in m (meter).
 
-    For the spatial dependency of the interpolated temperature `T_ipt(x,t)` the
-    gradient function `gf` is calculated every 1e-3 m (1 mm). Positions
-    inbetween are linear interpolated. For the temporal dependency the
-    temperatures `temp_steps` defined at the `time_steps` are linear
-    interpolated over time `t`.   
+For the spatial dependency of the interpolated temperature `T_ipt(x,t)` the
+gradient function `gf` is calculated every 1e-3 m (1 mm). Positions
+inbetween are linear interpolated. For the temporal dependency the
+temperatures `temp_steps` defined at the `time_steps` are linear
+interpolated over time `t`.   
 
-    # Examples
-    ```julia
-	julia> T_itp = temperature_interpolation([0.0, 60.0, 300.0, 120.0], 
-                                        [40.0, 40.0, 320.0, 320.0],
-                                        gf,
-                                        10.0)
-	```
+# Examples
+```julia
+julia> T_itp = temperature_interpolation([0.0, 60.0, 300.0, 120.0], [40.0, 40.0, 320.0, 320.0], gf, 10.0)
+```
 """
 function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Array{<:Real,1}, gradient_function::Function, L)
 	T(x) = temp_steps .+ gradient_function(x) 
@@ -585,20 +566,20 @@ end
 """
     pressure_interpolation(time_steps, press_steps)
 
-    Construct the pressure function depending on time `t`.  
+Construct the pressure function depending on time `t`.  
 
-    # Arguments
-    * `time_steps::Array{<:Real,1}`: Time steps in s (seconds). 
-    * `press_steps::Array{<:Real,1}`: Pressure steps in Pa (Pascal).
+# Arguments
+* `time_steps::Array{<:Real,1}`: Time steps in s (seconds). 
+* `press_steps::Array{<:Real,1}`: Pressure steps in Pa (Pascal).
 
-    The pressure between the `time_steps` is linear interpolated between the
-    corresponding values of `press_steps`  
+The pressure between the `time_steps` is linear interpolated between the
+corresponding values of `press_steps`  
 
-    # Examples
-    ```julia
-	julia> pin_itp = pressure_interpolation([0.0, 60.0, 300.0, 120.0], 
-                                        [300000.0, 300000.0, 400000.0, 400000.0])
-	```
+# Examples
+```julia
+julia> pin_itp = pressure_interpolation([0.0, 60.0, 300.0, 120.0], 
+                                    [300000.0, 300000.0, 400000.0, 400000.0])
+```
 """
 function pressure_interpolation(time_steps::Array{<:Real,1}, press_steps::Array{<:Real,1})
     p_itp = LinearInterpolation((cumsum(time_steps), ), press_steps, extrapolation_bc=Flat())
@@ -694,23 +675,23 @@ end
 """
     load_solute_database(db_path, db, sp, gas, solutes, t₀, τ₀) 
 
-    Load the data of `solutes` for the stationary phase `sp` and the mobile
-    phase `gas` from the database file `db` (located in `db_path`) into an array
-    of the structure `Substance`. 
+Load the data of `solutes` for the stationary phase `sp` and the mobile
+phase `gas` from the database file `db` (located in `db_path`) into an array
+of the structure `Substance`. 
 
-    # Arguments
-    * `db_path::String`: Path to the database file.
-    * `db::String`: Name of the database file. 
-    * `sp::String`: Name of the stationary phase.
-    * `gas::String`: Name of the mobile phase.
-    * `solutes::Array{<:AbstractString,1}`: Name of the solutes.
-    * `t₀::Array{Float64,1}`: Initial start times of the solutes.
-    * `τ₀::Array{Float64,1}`: Initial peak widths of the solutes. 
+# Arguments
+* `db_path::String`: Path to the database file.
+* `db::String`: Name of the database file. 
+* `sp::String`: Name of the stationary phase.
+* `gas::String`: Name of the mobile phase.
+* `solutes::Array{<:AbstractString,1}`: Name of the solutes.
+* `t₀::Array{Float64,1}`: Initial start times of the solutes.
+* `τ₀::Array{Float64,1}`: Initial peak widths of the solutes. 
 
-    # Examples
-    ```julia
-	julia> sub = load_solute_database("path/to/the/file", "db.csv", "DB5", "He", ["C10", "C11"], [0.0, 0.0], [0.5, 0.5])
-	```
+# Examples
+```julia
+julia> sub = load_solute_database("path/to/the/file", "db.csv", "DB5", "He", ["C10", "C11"], [0.0, 0.0], [0.5, 0.5])
+```
 """
 function load_solute_database(db_path::String, db::String, sp::String, gas::String, solutes::Array{<:AbstractString,1}, t₀::Array{Float64,1}, τ₀::Array{Float64,1})
 	# load the information about a solute from a data base and collecting these informations in the 
@@ -731,17 +712,17 @@ end
 """
     all_solutes(sp, db) 
 
-    Extract the name of all solutes for which data in a database `db` and the
-    stationay phase `sp` is available. 
+Extract the name of all solutes for which data in a database `db` and the
+stationay phase `sp` is available. 
 
-    # Arguments
-    * `sp`: Name of the stationary phase.
-    * `db`: DataFrame of the database.
+# Arguments
+* `sp`: Name of the stationary phase.
+* `db`: DataFrame of the database.
 
-    # Examples
-    ```julia
-	julia> all = all_solutes("DB5", db)
-	```
+# Examples
+```julia
+julia> all = all_solutes("DB5", db)
+```
 """
 function all_solutes(sp, db)
 	db_filter = filter([:Phase] => x -> x==sp, db)
@@ -752,22 +733,22 @@ end
 """
     diffusivity(M, Cn, Hn, On, Nn, Rn, gas)
 
-    Calculate the diffusivity `Dag` of solute `a` in gas `g` using the
-    emperical Fuller-Schettler-Giddings model [1].
-    
-    [1] Fuller, Edward N.; Ensley, Keith; Giddings, J. Calvin, Diffusion of
-    Halogenated Hydrocarbons in Helium. The Effect of Structure on Collision
-    Cross Sections, The Journal of Physical Chemistry, Volume 73, Issue 11,
-    1969, 3679–3685
+Calculate the diffusivity `Dag` of solute `a` in gas `g` using the
+emperical Fuller-Schettler-Giddings model [1].
 
-    # Arguments
-    * `M`: Molar mass of the solute.
-    * `Cn`: Number of carbon atoms of the solute.
-    * `Hn`: Number of hydrogen atoms of the solute.
-    * `On`: Number of oxygen atoms of the solute.
-    * `Nn`: Number of nitrogen atoms of the solute.
-    * `Rn`: Number of closed rings of the structure of the solute.
-    * `gas`: The name of the mobile phase. Allowed values: He, H2 or N2.
+[1] Fuller, Edward N.; Ensley, Keith; Giddings, J. Calvin, Diffusion of
+Halogenated Hydrocarbons in Helium. The Effect of Structure on Collision
+Cross Sections, The Journal of Physical Chemistry, Volume 73, Issue 11,
+1969, 3679–3685
+
+# Arguments
+* `M`: Molar mass of the solute.
+* `Cn`: Number of carbon atoms of the solute.
+* `Hn`: Number of hydrogen atoms of the solute.
+* `On`: Number of oxygen atoms of the solute.
+* `Nn`: Number of nitrogen atoms of the solute.
+* `Rn`: Number of closed rings of the structure of the solute.
+* `gas`: The name of the mobile phase. Allowed values: He, H2 or N2.
 """
 function diffusivity(M, Cn, Hn, On, Nn, Rn, gas)
     # calculates diffusitivity Dag of an analyte in a gas
@@ -847,26 +828,26 @@ end
 """
     flow_restriction(x, t, T_itp, d, gas; ng=false)
 
-    Calculate the flow restriction ``κ`` up to position `x` at time `t`.
+Calculate the flow restriction ``κ`` up to position `x` at time `t`.
 
-    # Arguments
-    * `x`: Position along the GC column, in m.
-    * `t`: Time in s.
-    * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-    * `d`: Diameter of the GC column, in m. Can be a function of position `x`.
-    * `gas`: Name of the mobile phase gas.
-    * `ng`: Option to calculate the simulation without a gradient (`ng = true`,
-      eq. 2)
-    or with a gradient (`ng = false`, eq. 1).
+# Arguments
+* `x`: Position along the GC column, in m.
+* `t`: Time in s.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`.
+* `d`: Diameter of the GC column, in m. Can be a function of position `x`.
+* `gas`: Name of the mobile phase gas.
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`,
+    eq. 2)
+or with a gradient (`ng = false`, eq. 1).
 
-    ``κ(x,t) = \\int_0^x \\frac{η(y,t) T(y,t)}{d(y)^4}dy``
-    Eq. 1
-    
-    ``κ(x,t) = \\frac{η(t) T(t) x}{d^4}`` Eq. 2
+``κ(x,t) = \\int_0^x \\frac{η(y,t) T(y,t)}{d(y)^4}dy``
+Eq. 1
 
-    with ``η(x,t)`` the viscosity of the mobile phase gas.
+``κ(x,t) = \\frac{η(t) T(t) x}{d^4}`` Eq. 2
 
-    See also: [`viscosity`](@ref)
+with ``η(x,t)`` the viscosity of the mobile phase gas.
+
+See also: [`viscosity`](@ref)
 """
 function flow_restriction(x, t, T_itp, d, gas; ng=false)
     if ng==true
@@ -880,22 +861,22 @@ end
 """
     viscosity(x, t, T_itp, gas)
 
-    Calculate the (dynamic) viscosity of the mobile phase gas at position `x`
-    at time `t` in Pa s.
+Calculate the (dynamic) viscosity of the mobile phase gas at position `x`
+at time `t` in Pa s.
 
-    # Arguments
-    * `x`: Position along the GC column, in m.
-    * `t`: Time in s.
-    * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-    * `gas`: Name of the mobile phase gas.
+# Arguments
+* `x`: Position along the GC column, in m.
+* `t`: Time in s.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`.
+* `gas`: Name of the mobile phase gas.
 
-    ``η(x,t) = η_{st}\\left(\\frac{T(x,t)}{T_{st}}\\right)^{(ξ_0 + ξ_1 \\frac{T(x,t)-T_{st}}{T_{st}})}`` 
+``η(x,t) = η_{st}\\left(\\frac{T(x,t)}{T_{st}}\\right)^{(ξ_0 + ξ_1 \\frac{T(x,t)-T_{st}}{T_{st}})}`` 
 
-    with ``η_{st}``, ``ξ_0`` and ``ξ_1`` parameters dependent on the
-    mobile phase gas [1].
+with ``η_{st}``, ``ξ_0`` and ``ξ_1`` parameters dependent on the
+mobile phase gas [1].
 
-    [1] Blumberg, Leonid M., Temperature-Programmed Gas Chromatography,
-    Wiley-VCH, 2010.
+[1] Blumberg, Leonid M., Temperature-Programmed Gas Chromatography,
+Wiley-VCH, 2010.
 """
 function viscosity(x, t, T_itp, gas)
     # using empiric model from Blumberg.2010
@@ -926,19 +907,19 @@ end
 """
     viscosity(T, gas)
 
-    Calculate the (dynamic) viscosity of the mobile phase gas at temperature `T` in Pa s.
+Calculate the (dynamic) viscosity of the mobile phase gas at temperature `T` in Pa s.
 
-    # Arguments
-    * `T`: Temperature in K.
-    * `gas`: Name of the mobile phase gas.
+# Arguments
+* `T`: Temperature in K.
+* `gas`: Name of the mobile phase gas.
 
-    ``η(x,t) = η_{st}\\left(\\frac{T)}{T_{st}}\right)^{(ξ_0 + ξ_1 \\frac{T-T_{st}}{T_{st}})}`` 
+``η(x,t) = η_{st}\\left(\\frac{T)}{T_{st}}\right)^{(ξ_0 + ξ_1 \\frac{T-T_{st}}{T_{st}})}`` 
 
-    with ``η_{st}``, ``ξ_0`` and ``ξ_1`` parameters dependent on the
-    mobile phase gas [1].
+with ``η_{st}``, ``ξ_0`` and ``ξ_1`` parameters dependent on the
+mobile phase gas [1].
 
-    [1] Blumberg, Leonid M., Temperature-Programmed Gas Chromatography,
-    Wiley-VCH, 2010.
+[1] Blumberg, Leonid M., Temperature-Programmed Gas Chromatography,
+Wiley-VCH, 2010.
 """
 function viscosity(T::Float64, gas::String)
     # using empiric model from Blumberg.2010
@@ -968,17 +949,17 @@ end
 """
     holdup_time(T, pin, pout, L, d, gas)
 
-    Calculate the hold-up time in s without a gradient.
+Calculate the hold-up time in s without a gradient.
 
-    # Arguments
-    * `T`: Temperature in K.
-    * `pin`: Inlet pressure in Pa(a).
-    * `pout`: Outlet pressure in Pa(g).
-    * `L`: Length of the capillary measured in m (meter).
-    * `d`: Diameter of the GC column, in m.
-    * `gas`: Name of the mobile phase gas.
+# Arguments
+* `T`: Temperature in K.
+* `pin`: Inlet pressure in Pa(a).
+* `pout`: Outlet pressure in Pa(g).
+* `L`: Length of the capillary measured in m (meter).
+* `d`: Diameter of the GC column, in m.
+* `gas`: Name of the mobile phase gas.
 
-    ``t_M = \\frac{128}{3}\\frac{L^2}{d^2}η\\frac{p_{in}^3-p_{out}^3}{(p_{in}^2-p_{out}^2)^2}``
+``t_M = \\frac{128}{3}\\frac{L^2}{d^2}η\\frac{p_{in}^3-p_{out}^3}{(p_{in}^2-p_{out}^2)^2}``
 """
 function holdup_time(T::Float64, pin::Float64, pout::Float64, L::Float64, d::Float64, gas::String)
     # hold-up time at temperature T (non-gradient)
@@ -990,26 +971,26 @@ end
 """
     holdup_time(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
 
-    Calculate the hold-up time in s at time `t` with a gradient.
+Calculate the hold-up time in s at time `t` with a gradient.
 
-    # Arguments
-    * `t`: Time in s.
-    * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-    * `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
-    * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
-    * `L`: Length of the capillary measured in m (meter).
-    * `d`: Diameter of the GC column, in m.
-    * `gas`: Name of the mobile phase gas.
-    * `ng`: Option to calculate the simulation without a gradient (`ng = true`,
-      eq. 2)
-    or with a gradient (`ng = false`, eq. 1).
+# Arguments
+* `t`: Time in s.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`.
+* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
+* `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
+* `L`: Length of the capillary measured in m (meter).
+* `d`: Diameter of the GC column, in m.
+* `gas`: Name of the mobile phase gas.
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`,
+    eq. 2)
+or with a gradient (`ng = false`, eq. 1).
 
-    ``t_M(t) = 64\\frac{κ_L(t)}{p_{in}(t)^2-p_{out}(t)^2} \\int_0^L
-    d(y)^2\\frac{p(y,t)}{T(y,t)}dy`` Eq. 1
+``t_M(t) = 64\\frac{κ_L(t)}{p_{in}(t)^2-p_{out}(t)^2} \\int_0^L
+d(y)^2\\frac{p(y,t)}{T(y,t)}dy`` Eq. 1
 
-    ``t_M(t) =
-    \\frac{128}{3}\\frac{L^2}{d^2}η(t)\\frac{p_{in}(t)^3-p_{out}(t)^3}{(p_{in}(t)^2-p_{out}(t)^2)^2}``
-    Eq. 2
+``t_M(t) =
+\\frac{128}{3}\\frac{L^2}{d^2}η(t)\\frac{p_{in}(t)^3-p_{out}(t)^3}{(p_{in}(t)^2-p_{out}(t)^2)^2}``
+Eq. 2
 """
 function holdup_time(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
     # hold-up time at time t in a temperature program with potential thermal gradient
@@ -1027,22 +1008,22 @@ end
 """
     flow(T, pin, pout, L, d, gas)
 
-    Calculate the normalized flow through the GC column in m³/s without a gradient.
+Calculate the normalized flow through the GC column in m³/s without a gradient.
 
-    # Arguments
-    * `T`: Temperature in K.
-    * `pin`: Inlet pressure in Pa(a).
-    * `pout`: Outlet pressure in Pa(g).
-    * `L`: Length of the capillary measured in m (meter).
-    * `d`: Diameter of the GC column, in m.
-    * `gas`: Name of the mobile phase gas.
+# Arguments
+* `T`: Temperature in K.
+* `pin`: Inlet pressure in Pa(a).
+* `pout`: Outlet pressure in Pa(g).
+* `L`: Length of the capillary measured in m (meter).
+* `d`: Diameter of the GC column, in m.
+* `gas`: Name of the mobile phase gas.
 
-    ``F =
-    \\frac{π}{256}\\frac{T_n}{p_n}\\frac{d^4}{L}\\frac{p_{in}^2-p_{out}^2}{η T}``
+``F =
+\\frac{π}{256}\\frac{T_n}{p_n}\\frac{d^4}{L}\\frac{p_{in}^2-p_{out}^2}{η T}``
 
-    with ``T_n`` the normalized temperature (``T_n=(25 + 273.15)``K), ``p_n``
-    the normalized pressure (``p_n = 101300`` Pa(a)) and ``η`` the viscosity
-    the mobile phase gas at temperature ``T``.
+with ``T_n`` the normalized temperature (``T_n=(25 + 273.15)``K), ``p_n``
+the normalized pressure (``p_n = 101300`` Pa(a)) and ``η`` the viscosity
+the mobile phase gas at temperature ``T``.
 """
 function flow(T::Float64, pin::Float64, pout::Float64, L::Float64, d::Float64, gas::String)
 	# normalized Flow at temperature T (non-gradient)
@@ -1054,33 +1035,33 @@ end
 """
     flow(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
 
-    Calculate the normalized flow through the GC column in m³/s at time `t`.
+Calculate the normalized flow through the GC column in m³/s at time `t`.
 
-    # Arguments
-    * `t`: Time in s.
-    * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-    * `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
-    * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
-    * `L`: Length of the capillary measured in m (meter).
-    * `d`: Diameter of the GC column, in m.
-    * `gas`: Name of the mobile phase gas.
-    * `ng`: Option to calculate the simulation without a gradient (`ng = true`,
-      eq. 2)
-    or with a gradient (`ng = false`, eq. 1).
+# Arguments
+* `t`: Time in s.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`.
+* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
+* `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
+* `L`: Length of the capillary measured in m (meter).
+* `d`: Diameter of the GC column, in m.
+* `gas`: Name of the mobile phase gas.
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`,
+    eq. 2)
+or with a gradient (`ng = false`, eq. 1).
 
-    ``F(t) =
-    \\frac{π}{256}\\frac{T_n}{p_n}\\frac{p_{in}(t)^2-p_{out}(t)^2}{κ_L(t)}``
-    Eq. 1
+``F(t) =
+\\frac{π}{256}\\frac{T_n}{p_n}\\frac{p_{in}(t)^2-p_{out}(t)^2}{κ_L(t)}``
+Eq. 1
 
-    ``F(t) =
-    \\frac{π}{256}\\frac{T_n}{p_n}\\frac{d^4}{L}\\frac{p_{in}(t)^2-p_{out}(t)^2}{η(t)
-    T(t)}``
-    Eq. 2
+``F(t) =
+\\frac{π}{256}\\frac{T_n}{p_n}\\frac{d^4}{L}\\frac{p_{in}(t)^2-p_{out}(t)^2}{η(t)
+T(t)}``
+Eq. 2
 
-    with ``T_n`` the normalized temperature (``T_n=(25 + 273.15)``K), ``p_n``
-    the normalized pressure (``p_n = 101300`` Pa(a)), ``κ_L`` the flow
-    restriction of the column and ``η`` the viscosity
-    the mobile phase gas at temperature ``T``.
+with ``T_n`` the normalized temperature (``T_n=(25 + 273.15)``K), ``p_n``
+the normalized pressure (``p_n = 101300`` Pa(a)), ``κ_L`` the flow
+restriction of the column and ``η`` the viscosity
+the mobile phase gas at temperature ``T``.
 """
 function flow(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
 	# normalized Flow at time t in a temperature program with potential thermal
@@ -1099,28 +1080,28 @@ end
 """
     mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
 
-    Calculate the residency (the inverse velocity) of the mobile phase at
-    position `x` at time `t`.
+Calculate the residency (the inverse velocity) of the mobile phase at
+position `x` at time `t`.
 
-    # Arguments
-    * `x`: Position along the GC column, in m.
-    * `t`: Time in s.
-    * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-    * `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
-    * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
-    * `L`: Length of the capillary measured in m (meter).
-    * `d`: Diameter of the GC column, in m.
-    * `gas`: Name of the mobile phase gas.
-    * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
-    or with a gradient (`ng = false`).
+# Arguments
+* `x`: Position along the GC column, in m.
+* `t`: Time in s.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`.
+* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
+* `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
+* `L`: Length of the capillary measured in m (meter).
+* `d`: Diameter of the GC column, in m.
+* `gas`: Name of the mobile phase gas.
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`)
+or with a gradient (`ng = false`).
 
-    ``r_M(x,t) = 64 \\frac{d^2 κ_L}{T(x,t)}\\frac{p(x,t)}{p_{in}^2-p_{out}^2}``
+``r_M(x,t) = 64 \\frac{d^2 κ_L}{T(x,t)}\\frac{p(x,t)}{p_{in}^2-p_{out}^2}``
 
-    with ``T_n`` the normalized temperature (``T_n=(25 + 273.15)``K), ``p_n``
-    the normalized pressure (``p_n = 101300`` Pa(a)), ``κ_L`` the flow
-    restriction of the column and ``p(x,t)`` the local pressure.
+with ``T_n`` the normalized temperature (``T_n=(25 + 273.15)``K), ``p_n``
+the normalized pressure (``p_n = 101300`` Pa(a)), ``κ_L`` the flow
+restriction of the column and ``p(x,t)`` the local pressure.
 
-    See also: [`pressure`](@ref), [`flow_restriction`](@ref)
+See also: [`pressure`](@ref), [`flow_restriction`](@ref)
 """
 function mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
     pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng)
@@ -1132,34 +1113,34 @@ end
 """
     residency(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp,  φ₀; ng=false)
 
-    Calculate the residency (the inverse velocity) of the solute at
-    position `x` at time `t`.
+Calculate the residency (the inverse velocity) of the solute at
+position `x` at time `t`.
 
-    # Arguments
-    * `x`: Position along the GC column, in m.
-    * `t`: Time in s.
-    * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-    * `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
-    * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
-    * `L`: Length of the capillary measured in m (meter).
-    * `d`: Diameter of the GC column, in m.
-    * `df`: Film thickness of the GC column, in m.
-    * `gas`: Name of the mobile phase gas.
-    * `Tchar`: Characteristic temperature of the solute, in K.
-    * `θchar`: Characteristic parameters of the solute, in °C.
-    * `ΔCp`: Change of the isobaric heat capacity of the solute moving from the mobile to the
-    stationary phase, in J mol⁻¹ K⁻¹.
-    * `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the
-    thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
-    * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
-    or with a gradient (`ng = false`).
+# Arguments
+* `x`: Position along the GC column, in m.
+* `t`: Time in s.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`.
+* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
+* `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
+* `L`: Length of the capillary measured in m (meter).
+* `d`: Diameter of the GC column, in m.
+* `df`: Film thickness of the GC column, in m.
+* `gas`: Name of the mobile phase gas.
+* `Tchar`: Characteristic temperature of the solute, in K.
+* `θchar`: Characteristic parameters of the solute, in °C.
+* `ΔCp`: Change of the isobaric heat capacity of the solute moving from the mobile to the
+stationary phase, in J mol⁻¹ K⁻¹.
+* `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the
+thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`)
+or with a gradient (`ng = false`).
 
-    ``r(x,t) = r_M(x,t) \\left(1+k(x,t)\\right)``
+``r(x,t) = r_M(x,t) \\left(1+k(x,t)\\right)``
 
-    with ``r_M`` the residency of the mobile phase and ``k(x,t)`` the retention
-    factor of the solute on the stationary phase.
+with ``r_M`` the residency of the mobile phase and ``k(x,t)`` the retention
+factor of the solute on the stationary phase.
 
-    See also: [`mobile_phase_residency`](@ref), [`retention_factor`](@ref)
+See also: [`mobile_phase_residency`](@ref), [`retention_factor`](@ref)
 """
 function residency(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=false)
     r = mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng)*(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀))
@@ -1169,30 +1150,30 @@ end
 """
     retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀)
 
-    Calculate the retention factor of the solute in the stationary phase at
-    position `x` at time `t`.
+Calculate the retention factor of the solute in the stationary phase at
+position `x` at time `t`.
 
-    # Arguments
-    * `x`: Position along the GC column, in m.
-    * `t`: Time in s.
-    * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-    * `d`: Diameter of the GC column, in m.
-    * `df`: Film thickness of the GC column, in m.
-    * `Tchar`: Characteristic temperature of the solute, in K.
-    * `θchar`: Characteristic parameters of the solute, in °C.
-    * `ΔCp`: Change of the isobaric heat capacity of the solute moving from the mobile to the
-    stationary phase, in J mol⁻¹ K⁻¹.
-    * `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the
-    thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
+# Arguments
+* `x`: Position along the GC column, in m.
+* `t`: Time in s.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`.
+* `d`: Diameter of the GC column, in m.
+* `df`: Film thickness of the GC column, in m.
+* `Tchar`: Characteristic temperature of the solute, in K.
+* `θchar`: Characteristic parameters of the solute, in °C.
+* `ΔCp`: Change of the isobaric heat capacity of the solute moving from the mobile to the
+stationary phase, in J mol⁻¹ K⁻¹.
+* `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the
+thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
 
-    ``k(x,t) = \\frac{φ}{φ₀}
-    \\exp{\\left((\\frac{ΔC_p}{R}+\\frac{T_{char}}{θ_{char}})(\\frac{T_{char}}{T}+-1)
-     \\frac{ΔC_p}{R}\\ln{(\\frac{T}{T_{char}})}\\right)}``
+``k(x,t) = \\frac{φ}{φ₀}
+\\exp{\\left((\\frac{ΔC_p}{R}+\\frac{T_{char}}{θ_{char}})(\\frac{T_{char}}{T}+-1)
+    \\frac{ΔC_p}{R}\\ln{(\\frac{T}{T_{char}})}\\right)}``
 
-    with ``R`` the molar gas constant and ``φ`` the dimensionless film thickness
-    of the simulated GC system (``φ = d_f/d``).
+with ``R`` the molar gas constant and ``φ`` the dimensionless film thickness
+of the simulated GC system (``φ = d_f/d``).
 
-    **TODO**: add option for the retention model ('ABC', 'K-centric')
+**TODO**: add option for the retention model ('ABC', 'K-centric')
 """
 function retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀)
     # this version of the function, where every parameter is
@@ -1210,51 +1191,51 @@ end
 """
     plate_height(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Dag; ng=false)
 
-    Calculate the plate height of the solute at position `x` at time `t`
-    according to the Golay equation.
+Calculate the plate height of the solute at position `x` at time `t`
+according to the Golay equation.
 
-    # Arguments
-    * `x`: Position along the GC column, in m.
-    * `t`: Time in s.
-    * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-    * `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
-    * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
-    * `L`: Length of the capillary measured in m (meter).
-    * `d`: Diameter of the GC column, in m.
-    * `df`: Film thickness of the GC column, in m.
-    * `gas`: Name of the mobile phase gas.
-    * `Tchar`: Characteristic temperature of the solute, in K.
-    * `θchar`: Characteristic parameters of the solute, in °C.
-    * `ΔCp`: Change of the isobaric heat capacity of the solute moving from the mobile to the
-    stationary phase, in J mol⁻¹ K⁻¹.
-    * `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the
-    thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
-    * `Dag`: diffusivity of solute `a` in gas `g`.
-    * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
-    or with a gradient (`ng = false`).
+# Arguments
+* `x`: Position along the GC column, in m.
+* `t`: Time in s.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`.
+* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
+* `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
+* `L`: Length of the capillary measured in m (meter).
+* `d`: Diameter of the GC column, in m.
+* `df`: Film thickness of the GC column, in m.
+* `gas`: Name of the mobile phase gas.
+* `Tchar`: Characteristic temperature of the solute, in K.
+* `θchar`: Characteristic parameters of the solute, in °C.
+* `ΔCp`: Change of the isobaric heat capacity of the solute moving from the mobile to the
+stationary phase, in J mol⁻¹ K⁻¹.
+* `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the
+thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
+* `Dag`: diffusivity of solute `a` in gas `g`.
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`)
+or with a gradient (`ng = false`).
 
-    ``H(x,t) = 2 \\frac{D_M}{u_M} + \\frac{d^2}{96}\\left(6 μ^2-16 μ +11
-    \\right) \\frac{u_M}{D_M} + \\frac{2}{3} d_f^2 μ(1-μ) \\frac{u_M}{D_S}``
+``H(x,t) = 2 \\frac{D_M}{u_M} + \\frac{d^2}{96}\\left(6 μ^2-16 μ +11
+\\right) \\frac{u_M}{D_M} + \\frac{2}{3} d_f^2 μ(1-μ) \\frac{u_M}{D_S}``
 
-    with ``D_M`` the diffusion coefficient of the solute in the mobile phase,
-    ``D_S`` the diffusion coefficient of the solute in the stationary phase,
-    ``u_M`` the velocity of the mobile phase and μ the mobility of the solute.
+with ``D_M`` the diffusion coefficient of the solute in the mobile phase,
+``D_S`` the diffusion coefficient of the solute in the stationary phase,
+``u_M`` the velocity of the mobile phase and μ the mobility of the solute.
 
-    ``D_S`` is correlated to ``D_M`` by: 
+``D_S`` is correlated to ``D_M`` by: 
 
-    ``D_S = \\frac{D_M}{10000}``
+``D_S = \\frac{D_M}{10000}``
 
-    **TODO**: alternative correlations?
+**TODO**: alternative correlations?
 
-    ``u_M`` is realated to the residency of the mobile phase ``r_M``:
+``u_M`` is realated to the residency of the mobile phase ``r_M``:
 
-    ``u_M = \\frac{1}{r_M}``
+``u_M = \\frac{1}{r_M}``
 
-    μ is correlated to the retention factor ``k``:
+μ is correlated to the retention factor ``k``:
 
-    ``μ = \\frac{1}{1 + k}``
+``μ = \\frac{1}{1 + k}``
 
-    See also: [`diffusion_mobile`](@ref), [`mobile_phase_residency`](@ref), [`retention_factor`](@ref)
+See also: [`diffusion_mobile`](@ref), [`mobile_phase_residency`](@ref), [`retention_factor`](@ref)
 """
 function plate_height(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Dag; ng=false)
     id = d(x)# - 2.0*df(x)
@@ -1272,23 +1253,23 @@ end
 """
     diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=false)
 
-    Calculate the diffusion coefficient of the solute in the mobile phase at
-    position `x` at time `t`.
+Calculate the diffusion coefficient of the solute in the mobile phase at
+position `x` at time `t`.
 
-    # Arguments
-    * `x`: Position along the GC column, in m.
-    * `t`: Time in s.
-    * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-    * `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
-    * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
-    * `L`: Length of the capillary measured in m (meter).
-    * `d`: Diameter of the GC column, in m.
-    * `gas`: Name of the mobile phase gas.
-    * `Dag`: diffusivity of solute `a` in gas `g`.
-    * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
-    or with a gradient (`ng = false`).
+# Arguments
+* `x`: Position along the GC column, in m.
+* `t`: Time in s.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`.
+* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
+* `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
+* `L`: Length of the capillary measured in m (meter).
+* `d`: Diameter of the GC column, in m.
+* `gas`: Name of the mobile phase gas.
+* `Dag`: diffusivity of solute `a` in gas `g`.
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`)
+or with a gradient (`ng = false`).
 
-    ``D_M(x,t) = D_{ag} \\frac{T(x,t)^{1.75}}{p(x,t)}``
+``D_M(x,t) = D_{ag} \\frac{T(x,t)^{1.75}}{p(x,t)}``
 """
 function diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=false)
     DM = T_itp(x, t)^1.75/pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng)*Dag
@@ -1323,17 +1304,17 @@ end
 """
     solve_system_multithreads(par::Parameters)
 
-    Simulate the GC system defined by the structure `par` by solving the
-    ODEs for ``t(z)`` and ``τ²(z)`` together as a system of ODEs using multiple
-    threads (parallel computing) for the simulation of different solutes. 
-    
-    Note: The result is an array of the solution structure from DifferentialEquations.jl.
+Simulate the GC system defined by the structure `par` by solving the
+ODEs for ``t(z)`` and ``τ²(z)`` together as a system of ODEs using multiple
+threads (parallel computing) for the simulation of different solutes. 
 
-    # Examples
+Note: The result is an array of the solution structure from DifferentialEquations.jl.
 
-    ```julia
-    julia> sol = solve_system_multithreads(par)
-    ```
+# Examples
+
+```julia
+julia> sol = solve_system_multithreads(par)
+```
 """
 function solve_system_multithreads(par)
 	n = length(par.sub)
@@ -1347,19 +1328,19 @@ end
 """
     solve_multithreads(par::Parameters)
 
-    Simulate the GC system defined by the structure `par` by solving the
-    ODEs for ``t(z)`` and ``τ²(z)`` separatly (solving ``t(z)`` and using this result
-    to solve for ``τ²(z)``) using multiple threads (parallel computing) for the
-    simulation of different solutes.
-    
-    Note: The result are two arrays of the solution structure from
-    DifferentialEquations.jl.
-    
-    # Examples
+Simulate the GC system defined by the structure `par` by solving the
+ODEs for ``t(z)`` and ``τ²(z)`` separatly (solving ``t(z)`` and using this result
+to solve for ``τ²(z)``) using multiple threads (parallel computing) for the
+simulation of different solutes.
 
-    ```julia
-    julia> sol, peak = solve_multithreads(par)
-    ```
+Note: The result are two arrays of the solution structure from
+DifferentialEquations.jl.
+
+# Examples
+
+```julia
+julia> sol, peak = solve_multithreads(par)
+```
 """
 function solve_multithreads(par)
     n = length(par.sub)
@@ -1375,11 +1356,11 @@ end
 """
     solving_migration(sys::System, prog::Program, sub::Substance, opt::Options)
 
-    Solve for the migration ``t(z)`` of solute `sub` in the GC system `sys` with
-    the program `prog` and the options `opt`.
+Solve for the migration ``t(z)`` of solute `sub` in the GC system `sys` with
+the program `prog` and the options `opt`.
 
-    Note: The result is the solution structure from
-    DifferentialEquations.jl.
+Note: The result is the solution structure from
+DifferentialEquations.jl.
 """
 function solving_migration(sys::System, prog::Program, sub::Substance, opt::Options)
 	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng)
@@ -1393,11 +1374,11 @@ end
 """
     solving_peakvariance(solution_tz, sys::System, prog::Program, sub::Substance, opt::Options)
 
-    Solve for the development of the peak variance ``τ²(z)`` of solute `sub` in the GC system `sys` with
-    the program `prog` and the options `opt` during its migration defined by `solution_tz`.
+Solve for the development of the peak variance ``τ²(z)`` of solute `sub` in the GC system `sys` with
+the program `prog` and the options `opt` during its migration defined by `solution_tz`.
 
-    Note: The result is the solution structure from
-    DifferentialEquations.jl.
+Note: The result is the solution structure from
+DifferentialEquations.jl.
 """
 function solving_peakvariance(solution_tz, sys, prog, sub, opt)
     t(z) = solution_tz(z)
@@ -1413,13 +1394,13 @@ end
 """
     solving_odesystem_r(sys::System, prog::Program, sub::Substance, opt::Options)
 
-    Solve the migration ``t(z)`` and peak variance development ``τ²(z)`` of solute `sub` in the GC system `sys` with
-    the program `prog` and the options `opt` as a system of ODEs.
+Solve the migration ``t(z)`` and peak variance development ``τ²(z)`` of solute `sub` in the GC system `sys` with
+the program `prog` and the options `opt` as a system of ODEs.
 
-    Note: The result is the solution structure from
-    DifferentialEquations.jl.
+Note: The result is the solution structure from
+DifferentialEquations.jl.
 
-    See also: [`odesystem_r!`](@ref)
+See also: [`odesystem_r!`](@ref)
 """
 function solving_odesystem_r(sys::System, prog::Program, sub::Substance, opt::Options)
     t₀ = [sub.t₀; sub.τ₀^2]
@@ -1438,15 +1419,15 @@ end
 """
     odesystem_r!(dt, t, p, z)
 
-    The ODE system for migration ``t(z)`` and peak variance development
-    ``τ²(z)``.
-    
-    ``\\frac{dt}{dz} = r(z, t(z))``
+The ODE system for migration ``t(z)`` and peak variance development
+``τ²(z)``.
 
-    ``\\frac{dτ^2}{dz} = H(z, t(z)) r(z, t(z)) + 2 τ^2(z, t(z))
-    \\frac{∂r}{∂t}(z,t(z))``
-    
-    See also: [`solving_odesystem_r`](@ref), [`peakode`](@ref)
+``\\frac{dt}{dz} = r(z, t(z))``
+
+``\\frac{dτ^2}{dz} = H(z, t(z)) r(z, t(z)) + 2 τ^2(z, t(z))
+\\frac{∂r}{∂t}(z,t(z))``
+
+See also: [`solving_odesystem_r`](@ref), [`peakode`](@ref)
 """
 function odesystem_r!(dt, t, p, z)
     # t[1] ... t time
@@ -1462,16 +1443,16 @@ end
 """
     peakode(z, t, τ², sys, prog, sub, opt)
 
-    The second ODE function for the ODE system describing the peak variance
-    development ``τ²(z)``, using (in parts) automatic differentiation.
-    
-    ``\\frac{dτ^2}{dz} = H(z, t(z)) r(z, t(z)) + 2 τ^2(z, t(z))
-    \\frac{∂r}{∂t}(z,t(z))``
+The second ODE function for the ODE system describing the peak variance
+development ``τ²(z)``, using (in parts) automatic differentiation.
 
-    **TODO**: alternative to QuadGK.jl for integration which is available for
-    ForwardDiff.jl 
-    
-    See also: [`solving_odesystem_r`](@ref), [`odesystem_r!`](@ref)
+``\\frac{dτ^2}{dz} = H(z, t(z)) r(z, t(z)) + 2 τ^2(z, t(z))
+\\frac{∂r}{∂t}(z,t(z))``
+
+**TODO**: alternative to QuadGK.jl for integration which is available for
+ForwardDiff.jl 
+
+See also: [`solving_odesystem_r`](@ref), [`odesystem_r!`](@ref)
 """
 function peakode(z, t, τ², sys, prog, sub, opt)
 	# alternative function
@@ -1648,24 +1629,24 @@ end
 """
     sol_extraction(sol, par)
 
-    Extract the points z=t, t=u1, τ²=u2 from the solution `sol` of
-    the ODE system of the GC system defined by `par`.
+Extract the points z=t, t=u1, τ²=u2 from the solution `sol` of
+the ODE system of the GC system defined by `par`.
 
-    The peaklist consists of the entrys: 
-    * `Name`: Name of the solute.
-    * `tR`: Retention time of the solute (in s).
-    * `τR`: Peak width of the solute (in s). 
-    * `TR`: Temperature of the end of the column at the retention time (in °C).
-    * `σR`: Band width of the solute at retention time (in m).
-    * `uR`: Solute velocity at retention time (in m/s).
-    * `kR`: Retention factor of the solute at retention time.
+The peaklist consists of the entrys: 
+* `Name`: Name of the solute.
+* `tR`: Retention time of the solute (in s).
+* `τR`: Peak width of the solute (in s). 
+* `TR`: Temperature of the end of the column at the retention time (in °C).
+* `σR`: Band width of the solute at retention time (in m).
+* `uR`: Solute velocity at retention time (in m/s).
+* `kR`: Retention factor of the solute at retention time.
 
-    # Examples
+# Examples
 
-    ```julia
-    pl = peaklist(sol, par)
-    ...
-    ```    
+```julia
+pl = peaklist(sol, par)
+...
+```    
 """
 function sol_extraction(sol, par)
     # extract the points z=t, t=u1, τ²=u2 from the solution of
@@ -1694,24 +1675,24 @@ end
 """
     sol_extraction(sol, peak, par)
 
-    Extract the points z_t=sol.t, t=sol.u, z_τ²=peak.t and τ²=peak.u from the
-    solution `sol` and `peak` of the ODEs of the GC system defined by `par`.
+Extract the points z_t=sol.t, t=sol.u, z_τ²=peak.t and τ²=peak.u from the
+solution `sol` and `peak` of the ODEs of the GC system defined by `par`.
 
-    The peaklist consists of the entrys: 
-    * `Name`: Name of the solute.
-    * `tR`: Retention time of the solute (in s).
-    * `τR`: Peak width of the solute (in s). 
-    * `TR`: Temperature of the end of the column at the retention time (in °C).
-    * `σR`: Band width of the solute at retention time (in m).
-    * `uR`: Solute velocity at retention time (in m/s).
-    * `kR`: Retention factor of the solute at retention time.
+The peaklist consists of the entrys: 
+* `Name`: Name of the solute.
+* `tR`: Retention time of the solute (in s).
+* `τR`: Peak width of the solute (in s). 
+* `TR`: Temperature of the end of the column at the retention time (in °C).
+* `σR`: Band width of the solute at retention time (in m).
+* `uR`: Solute velocity at retention time (in m/s).
+* `kR`: Retention factor of the solute at retention time.
 
-    # Examples
+# Examples
 
-    ```julia
-    pl = peaklist(sol, peak, par)
-    ...
-    ```    
+```julia
+pl = peaklist(sol, peak, par)
+...
+```    
 """
 function sol_extraction(sol, peak, par)
     # extract the points z=t, t=u, from the solution of
@@ -1735,12 +1716,5 @@ function sol_extraction(sol, peak, par)
     return df_sol
 end
 #---Begin-Result-Functions---
-
-"""
-    func(x)
-
-    Returns double the number `x` plus `1`.
-"""
-func(x) = 2x+1
 
 end # module
