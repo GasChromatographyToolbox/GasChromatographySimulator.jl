@@ -18,7 +18,6 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 [compat]
 CSV = "0.9"
 DataFrames = "1.2"
-DifferentialEquations = "6.18"
 ForwardDiff = "0.10"
 Interpolations = "0.13"
 QuadGK = "2.4"
