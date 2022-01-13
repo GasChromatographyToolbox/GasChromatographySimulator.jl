@@ -665,8 +665,8 @@ function load_solute_database(db::DataFrame, sp::String, gas::String, solutes::A
 										φ₀[i],
 										Annotation[i],
 										Dag, 
-										τ₀[i],
-										t₀[i])
+										t₀[i],
+										τ₀[i])
 		end
 	end
 	return sub
@@ -1630,21 +1630,12 @@ end
     sol_extraction(sol, par)
 
 Extract the points z=t, t=u1, τ²=u2 from the solution `sol` of
-the ODE system of the GC system defined by `par`.
-
-The peaklist consists of the entrys: 
-* `Name`: Name of the solute.
-* `tR`: Retention time of the solute (in s).
-* `τR`: Peak width of the solute (in s). 
-* `TR`: Temperature of the end of the column at the retention time (in °C).
-* `σR`: Band width of the solute at retention time (in m).
-* `uR`: Solute velocity at retention time (in m/s).
-* `kR`: Retention factor of the solute at retention time.
+the ODE system of the GC system defined by `par` and exports them in a DataFrame.
 
 # Examples
 
 ```julia
-pl = peaklist(sol, par)
+df_sol = sol_extraction(sol, par)
 ...
 ```    
 """
@@ -1676,21 +1667,12 @@ end
     sol_extraction(sol, peak, par)
 
 Extract the points z_t=sol.t, t=sol.u, z_τ²=peak.t and τ²=peak.u from the
-solution `sol` and `peak` of the ODEs of the GC system defined by `par`.
-
-The peaklist consists of the entrys: 
-* `Name`: Name of the solute.
-* `tR`: Retention time of the solute (in s).
-* `τR`: Peak width of the solute (in s). 
-* `TR`: Temperature of the end of the column at the retention time (in °C).
-* `σR`: Band width of the solute at retention time (in m).
-* `uR`: Solute velocity at retention time (in m/s).
-* `kR`: Retention factor of the solute at retention time.
+solution `sol` and `peak` of the ODEs of the GC system defined by `par` and exports them in a DataFrame.
 
 # Examples
 
 ```julia
-pl = peaklist(sol, peak, par)
+df_sol = sol_extraction(sol, peak, par)
 ...
 ```    
 """
@@ -1715,6 +1697,6 @@ function sol_extraction(sol, peak, par)
     df_sol = DataFrame(name=solutes, z_t=sol_z, t=sol_t, z_τ²=peak_z, τ²=peak_τ²)
     return df_sol
 end
-#---Begin-Result-Functions---
+#---End-Result-Functions---
 
 end # module
