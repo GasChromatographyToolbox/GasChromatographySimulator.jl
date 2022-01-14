@@ -26,6 +26,18 @@ begin
 	TableOfContents()
 end
 
+# ╔═╡ 9c54bef9-5b70-4cf7-b110-a2f48f5db066
+begin
+	plotly()
+	html"""
+	<style>
+	  main {
+		max-width: 800px;
+	  }
+	</style>
+	"""
+end
+
 # ╔═╡ c9246396-3c01-4a36-bc9c-4ed72fd9e325
 md"""
 # Gas Chromatography Simulator
@@ -50,19 +62,18 @@ begin
 	"""
 end
 
-# ╔═╡ 834a26d2-8f7b-4a00-843f-19e13dc686f2
-md"""
-## Column flow
-"""
-
 # ╔═╡ 323a769f-55f9-41dd-b8f1-db7928996a52
 md"""
 ## Temperature program
+
+select temperature plot: $(@bind Tplot Select(["T(x,t)", "T(x)", "T(t)"]; default="T(x,t)"))
 """
 
 # ╔═╡ 3c856d47-c6c2-40d3-b547-843f9654f48d
 md"""
 ### Plot of local values
+
+Plot $(@bind yy Select(["z", "t", "T", "τ", "σ", "u"]; default="t")) over $(@bind xx Select(["z", "t", "T", "τ", "σ", "u"]; default="z"))
 """
 
 # ╔═╡ 95e1ca30-9442-4f39-9af0-34bd202fcc24
@@ -215,7 +226,43 @@ function plot_chromatogram(peaklist)
 	return p_chrom, t, chrom
 end
 
-end;
+function plot_flow(par)
+	t = 0.0:sum(par.prog.time_steps)/1000.0:sum(par.prog.time_steps)
+	F = Array{Float64}(undef, length(t))
+	for i=1:length(t)
+		F[i] = GasChromatographySimulator.flow(t[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas)
+	end
+	pflow = plot(t, F.*60e6, xlabel="time in s", ylabel="column flow in mL/min", legend=false)
+	return pflow
+end
+
+function temperature_plot(par, plot_selector; x₀=0.0, t₀=0.0)
+	if plot_selector=="T(x)"
+		nx = 0.0:par.sys.L/1000:par.sys.L
+		T = par.prog.T_itp.(nx, t₀).-273.15
+		Tplot = plot(nx,  T, xlabel="x in m", ylabel="T in °C", legend=:top, label="t=$(t₀)s", size=(800,500))
+	elseif plot_selector=="T(t)"
+		nt = 0.0:sum(par.prog.time_steps)/1000:sum(par.prog.time_steps)
+		T = par.prog.T_itp.(x₀, nt).-273.15
+		Tplot = plot(nt, T, xlabel="t in s", ylabel="T in °C", legend=:top, label="x=$(x₀)m", size=(800,500))
+	elseif plot_selector=="T(x,t)"
+		nx = 0.0:par.sys.L/1000:par.sys.L
+		nt = 0.0:sum(par.prog.time_steps)/1000:sum(par.prog.time_steps)
+		T = Array{Float64}(undef, length(nx), length(nt))
+		for j=1:length(nt)
+			for i=1:length(nx)
+				T[i,j] = par.prog.T_itp(nx[i], nt[j])-273.15
+			end
+		end
+		Tplot = plot(nx, nt, T', st=:surface, xlabel="x in m", ylabel="t in s", zlabel="T in °C", size=(800,500))
+	end
+	return Tplot
+end
+
+	md"""
+	Definition of functions.
+	"""
+end
 
 # ╔═╡ e0669a58-d5ac-4d01-b079-05412b413dda
 @bind sys_values confirm(sys_set_UI(sp))
@@ -251,13 +298,56 @@ prog = GasChromatographySimulator.Program(parse.(Float64, split(prog_values[1]))
 										sys.L
 );
 
-# ╔═╡ 49faa7ea-0f22-45ca-9ab5-338d0db25564
+# ╔═╡ 85954bdb-d649-4772-a1cd-0bda5d9917e9
+par = GasChromatographySimulator.Parameters(sys, prog, sub, opt);
+
+# ╔═╡ 834a26d2-8f7b-4a00-843f-19e13dc686f2
+md"""
+## Column flow
+
+$(embed_display(plot_flow(par)))
+"""
+
+# ╔═╡ c98d599e-82b8-43d4-948b-34434d5ddf3c
 begin
-	par = GasChromatographySimulator.Parameters(sys, prog, sub, opt)
-	
+	if Tplot=="T(x)"
+		md"""
+		select time: $(@bind tselect Slider(0:sum(par.prog.time_steps), show_value=true))s
+		"""
+	elseif Tplot=="T(t)"
+		md"""
+		select time: $(@bind xselect Slider(0:par.sys.L/100:par.sys.L, show_value=true))m
+		"""
+	end
+end
+
+# ╔═╡ 96580972-6ef1-4a88-b872-2f74cba4dbf4
+begin
+	if Tplot=="T(x,t)"
+		md"""
+		**_Temperature T(x,t)_**
+		
+		$(embed_display(temperature_plot(par, Tplot)))
+		"""
+	elseif Tplot=="T(x)"
+		md"""
+		**_Temperature T(x)_**
+		
+		$(embed_display(temperature_plot(par, Tplot, t₀=tselect)))
+		"""
+	elseif Tplot=="T(t)"
+		md"""
+		**_Temperature T(t)_**
+		$(embed_display(temperature_plot(par, Tplot, x₀=xselect)))
+		"""
+	end
+end
+
+# ╔═╡ 49faa7ea-0f22-45ca-9ab5-338d0db25564
+begin	
 	peaklist, solution = GasChromatographySimulator.simulate(par)
 	md"""
-	## Simulatiion
+	## Simulation
 	"""
 end
 
@@ -277,8 +367,94 @@ begin
 	"""
 end
 
+# ╔═╡ 48f91bc4-35ce-470a-9b6d-eb3c08da27dc
+begin
+	
+function add_plots(xx, yy, sol, par)
+	n = size(sol)[1]
+
+	df_sol = GasChromatographySimulator.sol_extraction(solution, par)
+	xvalues = Array{Array{Float64,1}}(undef, n)
+	yvalues = Array{Array{Float64,1}}(undef, n)
+	
+	p_add = plot(legend=false)
+	for i=1:n
+		if xx=="z"
+			xvalues[i] = df_sol.z[i]
+			xlabel = "position z in m"
+		elseif xx=="t"
+			xvalues[i] = df_sol.t[i]
+			xlabel = "time t in s"
+		elseif xx=="T"
+			xvalues[i] = par.prog.T_itp.(df_sol.z[i], df_sol.t[i]).-273.15
+			xlabel = "temperature T in °C"
+		elseif xx=="τ"
+			xvalues[i] = sqrt.(df_sol.τ²[i])
+			xlabel = "peak width τ in s"
+		elseif xx=="σ"
+			xvalues[i] = velocity(df_sol, i, par).*sqrt.(df_sol.τ²[i])
+			xlabel = "band width in m"
+		elseif xx=="u"
+			xvalues[i] = velocity(df_sol, i, par)
+			xlabel = "solute velocity in m/s"
+		end
+		if yy=="z"
+			yvalues[i] = df_sol.z[i]
+			ylabel = "position z in m"
+		elseif yy=="t"
+			yvalues[i] = df_sol.t[i]
+			ylabel = "time t in s"
+		elseif yy=="T"
+			yvalues[i] = par.prog.T_itp.(df_sol.z[i], df_sol.t[i]).-273.15
+			ylabel = "temperature T in °C"
+		elseif yy=="τ"
+			yvalues[i] = sqrt.(df_sol.τ²[i])
+			ylabel = "peak width in s"
+		elseif yy=="σ"
+			yvalues[i] = velocity(df_sol, i, par).*sqrt.(df_sol.τ²[i])
+			ylabel = "band width in m"
+		elseif yy=="u"
+			yvalues[i] = velocity(df_sol, i, par)
+			ylabel = "solute velocity in m/s"
+		end
+		plot!(p_add, xvalues[i], yvalues[i], xlabel=xlabel, ylabel=ylabel, label=par.sub[i].name, m=:o)
+	end
+	return p_add
+end
+
+function velocity(df_sol, i, par)
+	x = df_sol.z[i]
+	t = df_sol.t[i]
+	T_itp = par.prog.T_itp
+	pin_itp = par.prog.pin_itp
+	pout_itp = par.prog.pout_itp
+	L = par.sys.L
+	d = par.sys.d
+	df = par.sys.df
+	gas = par.sys.gas
+	ΔCp = par.sub[i].ΔCp
+	Tchar = par.sub[i].Tchar
+	θchar = par.sub[i].θchar
+	φ₀ = par.sub[i].φ₀
+	u = Array{Float64}(undef, length(x))
+	for j=1:length(x)
+		u[j] = 1/GasChromatographySimulator.residency(x[j], t[j], T_itp, pin_itp, pout_itp, L, d, df, gas, ΔCp, Tchar, θchar, φ₀)
+	end
+	return u
+end
+	md"""
+	Definition of more functions.
+	"""
+end
+
+# ╔═╡ 0740f2e6-bce0-4590-acf1-ad4d7cb7c523
+md"""
+$(embed_display(add_plots(xx, yy, solution, par)))
+"""
+
 # ╔═╡ Cell order:
 # ╟─7272450e-73b1-11ec-080d-1d1efd32e836
+# ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
 # ╟─273dcf96-6de4-4380-a00f-ed119bfa13b7
@@ -286,15 +462,20 @@ end
 # ╟─a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
 # ╟─7a00bb54-553f-47f5-b5db-b40d226f4183
 # ╟─3e053ac1-db7b-47c1-b52c-00e26b59912f
-# ╠═834a26d2-8f7b-4a00-843f-19e13dc686f2
-# ╠═323a769f-55f9-41dd-b8f1-db7928996a52
-# ╟─49faa7ea-0f22-45ca-9ab5-338d0db25564
+# ╟─834a26d2-8f7b-4a00-843f-19e13dc686f2
+# ╟─323a769f-55f9-41dd-b8f1-db7928996a52
+# ╟─c98d599e-82b8-43d4-948b-34434d5ddf3c
+# ╟─96580972-6ef1-4a88-b872-2f74cba4dbf4
+# ╠═49faa7ea-0f22-45ca-9ab5-338d0db25564
 # ╟─14db2d66-eea6-43b1-9caf-2039709d1ddb
 # ╟─a2287fe8-5aa2-4259-bf7c-f715cc866243
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
+# ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
 # ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
 # ╟─802e4071-b22b-4411-b589-205292aabc75
+# ╟─48f91bc4-35ce-470a-9b6d-eb3c08da27dc
 # ╟─f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
 # ╟─ee267b33-4086-4e04-9f39-b7f53f2ec920
 # ╟─e3277bb4-301a-4a1e-a838-311832b6d6aa
 # ╟─115fa61e-8e82-42b2-8eea-9c7e21d97ea8
+# ╟─85954bdb-d649-4772-a1cd-0bda5d9917e9
