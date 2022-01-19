@@ -64,9 +64,9 @@ end
 
 # ╔═╡ 323a769f-55f9-41dd-b8f1-db7928996a52
 md"""
-## Temperature program
+## Plot of temperature program
 
-select temperature plot: $(@bind Tplot Select(["T(x,t)", "T(x)", "T(t)"]; default="T(x,t)"))
+select temperature plot: $(@bind Tplot Select(["T(x,t)", "T(x)", "T(t)"]; default="T(t)"))
 """
 
 # ╔═╡ 3c856d47-c6c2-40d3-b547-843f9654f48d
@@ -96,15 +96,15 @@ function sys_set_UI(sp)
 		### System settings 
 		
 		``L`` [m]: $(
-			Child(NumberField(0.1:0.1:100.0; default=4.0))
+			Child(NumberField(0.1:0.1:100.0; default=10.0))
 		) ``d`` [mm]: $(
-			Child(NumberField(0.01:0.01:1.00; default=0.10))
+			Child(NumberField(0.01:0.01:1.00; default=0.25))
 		) ``d_f`` [µm]: $(
-			Child(NumberField(0.01:0.01:1.00; default=0.10))
+			Child(NumberField(0.01:0.01:1.00; default=0.25))
 		) stat. phase: $(
-			Child(Select(sp))
+			Child(Select(sp; default="SLB5ms"))
 		) Gas: $(
-			Child(Select(["He", "H2", "N2"]))
+			Child(Select(["He", "H2", "N2"]; default="He"))
 		) 
 			
 		"""
@@ -123,27 +123,27 @@ function prog_set_UI()
 		_Note: Same number of entrys for every text field._
 		
 		$(
-			Child(TextField((50,1); default="0 10 60 20"))
+			Child(TextField((50,1); default="0 60 300 300 120"))
 		) time steps [s] 
 		
 		$(
-			Child(TextField((50,1); default="40 40 300 300"))
+			Child(TextField((50,1); default="40 40 170 300 300"))
 		) temperature steps [°C]
 		
 		$(
-			Child(TextField((50,1); default="0 0 60 60"))
+			Child(TextField((50,1); default="0 0 40 60 0"))
 		) ``ΔT`` steps [°C]
 		
 		$(
-			Child(TextField((50,1); default="0 0 -3 -3"))
+			Child(TextField((50,1); default="-3 -3 -3 -3 -3"))
 		) ``α`` steps
 
 		$(
-			Child(TextField((50,1); default="200 200 200 200"))
+			Child(TextField((50,1); default="18 18 58 98 98"))
 		) ``p_{in}`` steps [kPa(g)]
 
 		$(
-			Child(TextField((50,1); default="101.3 101.3 101.3 101.3"))
+			Child(TextField((50,1); default="0 0 0 0 0"))
 		)``p_{out}`` steps [kPa(a)]
 			
 		"""
@@ -232,19 +232,37 @@ function plot_flow(par)
 	for i=1:length(t)
 		F[i] = GasChromatographySimulator.flow(t[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas)
 	end
-	pflow = plot(t, F.*60e6, xlabel="time in s", ylabel="column flow in mL/min", legend=false)
+	pflow = plot(t, F.*60e6, xlabel="time in s", ylabel="column flow in mL/min", legend=false, size=(800,500))
 	return pflow
 end
 
-function temperature_plot(par, plot_selector; x₀=0.0, t₀=0.0)
+function plot_pressure(par)
+	t = 0.0:sum(par.prog.time_steps)/1000.0:sum(par.prog.time_steps)
+	pin = Array{Float64}(undef, length(t))
+	pout = Array{Float64}(undef, length(t))
+	for i=1:length(t)
+		pin[i] = par.prog.pin_itp(t[i])
+		pout[i] = par.prog.pout_itp(t[i])
+	end
+	ppress = plot(t, pin, xlabel="time in s", ylabel="pressure in Pa", label="inlet", size=(800,500))
+	plot!(ppress, t, pout, label="outlet")
+	return ppress
+end
+
+function temperature_plot(par, plot_selector)
 	if plot_selector=="T(x)"
 		nx = 0.0:par.sys.L/1000:par.sys.L
-		T = par.prog.T_itp.(nx, t₀).-273.15
-		Tplot = plot(nx,  T, xlabel="x in m", ylabel="T in °C", legend=:top, label="t=$(t₀)s", size=(800,500))
+		Tplot = plot(xlabel="x in m", ylabel="T in °C", legend=:top, size=(800,500))
+		for i=1:length(par.prog.time_steps)
+			T = par.prog.T_itp.(nx, cumsum(par.prog.time_steps)[i]).-273.15
+			plot!(Tplot, nx, T, label="t=$(cumsum(par.prog.time_steps)[i])s")
+		end
 	elseif plot_selector=="T(t)"
 		nt = 0.0:sum(par.prog.time_steps)/1000:sum(par.prog.time_steps)
-		T = par.prog.T_itp.(x₀, nt).-273.15
-		Tplot = plot(nt, T, xlabel="t in s", ylabel="T in °C", legend=:top, label="x=$(x₀)m", size=(800,500))
+		T0 = par.prog.T_itp.(0.0, nt).-273.15
+		Tplot = plot(nt, T0, xlabel="t in s", ylabel="T in °C", legend=:top, label="inlet", c=:red, size=(800,500))
+		TL = par.prog.T_itp.(par.sys.L, nt).-273.15
+		plot!(Tplot, nt, TL, label="outlet", c=:blue)
 	elseif plot_selector=="T(x,t)"
 		nx = 0.0:par.sys.L/1000:par.sys.L
 		nt = 0.0:sum(par.prog.time_steps)/1000:sum(par.prog.time_steps)
@@ -301,26 +319,6 @@ prog = GasChromatographySimulator.Program(parse.(Float64, split(prog_values[1]))
 # ╔═╡ 85954bdb-d649-4772-a1cd-0bda5d9917e9
 par = GasChromatographySimulator.Parameters(sys, prog, sub, opt);
 
-# ╔═╡ 834a26d2-8f7b-4a00-843f-19e13dc686f2
-md"""
-## Column flow
-
-$(embed_display(plot_flow(par)))
-"""
-
-# ╔═╡ c98d599e-82b8-43d4-948b-34434d5ddf3c
-begin
-	if Tplot=="T(x)"
-		md"""
-		select time: $(@bind tselect Slider(0:sum(par.prog.time_steps), show_value=true))s
-		"""
-	elseif Tplot=="T(t)"
-		md"""
-		select time: $(@bind xselect Slider(0:par.sys.L/100:par.sys.L, show_value=true))m
-		"""
-	end
-end
-
 # ╔═╡ 96580972-6ef1-4a88-b872-2f74cba4dbf4
 begin
 	if Tplot=="T(x,t)"
@@ -333,15 +331,29 @@ begin
 		md"""
 		**_Temperature T(x)_**
 		
-		$(embed_display(temperature_plot(par, Tplot, t₀=tselect)))
+		$(embed_display(temperature_plot(par, Tplot)))
 		"""
 	elseif Tplot=="T(t)"
 		md"""
 		**_Temperature T(t)_**
-		$(embed_display(temperature_plot(par, Tplot, x₀=xselect)))
+		$(embed_display(temperature_plot(par, Tplot)))
 		"""
 	end
 end
+
+# ╔═╡ 1554aee2-41dc-4a39-b6fc-5e02ad4c24e2
+md"""
+## Plot of pressure program
+
+$(embed_display(plot_pressure(par)))
+"""
+
+# ╔═╡ 834a26d2-8f7b-4a00-843f-19e13dc686f2
+md"""
+## Plot of column flow
+
+$(embed_display(plot_flow(par)))
+"""
 
 # ╔═╡ 49faa7ea-0f22-45ca-9ab5-338d0db25564
 begin	
@@ -462,17 +474,17 @@ $(embed_display(add_plots(xx, yy, solution, par)))
 # ╟─a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
 # ╟─7a00bb54-553f-47f5-b5db-b40d226f4183
 # ╟─3e053ac1-db7b-47c1-b52c-00e26b59912f
-# ╟─834a26d2-8f7b-4a00-843f-19e13dc686f2
-# ╟─323a769f-55f9-41dd-b8f1-db7928996a52
-# ╟─c98d599e-82b8-43d4-948b-34434d5ddf3c
+# ╠═323a769f-55f9-41dd-b8f1-db7928996a52
 # ╟─96580972-6ef1-4a88-b872-2f74cba4dbf4
+# ╠═1554aee2-41dc-4a39-b6fc-5e02ad4c24e2
+# ╠═834a26d2-8f7b-4a00-843f-19e13dc686f2
 # ╠═49faa7ea-0f22-45ca-9ab5-338d0db25564
 # ╟─14db2d66-eea6-43b1-9caf-2039709d1ddb
 # ╟─a2287fe8-5aa2-4259-bf7c-f715cc866243
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
 # ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
 # ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
-# ╟─802e4071-b22b-4411-b589-205292aabc75
+# ╠═802e4071-b22b-4411-b589-205292aabc75
 # ╟─48f91bc4-35ce-470a-9b6d-eb3c08da27dc
 # ╟─f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
 # ╟─ee267b33-4086-4e04-9f39-b7f53f2ec920
