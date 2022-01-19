@@ -114,55 +114,55 @@ end
     @test length(results_ng[3]) == 2
     @test length(results_ng[4]) == 3
 
-    @test results_g[1][1].tR[1] == 123.18424848999621
-    @test results_g[2][1].tR[1] == 123.18624737819937
-    @test results_g[3][1].tR[1] == 51.454863869253934
-    @test results_g[4][1].tR[1] == 51.45638645568056
-    @test results_g[5][1].tR[1] == 123.20828349634378
-    @test results_g[6][1].tR[1] == 123.17339663387685
+    @test results_g[1][1].tR[1] ≈ 123.18424848999621
+    @test results_g[2][1].tR[1] ≈ 123.18624737819937
+    @test results_g[3][1].tR[1] ≈ 51.454863869253934
+    @test results_g[4][1].tR[1] ≈ 51.45638645568056
+    @test results_g[5][1].tR[1] ≈ 123.20828349634378
+    @test results_g[6][1].tR[1] ≈ 123.17339663387685
 
-    @test results_g[1][1].τR[2] == 0.5481628763675231
-    @test results_g[2][1].τR[2] == 0.5476833396406813
-    @test results_g[3][1].τR[2] == 0.5252588001145008
-    @test results_g[4][1].τR[2] == 0.5248726201963742
-    @test results_g[5][1].τR[2] == 0.5477573346176421
-    @test results_g[6][1].τR[2] == 0.5479648788481386
+    @test results_g[1][1].τR[2] ≈ 0.5481628763675231
+    @test results_g[2][1].τR[2] ≈ 0.5476833396406813
+    @test results_g[3][1].τR[2] ≈ 0.5252588001145008
+    @test results_g[4][1].τR[2] ≈ 0.5248726201963742
+    @test results_g[5][1].τR[2] ≈ 0.5477573346176421
+    @test results_g[6][1].τR[2] ≈ 0.5479648788481386
 
-    @test results_g[1][1].Res[1] == 18.58246263731392
-    @test results_g[2][1].Res[1] == 18.583767746802923
-    @test results_g[3][1].Res[1] == 19.860914280255994
-    @test results_g[4][1].Res[1] == 19.863463267876234
-    @test results_g[5][1].Res[1] == 18.598827557069868
-    @test results_g[6][1].Res[1] == 18.581356452824906
+    @test results_g[1][1].Res[1] ≈ 18.58246263731392
+    @test results_g[2][1].Res[1] ≈ 18.583767746802923
+    @test results_g[3][1].Res[1] ≈ 19.860914280255994
+    @test results_g[4][1].Res[1] ≈ 19.863463267876234
+    @test results_g[5][1].Res[1] ≈ 18.598827557069868
+    @test results_g[6][1].Res[1] ≈ 18.581356452824906
 
-    @test results_ng[1][1].tR[1] == 87.39733183107204
-    @test results_ng[2][1].tR[1] == 87.40081993839854
-    @test results_ng[3][1].tR[1] == 87.40081993839854
-    @test results_ng[4][1].tR[1] == 87.40030480193386
-    @test results_ng[5][1].tR[1] == 87.40030480193386
-    @test results_ng[6][1].tR[1] == 87.39160123672703
+    @test results_ng[1][1].tR[1] ≈ 87.39733183107204
+    @test results_ng[2][1].tR[1] ≈ 87.40081993839854
+    @test results_ng[3][1].tR[1] ≈ 87.40081993839854
+    @test results_ng[4][1].tR[1] ≈ 87.40030480193386
+    @test results_ng[5][1].tR[1] ≈ 87.40030480193386
+    @test results_ng[6][1].tR[1] ≈ 87.39160123672703
 
-    @test results_ng[1][1].τR[2] == 0.5900336247965692
-    @test results_ng[2][1].τR[2] == 0.5902763609009182
-    @test results_ng[3][1].τR[2] == 0.5902763609009182
-    @test results_ng[4][1].τR[2] == 0.5958501556434311
-    @test results_ng[5][1].τR[2] == 0.5958501556434311
-    @test results_ng[6][1].τR[2] == 0.5902842414446662
+    @test results_ng[1][1].τR[2] ≈ 0.5900336247965692
+    @test results_ng[2][1].τR[2] ≈ 0.5902763609009182
+    @test results_ng[3][1].τR[2] ≈ 0.5902763609009182
+    @test results_ng[4][1].τR[2] ≈ 0.5958501556434311
+    @test results_ng[5][1].τR[2] ≈ 0.5958501556434311
+    @test results_ng[6][1].τR[2] ≈ 0.5902842414446662
 
-    @test results_ng[1][1].Res[1] == 17.65902199872825
-    @test results_ng[2][1].Res[1] == 17.619585565883256
-    @test results_ng[3][1].Res[1] == 17.619585565883256
-    @test results_ng[4][1].Res[1] == 17.560464952423732
-    @test results_ng[5][1].Res[1] == 17.560464952423732
-    @test results_ng[6][1].Res[1] == 17.648531928432124
+    @test results_ng[1][1].Res[1] ≈ 17.65902199872825
+    @test results_ng[2][1].Res[1] ≈ 17.619585565883256
+    @test results_ng[3][1].Res[1] ≈ 17.619585565883256
+    @test results_ng[4][1].Res[1] ≈ 17.560464952423732
+    @test results_ng[5][1].Res[1] ≈ 17.560464952423732
+    @test results_ng[6][1].Res[1] ≈ 17.648531928432124
 
     # sol_extraction()
     df_sol = GasChromatographySimulator.sol_extraction(results_g[1][2], par_g[1])
-    @test df_sol.t[1][end] == results_g[1][1].tR[1]
+    @test df_sol.t[1][end] ≈ results_g[1][1].tR[1]
     @test df_sol.τ²[2][end] ≈ results_g[1][1].τR[2]^2
 
     df_sol = GasChromatographySimulator.sol_extraction(results_g[4][2], results_g[4][3], par_g[4])
-    @test df_sol.t[1][end] == results_g[4][1].tR[1]
+    @test df_sol.t[1][end] ≈ results_g[4][1].tR[1]
     @test df_sol.τ²[2][end] ≈ results_g[4][1].τR[2]^2
 end
 
