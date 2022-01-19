@@ -41,11 +41,9 @@ struct System{Fd<:Function, Fdf<:Function}
 end
 
 """
-    Program(time_steps, temp_steps, pin_steps,
-    pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
+    Program(time_steps, temp_steps, pin_steps, pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
 
-Structure to describe the temperature and pressure program of a GC system. The
-function `gf` describes an optional thermal gradient.
+Structure to describe the temperature and pressure program of a GC system. The function `gf` describes an optional thermal gradient.
 
 # Arguments
 * `time_steps`: Time steps in s (seconds). 
@@ -78,28 +76,17 @@ end
 """
     Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Dag, t₀, τ₀)
 
-Structure to describe the properties of a solute, which migrates through the
-GC system. These datas are in most cases read from a database with the
-function `load_solute_database()`.
+Structure to describe the properties of a solute, which migrates through the GC system. These datas are in most cases read from a database with the function `load_solute_database()`.
 
 # Arguments
 * `name`: Name of the solute. 
 * `CAS`: CAS number of the solute.
-* `Tchar`: Characterisic temperature (in K). One of the three
-  distribution-centric thermodynamic parameters describing the retention of this
-  solute on the given stationary phase.
-* `θchar`: Characterisic parameters (in °C). One of the three
-distribution-centric thermodynamic parameters describing the retention of
-this solute on the given stationary phase.
-* `ΔCp`: Change of the isobaric heat capacity moving from the mobile to the
-    stationary phase (in J mol⁻¹ K⁻¹). One of the three
-    distribution-centric thermodynamic parameters describing the retention of
-    this solute on the given stationary phase.
-* `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the
-    thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
+* `Tchar`: Characterisic temperature (in K). One of the three distribution-centric thermodynamic parameters describing the retention of this solute on the given stationary phase.
+* `θchar`: Characterisic parameters (in °C). One of the three distribution-centric thermodynamic parameters describing the retention of this solute on the given stationary phase.
+* `ΔCp`: Change of the isobaric heat capacity moving from the mobile to the stationary phase (in J mol⁻¹ K⁻¹). One of the three distribution-centric thermodynamic parameters describing the retention of this solute on the given stationary phase.
+* `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
 * `ann`: Annotations. In most cases the source of the data is noted here.
-* `Dag`: The diffusitivity of the solute `a` in the mobile phase `g` (in
-    ...). It is calculated by the function `diffusitivity()`.
+* `Dag`: The diffusitivity of the solute `a` in the mobile phase `g` (in...). It is calculated by the function `diffusitivity()`.
 * `t₀`: Initial time of the solute (in s) at the start of the simulation.
 * `τ₀`: Initial peak width of the solute (in s) at the start of the simulation. 
 
@@ -124,26 +111,16 @@ end
 Structure describing some general options for the simulation. 
 
 # Arguments
-* `alg`: The algorithm used for the ODE solver. The algorithms
-    `OwrenZen3()`, `OwrenZen4()` and `OwrenZen5()` are recommended.
-* `abstol`: The absolute tolerance for the ODE solver. Recommended value
-    1e-6 to 1e-8.
-* `reltol`: The relative tolerance for the ODE solver. Recommended value
-1e-3 to 1e-5. 
-* `Tcontrol`: Option defining at which point of the column the temperature
-    program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
-* `odesys`: Combine the ODEs for migration and peak-width into a system of
-    ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
-* `ng`: Option to calculate the simulation without a gradient (`ng = true`)
-    or with a gradient (`ng = false`). This distinction is made because of
-    partly manuall differentiation (problem of automatic differentiation with
-    integrals, e.g. in the `flow_restriction()` function. -> **TODO**: test
-    package Quadrature.jl as alternative to QuadGK.jl for integration)
+* `alg`: The algorithm used for the ODE solver. The algorithms `OwrenZen3()`, `OwrenZen4()` and `OwrenZen5()` are recommended.
+* `abstol`: The absolute tolerance for the ODE solver. Recommended value 1e-6 to 1e-8.
+* `reltol`: The relative tolerance for the ODE solver. Recommended value 1e-3 to 1e-5. 
+* `Tcontrol`: Option defining at which point of the column the temperature program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
+* `odesys`: Combine the ODEs for migration and peak-width into a system of ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`) or with a gradient (`ng = false`). This distinction is made because of partly manuall differentiation (problem of automatic differentiation with integrals, e.g. in the `flow_restriction()` function. -> **TODO**: test package Quadrature.jl as alternative to QuadGK.jl for integration)
 
 **TODO**: add option for the retention model ('ABC', 'K-centric')
 
-For more informations about the arguments `alg`, `abstol` and `reltol` see
-the documentation of the DifferentialEquations.jl package.
+For more informations about the arguments `alg`, `abstol` and `reltol` see the documentation of the DifferentialEquations.jl package.
 """
 struct Options
     alg                 # algorithmen for the ODE solver
@@ -879,7 +856,6 @@ mobile phase gas [1].
 Wiley-VCH, 2010.
 """
 function viscosity(x, t, T_itp, gas)
-    # using empiric model from Blumberg.2010
     if gas=="He"
         ηst = 18.63e-6
         ξ₀ = 0.6958
