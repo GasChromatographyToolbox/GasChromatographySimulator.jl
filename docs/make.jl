@@ -12,15 +12,6 @@ makedocs(
                 "References" => "references.md"
             ]
         )
-#=makedocs(
-    sitename = "GasChromatographySimulator",
-    pages = [
-        "Index" => "index.md",
-        "Another page" => "anotherPage.md",
-    ],
-    format = Documenter.HTML(prettyurls = false),
-    modules = [GasChromatographySimulator]
-)
 
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
@@ -29,4 +20,3 @@ deploydocs(
     repo = "github.com/JanLeppert/GasChromatographySimulator.jl",
     devbranch = "main"
 )
-=#
