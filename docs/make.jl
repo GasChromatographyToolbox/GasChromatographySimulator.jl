@@ -1,7 +1,17 @@
 using Documenter
 using GasChromatographySimulator
 
-makedocs(sitename = "GasChromatographySimulator.jl")
+makedocs(
+            sitename = "GasChromatographySimulator.jl",
+            pages = Any[
+                "Home" => "index.md",
+                "Installation" => "installation.md",
+                "Usage" => "usage.md",
+                "Examples" => "examples.md",
+                "Functions" => "functions.md",
+                "References" => "references.md"
+            ]
+        )
 #=makedocs(
     sitename = "GasChromatographySimulator",
     pages = [
