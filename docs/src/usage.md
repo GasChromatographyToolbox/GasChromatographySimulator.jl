@@ -8,7 +8,7 @@ A GC-system for the simulation is defined by four sets of parameters:
 
 The GC-system parameters `GasChromatographySimulator.System` defines the dimensions of the GC column, length ``L``, diameter ``d`` and film thickness of the stationary phase ``d_f``, all measured in meters, the name of the stationary phase and the name of the mobile phase (with the allowed values "He", "H2" and "N2").
 
-![GC-column](https://ibb.co/b5mG18K)
+![GC-column](https://i.ibb.co/0y2zqdG/Column.png)
 
 ```julia
 sys = GasChromatographySimulator.System(4.0, 0.1e-3, 0.1e-6, "Rxi17SilMS", "He")
@@ -34,7 +34,7 @@ prog = GasChromatographySimulator.Program(  [0.0, 60.0, 600.0, 120.0],
 
 The first array defines the time steps (in s), the second array defines the temperatures (in °C) at these time steps, the third and fourth array define the inlet and outlet pressures (both in Pa(absolute)) at the time steps. The values of temperature and pressures change linearly between the values defined at the time steps. The following picture shows the resulting temperature and pressure program.
 
-![Program without thermal gradient](https://ibb.co/H2KDHH8)
+![Program without thermal gradient](https://i.ibb.co/wLdNzzm/T-of-t-and-p-of-t-ng.png)
 
 The first time step is always zero (t₁ = 0.0 s). The following time steps define the time that passes until the next step. In the example the second time step is t₂ = 60 seconds long and in this time the temperature stays constant at 40°C (it changes linearly from T₁ = 40°C to T₂ = 40°C). With the next time step (t₃ = 600 s) the temperature changes from T₂ = 40°C linearly to T₃ = 300°C. In the last time step (t₄ = 120 s) the temperature is again kept constant at 300°C. The pressure program is defined in the same way.
 

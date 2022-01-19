@@ -10,7 +10,7 @@ Beside a temperature program (change of the temperature of the GC-system with ti
 
 The interaction between the substances and the stationary phase of the GC-system is described by a thermodynamic model (K-centric thermodynamic parameters [Blumberg.2017])
 
-![Chromatogram](https://ibb.co/f1L0KjC)
+![Chromatogram](https://i.ibb.co/HF3gM5r/Chromatogram.png)
 
 For further details see [Leppert.2020a].
 
