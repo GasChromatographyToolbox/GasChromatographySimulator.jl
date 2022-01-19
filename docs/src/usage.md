@@ -6,9 +6,13 @@ A GC-system for the simulation is defined by four sets of parameters:
 
 ### GC-system
 
-The GC-system parameters `GasChromatographySimulator.System` defines the dimensions of the GC column, length ``L``, diameter ``d`` and film thickness of the stationary phase ``d_f``, all measured in meters, the name of the stationary phase and the name of the mobile phase (with the allowed values "He", "H2" and "N2").
+A GC-system is defined by the dimensions of the GC column, length `L`, diameter `d` and film thickness of the stationary phase `df`, all measured in meters, the name of the stationary phase and the name of the mobile phase (with the allowed values "He", "H2" and "N2").
 
 ![GC-column](https://i.ibb.co/0y2zqdG/Column.png)
+
+These values are collected in the type structure [`GasChromatographySimulator.System`](@ref), which allows to define a function depending on column position `x` of the diameter `d(x, a_d)` and film thickness `df(x, a_df)`, where `a_d`, resp. `a_df` are parameters of the function.
+
+The following method constructs the System structure `sys` with a constant diameter and film thickness:
 
 ```julia
 sys = GasChromatographySimulator.System(4.0, 0.1e-3, 0.1e-6, "Rxi17SilMS", "He")
@@ -16,7 +20,10 @@ sys = GasChromatographySimulator.System(4.0, 0.1e-3, 0.1e-6, "Rxi17SilMS", "He")
 
 ### Program
 
+The program for a GC separation is defined by a temperature program ``T(t)`` and a pressure program. Typically the inlet pressure is controlled over time ``p_{in}(t)`` and the outlet pressure is constant, but here the outlet pressure can also be a function of time ``p_{out}(t)``. In addition ... gradient.
 The program parameters `GasChromatographySimulator.Program` defines the temperature and pressure program for the GC separation.
+
+Program-structure...
 
 The definition of the program parameters will be explained by two examples.
 
@@ -32,13 +39,13 @@ prog = GasChromatographySimulator.Program(  [0.0, 60.0, 600.0, 120.0],
                                             sys.L)
 ```
 
-The first array defines the time steps (in s), the second array defines the temperatures (in °C) at these time steps, the third and fourth array define the inlet and outlet pressures (both in Pa(absolute)) at the time steps. The values of temperature and pressures change linearly between the values defined at the time steps. The following picture shows the resulting temperature and pressure program.
-
 ![Program without thermal gradient](https://i.ibb.co/wLdNzzm/T-of-t-and-p-of-t-ng.png)
+
+The first array defines the time steps (in s), the second array defines the temperatures (in °C) at these time steps, the third and fourth array define the inlet and outlet pressures (both in Pa(absolute)) at the time steps. The values of temperature and pressures change linearly between the values defined at the time steps. The following picture shows the resulting temperature and pressure program.
 
 The first time step is always zero (t₁ = 0.0 s). The following time steps define the time that passes until the next step. In the example the second time step is t₂ = 60 seconds long and in this time the temperature stays constant at 40°C (it changes linearly from T₁ = 40°C to T₂ = 40°C). With the next time step (t₃ = 600 s) the temperature changes from T₂ = 40°C linearly to T₃ = 300°C. In the last time step (t₄ = 120 s) the temperature is again kept constant at 300°C. The pressure program is defined in the same way.
 
-The four arrays for time steps, temperatures and the two pressures must have the same number of elements, otherwise the construction of the Program-structure gives an error message.
+The four arrays for time steps, temperatures and the two pressures must have the same number of elements, otherwise the construction of the Program-structure gives an error message. Complex programs with several different heating ramps and temperature plateaus, as well as programed pressures, e.g. pressure pulses, can be realized by adding the temperature7pressure values at additional time steps. 
 
 #### Thermal gradient
 ...
