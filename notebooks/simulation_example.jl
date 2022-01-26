@@ -471,7 +471,7 @@ $(embed_display(add_plots(xx, yy, solution, par)))
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
 # ╟─273dcf96-6de4-4380-a00f-ed119bfa13b7
 # ╟─e0669a58-d5ac-4d01-b079-05412b413dda
-# ╟─a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
+# ╠═a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
 # ╟─7a00bb54-553f-47f5-b5db-b40d226f4183
 # ╟─3e053ac1-db7b-47c1-b52c-00e26b59912f
 # ╠═323a769f-55f9-41dd-b8f1-db7928996a52
@@ -484,7 +484,7 @@ $(embed_display(add_plots(xx, yy, solution, par)))
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
 # ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
 # ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
-# ╠═802e4071-b22b-4411-b589-205292aabc75
+# ╟─802e4071-b22b-4411-b589-205292aabc75
 # ╟─48f91bc4-35ce-470a-9b6d-eb3c08da27dc
 # ╟─f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
 # ╟─ee267b33-4086-4e04-9f39-b7f53f2ec920

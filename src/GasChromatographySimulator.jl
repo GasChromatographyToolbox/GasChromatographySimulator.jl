@@ -282,7 +282,7 @@ function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin
 end
 
 """
-    Program(time_steps, temp_steps, pin_steps, pout_steps, L)
+Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, L)
 
 Construct the structure `Program` with given values for the case
 without a thermal gradient. 
@@ -1673,6 +1673,24 @@ function sol_extraction(sol, peak, par)
     df_sol = DataFrame(name=solutes, z_t=sol_z, t=sol_t, z_τ²=peak_z, τ²=peak_τ²)
     return df_sol
 end
+
+function chromatogram(t::Array{Float64,1}, tR::Array{Float64,1}, τR::Array{Float64,1})
+	g(t,tR,τR) = 1/sqrt(2*π*τR^2)*exp(-(t-tR)^2/(2*τR^2))
+	chromatograms = Array{Array{Float64,1}}(undef, length(tR))
+	for j=1:length(tR)
+		chromatograms[j] = g.(t, tR[j], τR[j])
+	end
+	return sum(chromatograms)
+end
+
+function plot_chromatogram(peaklist)
+	tMax = maximum(peaklist.tR)*1.05
+	t = 0.0:tMax/10000:tMax
+	chrom = chromatogram(collect(t), peaklist.tR, peaklist.τR)
+	p_chrom = plot(t, chrom, xlabel="time in s", ylabel="abundance", legend=false)
+	return p_chrom, t, chrom
+end
+
 #---End-Result-Functions---
 
 end # module

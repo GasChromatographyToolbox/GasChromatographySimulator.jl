@@ -27,11 +27,10 @@ The manual is structured as followed:
 Pages = [
     "installation.md",
     "usage.md",
-    "examples.md",
     "functions.md",
     "references.md"
     ]
-Depth = 1
+Depth = 2
 ```
 
 
