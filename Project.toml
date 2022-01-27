@@ -1,7 +1,7 @@
 name = "GasChromatographySimulator"
 uuid = "dd82b6e2-56ef-419d-b271-0be268cb65f5"
 authors = ["Jan Leppert <jleppert@uni-bonn.de>"]
-version = "0.2.3"
+version = "0.2.4"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -21,7 +21,9 @@ DataFrames = "1.2"
 DifferentialEquations = "7.1"
 ForwardDiff = "0.10"
 Interpolations = "0.13"
-QuadGK = "2.4"
+Plots = "1.25"
 Pluto = "0.17"
 PlutoUI = "0.7"
+QuadGK = "2.4"
+Reexport = "1.2"
 julia = "1.6"
