@@ -96,7 +96,114 @@ For `α=0` a linear change of the temperature along the column is achieved. For 
 
 From the parameters `time_steps`, `temp_steps`, `a_gf` and gradient function `gf(x)` the temperature at every position `x` and every time `t` is linearly interpolated in a function `T_itp(x,t)`, which is stored in the [`GasChromatographySimulator.Program`](@ref) structure. The parameters `time_steps` and `pin_steps`, resp. `pout_steps`, are used to construct the linear interpolated pressure function in time `pin_itp(t)`, resp. `pout_itp(t)`. These interpolated functions are used throughout the simulation.
 
-#### Self-defined gradient function
+
+
+## Substance parameters
+
+A third set of parameters, [`GasChromatographySimulator.Substance`](@ref), is used to store the informations about the substances which are separated in the simulated GC-run. The stored information are the name, the CAS-number, three thermodynamic parameters (`Tchar` `θchar` `ΔCp`), the dimensionless film thickness (df/d) of the system for which the thermodynamic parameters were estimated, the diffusivity (calculated from the molecular formula, number of rings in the molecule and mol mass), the injection time and initial peak width. For several substances an array of the type [`GasChromatographySimulator.Substance`](@ref) is used.
+
+With the function [`GasChromatographySimulator.load_solute_database`](@ref) the data for selected substances and a selected stationary phase is loaded from an external database (a .csv-file).
+
+```@example ex
+stat_phase = sys.sp
+solutes = ["C10", "C11", "C12", "2-Octanol", "2-Octanone"]
+t₀ = zeros(length(solutes))
+τ₀ = zeros(length(solutes))
+sub = GasChromatographySimulator.load_solute_database("../../data", "Database_test.csv", 
+                                                        stat_phase,
+                                                        sys.gas,
+                                                        solutes,
+                                                        t₀,
+                                                        τ₀)
+```
+
+An example database [`Database_test.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/Database_test.csv) with thermodynamic data from [Blumberg2017a] can be found in the folder `/data` of this github project, see also [`Database`](#Database).
+
+## Option parameters
+
+A fourth set of parameters, [`GasChromatographySimulator.Options`](@ref), holds additional options used in the simulation. For details see the docstring.
+
+The default options can be initialized by calling:
+```@example ex
+opt = GasChromatographySimulator.Options()
+```
+
+## Combining the parameters
+
+The four sets of parameters defining the simulation are collected in the type structure [`GasChromatographySimulator.Parameters`](@ref). All information for the simulation are contained in this structure.
+
+```@example ex
+par_g = GasChromatographySimulator.Parameters(sys, prog_g, sub, opt) 
+nothing # hide
+```
+
+## Run the simulation and evaluate the results
+
+
+ODEs (see [Leppert.2020a, Leppert.2020b, Leppert.2021])
+
+With the function [`GasChromatographySimulator.simulate`](@ref) the simulation is initiated.
+
+An example of the above defined GC-system `sys`, with the program with a temperature gradient `prog_g`, the five substances `sub` and the default options `opt` (collected in the parameters `par_g`) is simulated by 
+
+```@example ex
+peaklist, sol = GasChromatographySimulator.simulate(par_g)
+nothing # hide
+```
+
+The simulation gives two resulting quantities. In the `peaklist` the general results of the simulated GC-run are presented in a DataFrame:
+
+```@example ex
+peaklist # hide
+```
+
+- Name          ... name of the substance
+- tR            ... retention time in s
+- τR            ... peak width at retention time in s
+- TR            ... elution temperature (temperature of the column outlet at retention time) 
+- σR            ... band width at retention time in m
+- uR            ... velocity of the substance at retention time in m/s
+- kR            ... retention factor at retention time
+- Res           ... resolution between the substance and its following neighbor
+
+From the `peaklist` a chromatogram can be calculated (gaussian peak form with the same area are assumed) and plotted:
+
+```@example ex
+using Plots # hide
+p_chrom, t, abundance = GasChromatographySimulator.plot_chromatogram(peaklist, (100.0, 200.0))
+savefig(p_chrom, "plot_chromatogram.png"); nothing # hide
+```
+
+![](plot_chromatogram.png)
+ 
+The solution of the ODEs are stored in `sol` as an array of solutions from the [`DifferentialEquations.jl`](https://github.com/SciML/DifferentialEquations.jl) package. The solution for the first substance (C10) is:
+```@example ex
+sol[1] # hide
+```
+
+Herby is `sol[1].t` the position `x` along the column and `sol[1].u` consists of an array of the corresponding time `t` and peak variance `τ²`.
+
+The solution `t(x)` can be plotted by
+
+```@example ex
+p_tx = plot(sol[1], vars=1)
+savefig(p_tx, "plot_tx.png"); nothing # hide
+```
+
+![](plot_tx.png)
+
+THe solution `τ²(x)` can be plotted by
+```@example ex
+p_τ²x = plot(sol[1], vars=2)
+savefig(p_τ²x, "plot_tau2x.png"); nothing # hide
+```
+
+![](plot_tau2x.png)
+
+
+## Notes
+
+### Self-defined gradient function
 
 It is possible to define other gradient function beside the pre-defined function above. The following example shows the construction of the [`GasChromatographySimulator.Program`](@ref) structure with a `sin` function with a changing period over the time of the program:
 
@@ -122,27 +229,6 @@ The solid lines show the defined gradient functions at the five `time_steps`. Th
 
 Note: Not fully tested yet.
 
-## Substance parameters
-
-A third set of parameters, [`GasChromatographySimulator.Substance`](@ref), is used to store the informations about the substances which are separated in the simulated GC-run. The stored information are the name, the CAS-number, three thermodynamic parameters (`Tchar` `θchar` `ΔCp`), the dimensionless film thickness (df/d) of the system for which the thermodynamic parameters were estimated, the diffusivity (calculated from the molecular formula, number of rings in the molecule and mol mass), the injection time and initial peak width. For several substances an array of the type [`GasChromatographySimulator.Substance`](@ref) is used.
-
-With the function [`GasChromatographySimulator.load_solute_database`](@ref) the data for selected substances and a selected stationary phase is loaded from an external database (a .csv-file).
-
-```@example ex
-stat_phase = sys.sp
-solutes = ["C10", "C11", "C12", "2-Octanol", "2-Octanone"]
-t₀ = zeros(length(solutes))
-τ₀ = zeros(length(solutes))
-sub = GasChromatographySimulator.load_solute_database("../../data", "Database_test.csv", 
-                                                        stat_phase,
-                                                        sys.gas,
-                                                        solutes,
-                                                        t₀,
-                                                        τ₀)
-```
-
-An example database [`Database_test.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/Database_test.csv) with thermodynamic data from [Blumberg2017a] can be found in the folder `/data` of this github project.
-
 ### Database
 
 The layout of the database in the .csv-file is shown here:
@@ -167,63 +253,3 @@ It consists of 14 different columns:
 - DeltaCp       ... the third thermodynamic parameter in J mol⁻¹ K⁻¹
 - phi0          ... the dimensionless film thickness (df/d) for which the thermodynamic parameters were estimated
 - Annotation    ... a note, e.g. reference for the thermodynamic parameters
-	
-
-## Additional Options
-
-A fourth set of parameters, [`GasChromatographySimulator.Options`](@ref), holds additional options used in the simulation. For details see the docstring.
-
-The default options can be initialized by calling:
-```@example ex
-opt = GasChromatographySimulator.Options()
-```
-
-## Combining the parameters
-
-The four sets of parameters defining the simulation are collected in the type structure [`GasChromatographySimulator.Parameters`](@ref). All information for the simulation are contained in this structure.
-
-```@example ex
-par_g = GasChromatographySimulator.Parameters(sys, prog_g, sub, opt) 
-nothing # hide
-```
-
-## Run the simulation and evaluate the results
-
-With the function [`GasChromatographySimulator.simulate`](@ref) the simulation is initiated.
-
-ODEs (see [Leppert.2020a, Leppert.2020b, Leppert.2021])
-
-An example of the above defined GC-system `sys`, with the program with a temperature gradient `prog_g`, the five substances `sub` and the default options `opt` (collected in the parameters `par_g`) is simulated by 
-
-```@example ex
-peaklist, sol = GasChromatographySimulator.simulate(par_g)
-nothing # hide
-```
-
-The simulation gives two resulting quantities. In the `peaklist` the general results of the simulated GC-run are presented in a DataFrame:
-
-```@example ex
-peaklist # hide
-```
-
-- Name          ... name of the substance
-- tR            ... retention time in s
-- τR            ... peak width at retention time in s
-- TR            ... elution temperature (temperature of the column outlet at retention time) 
-- σR            ... band width at retention time in m
-- uR            ... velocity of the substance at retention time in m/s
-- kR            ... retention factor at retention time
-- Res           ... resolution between the substance and its following neighbor
- 
-The solution of the ODEs are stored in `sol` as an array of solutions from the [`DifferentialEquations.jl`](https://github.com/SciML/DifferentialEquations.jl) package. The solution for the first substance (C10) is:
-```@example ex
-sol[1] # hide
-```
-
-Herby is `sol[1].t` the position `x` along the column and `sol[1].u` consists of an array of the corresponding time `t` and peak variance `τ²`.
-
-show chromatogram:
-
-```@example ex
-GasChromatographySimulator.plot_chromatogram(peaklist)
-```

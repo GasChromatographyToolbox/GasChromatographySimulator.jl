@@ -145,3 +145,23 @@ GasChromatographySimulator.sol_extraction(sol, par)
 ```@docs
 GasChromatographySimulator.sol_extraction(sol, peak, par)
 ```
+
+```@docs
+GasChromatographySimulator.plot_chromatogram(peaklist, tlims; annotation=true, number=true, mirror=false, offset=0.0)
+```
+
+```@docs
+GasChromatographySimulator.plot_chromatogram!(peaklist, tlims; annotation=true, number=true, mirror=false, offset=0.0)
+```
+
+```@docs
+GasChromatographySimulator.plot_flow(par)
+```
+
+```@docs
+GasChromatographySimulator.plot_pressure(prog)
+```
+
+```@docs
+GasChromatographySimulator.plot_temperature(par; selector="T(t)")
+```
