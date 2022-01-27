@@ -91,7 +91,7 @@ end
             GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "outlet", true),
             GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "outlet", false),
             GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", false)#,
-            #GasChromatographySimulator.Options(OwrenZen5(), 1e-8, 1e-5, "inlet", true)
+            #GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true; ng=true)
             ]
 
     par_g = Array{GasChromatographySimulator.Parameters}(undef, length(opt))
@@ -164,6 +164,77 @@ end
     df_sol = GasChromatographySimulator.sol_extraction(results_g[4][2], results_g[4][3], par_g[4])
     @test df_sol.t[1][end] ≈ results_g[4][1].tR[1]
     @test df_sol.τ²[2][end] ≈ results_g[4][1].τR[2]^2
+
+    # ng = true
+    opt_ng = GasChromatographySimulator.Options(ng=true)
+    prog_o_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_ng.Tcontrol, sys.L)
+    par_o_ng = GasChromatographySimulator.Parameters(sys, prog_o_ng, sub, opt_ng)
+    results_o_ng = GasChromatographySimulator.simulate(par_o_ng)
+    @test isapprox(results_o_ng[1].tR[1], 87.401, atol=1e-3)
+    @test isapprox(results_o_ng[1].τR[2], 0.59028, atol=1e-5)
+
+end
+
+@testset "plots check" begin
+
+    a_d = [d]
+    a_df = [df]
+    d_fun(x) = GasChromatographySimulator.gradient(x, a_d)
+    df_fun(x) = GasChromatographySimulator.gradient(x, a_df)
+    sys = GasChromatographySimulator.System(L, d_fun, a_d, df_fun, a_df, sp, gas)
+
+    solutes = ["C10", "C11"]
+    init_t = zeros(length(solutes))
+    init_τ = zeros(length(solutes))
+    sub = GasChromatographySimulator.load_solute_database(db_path, db, sys.sp, sys.gas, solutes, init_t, init_τ)
+    
+    opt_ng = GasChromatographySimulator.Options(ng=true)
+    prog_o_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_ng.Tcontrol, sys.L)
+    par_o_ng = GasChromatographySimulator.Parameters(sys, prog_o_ng, sub, opt_ng)
+    results_o_ng = GasChromatographySimulator.simulate(par_o_ng)
+
+    # separat testset
+    # plot functions
+    t_start = 0.0
+    t_end = 200.0
+    p_chrom, t, chrom = GasChromatographySimulator.plot_chromatogram(results_o_ng[1], (t_start, t_end))
+    @test t[1] == t_start && t[end] == t_end
+    tR = results_o_ng[1].tR[1]
+    τR = results_o_ng[1].τR[1]
+    t0 = round(tR; digits=1)
+    @test chrom[findfirst(t.==t0)] == 1/sqrt(2*π*τR^2)*exp(-(t0-tR)^2/(2*τR^2))
+    t2, chrom2 = GasChromatographySimulator.plot_chromatogram!(p_chrom, results_o_ng[1], (t_start, t_end); mirror=true)
+    @test t == t2
+    @test chrom == -chrom2
+    #@test p_chrom[1][:xaxis][:optimized_ticks][1][1] = t_start 
+    #@test p_chrom[1][:xaxis][:optimized_ticks][1][end] = t_end 
+    @test p_chrom[1][1][:y] == - p_chrom[1][2][:y]
+    @test p_chrom[1][1][:x] == p_chrom[1][2][:x]
+
+    p_flow = GasChromatographySimulator.plot_flow(par_o_ng)
+    #@test p_flow[1][:xaxis][:optimized_ticks][1][1] = 0.0 
+    #@test p_flow[1][:xaxis][:optimized_ticks][1][end] = 800.0
+    @test isapprox(p_flow[1][1][:y][1], 11.9797, atol=1e-4)
+
+    p_pres = GasChromatographySimulator.plot_pressure(par_o_ng.prog)
+    #@test p_pres[1][:xaxis][:optimized_ticks][1][1] = 0.0 
+    #@test p_pres[1][:xaxis][:optimized_ticks][1][end] = 800.0
+    @test p_pres[1][1][:y][1] == par_o_ng.prog.pin_steps[1]
+    @test p_pres[1][2][:y][end] == par_o_ng.prog.pout_steps[end]
+
+    p_temp = GasChromatographySimulator.plot_temperature(par_o_ng)
+    @test p_temp[1][1][:y][1] == par_o_ng.prog.temp_steps[1]
+    @test p_temp[1][1][:y][end] == par_o_ng.prog.temp_steps[end]
+    @test p_temp[1][2][:x][end] == sum(par_o_ng.prog.time_steps)
+
+    p_temp = GasChromatographySimulator.plot_temperature(par_o_ng; selector="T(x)")
+    @test p_temp[1][1][:y][1] == par_o_ng.prog.temp_steps[1]
+    @test p_temp[1][end][:y][end] == par_o_ng.prog.temp_steps[end]
+    @test p_temp[1][2][:x][end] == par_o_ng.sys.L
+
+    p_temp = GasChromatographySimulator.plot_temperature(par_o_ng; selector="T(x,t)")
+    @test p_temp[1][1][:y][end] == sum(par_o_ng.prog.time_steps)
+    @test p_temp[1][1][:x][end] == par_o_ng.sys.L
 end
 
 @testset "misc checks" begin
