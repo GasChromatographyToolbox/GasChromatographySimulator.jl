@@ -1744,8 +1744,7 @@ Add the chromatogram of the peaks listed in `peaklist` over the time tupel `tlim
 * `offset`: Float64, this value is added to the chromatogram; default = 0.0.
 
 # Output
-Tupel `(p_chrom, t, chrom)`
-* `p_chrom`: the plot of the chromatogram `chrom` over time `t`
+Tupel `(t, chrom)`
 * `t`: Array of time of the chromatogram
 * `chrom`: Array of the abundance values of the chromatogram
 """
@@ -1766,7 +1765,7 @@ function plot_chromatogram!(p_chrom, peaklist, tlims; t₀=0.0, annotation=true,
 	elseif annotation==true && number==false
 		plot!(p_chrom, annotations = [(peaklist.tR[i], chrom_tR[i], text(peaklist.Name[i], 10, rotation=90, :center)) for i in 1:length(peaklist.tR)])
 	end
-	return p_chrom, t, chrom
+	return t, chrom
 end
 
 """
