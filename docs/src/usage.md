@@ -192,7 +192,7 @@ savefig(p_tx, "plot_tx.png"); nothing # hide
 
 ![](plot_tx.png)
 
-THe solution `τ²(x)` can be plotted by
+The solution `τ²(x)` can be plotted by
 ```@example ex
 p_τ²x = plot(sol[1], vars=2)
 savefig(p_τ²x, "plot_tau2x.png"); nothing # hide
