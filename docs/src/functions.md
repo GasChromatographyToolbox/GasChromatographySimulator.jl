@@ -1,6 +1,7 @@
 # Functions 
 
-```@index
+```@docs
+GasChromatographySimulator.System
 ```
 
 ```@docs
@@ -8,11 +9,15 @@ GasChromatographySimulator.System(L, d, df, sp, gas)
 ```
 
 ```@docs
-GasChromatographySimulator.Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, a_gf::Array{<:Real, 2}, Tcontrol, L)
+GasChromatographySimulator.Program
 ```
 
 ```@docs
-GasChromatographySimulator.Program
+GasChromatographySimulator.Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, L)
+```
+
+```@docs
+GasChromatographySimulator.Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, a_gf::Array{<:Real, 2}, Tcontrol, L)
 ```
 
 ```@docs
@@ -136,4 +141,27 @@ GasChromatographySimulator.sol_extraction(sol, par)
 
 ```@docs
 GasChromatographySimulator.sol_extraction(sol, peak, par)
+```
+
+```@docs
+GasChromatographySimulator.plot_chromatogram
+```
+
+```@docs
+GasChromatographySimulator.plot_chromatogram!
+```
+
+```@docs
+GasChromatographySimulator.plot_flow
+```
+
+```@docs
+GasChromatographySimulator.plot_pressure
+```
+
+```@docs
+GasChromatographySimulator.plot_temperature
+```
+
+```@index
 ```

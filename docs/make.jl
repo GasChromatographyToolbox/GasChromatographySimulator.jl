@@ -7,7 +7,6 @@ makedocs(
                 "Home" => "index.md",
                 "Installation" => "installation.md",
                 "Usage" => "usage.md",
-                "Examples" => "examples.md",
                 "Functions" => "functions.md",
                 "References" => "references.md"
             ]
