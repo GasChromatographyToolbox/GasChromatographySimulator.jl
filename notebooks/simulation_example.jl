@@ -52,7 +52,7 @@ md"""
 
 # ╔═╡ 273dcf96-6de4-4380-a00f-ed119bfa13b7
 begin
-	solute_db_path = "../data" #"/Users/janleppert/Documents/GitHub/GasChromatographySimulator/data/"
+	solute_db_path = "../data"
 	solute_db = "Database_test.csv"
 	db = DataFrame(CSV.File(joinpath(solute_db_path, solute_db), header=1, silencewarnings=true))
 	sp = unique(db.Phase)
@@ -199,86 +199,10 @@ function opt_set_UI()
 	end
 end
 
-"""
-    chromatogram(t::Array{Float64,1}, tR::Array{Float64,1}, τR::Array{Float64,1})
 
-Calculate the chromatogram as a sum of gaussian peaks over the time `t` for peaks centered at retention times `tR` and with peak width `τR`.    
-"""
-function chromatogram(t::Array{Float64,1}, tR::Array{Float64,1}, τR::Array{Float64,1})
-	g(t,tR,τR) = 1/sqrt(2*π*τR^2)*exp(-(t-tR)^2/(2*τR^2))
-	chromatograms = Array{Array{Float64,1}}(undef, length(tR))
-	for j=1:length(tR)
-		chromatograms[j] = g.(t, tR[j], τR[j])
-	end
-	return sum(chromatograms)
-end
-
-"""
-    plot_chromatogram(peaklist)
-
-Plot the chromatogram of the peaks listed in `peaklist``.    
-"""
-function plot_chromatogram(peaklist)
-	tMax = maximum(peaklist.tR)*1.05
-	t = 0.0:tMax/10000:tMax
-	chrom = chromatogram(collect(t), peaklist.tR, peaklist.τR)
-	p_chrom = plot(t, chrom, xlabel="time in s", ylabel="abundance", legend=false)
-	return p_chrom, t, chrom
-end
-
-function plot_flow(par)
-	t = 0.0:sum(par.prog.time_steps)/1000.0:sum(par.prog.time_steps)
-	F = Array{Float64}(undef, length(t))
-	for i=1:length(t)
-		F[i] = GasChromatographySimulator.flow(t[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas)
-	end
-	pflow = plot(t, F.*60e6, xlabel="time in s", ylabel="column flow in mL/min", legend=false, size=(800,500))
-	return pflow
-end
-
-function plot_pressure(par)
-	t = 0.0:sum(par.prog.time_steps)/1000.0:sum(par.prog.time_steps)
-	pin = Array{Float64}(undef, length(t))
-	pout = Array{Float64}(undef, length(t))
-	for i=1:length(t)
-		pin[i] = par.prog.pin_itp(t[i])
-		pout[i] = par.prog.pout_itp(t[i])
-	end
-	ppress = plot(t, pin, xlabel="time in s", ylabel="pressure in Pa", label="inlet", size=(800,500))
-	plot!(ppress, t, pout, label="outlet")
-	return ppress
-end
-
-function temperature_plot(par, plot_selector)
-	if plot_selector=="T(x)"
-		nx = 0.0:par.sys.L/1000:par.sys.L
-		Tplot = plot(xlabel="x in m", ylabel="T in °C", legend=:top, size=(800,500))
-		for i=1:length(par.prog.time_steps)
-			T = par.prog.T_itp.(nx, cumsum(par.prog.time_steps)[i]).-273.15
-			plot!(Tplot, nx, T, label="t=$(cumsum(par.prog.time_steps)[i])s")
-		end
-	elseif plot_selector=="T(t)"
-		nt = 0.0:sum(par.prog.time_steps)/1000:sum(par.prog.time_steps)
-		T0 = par.prog.T_itp.(0.0, nt).-273.15
-		Tplot = plot(nt, T0, xlabel="t in s", ylabel="T in °C", legend=:top, label="inlet", c=:red, size=(800,500))
-		TL = par.prog.T_itp.(par.sys.L, nt).-273.15
-		plot!(Tplot, nt, TL, label="outlet", c=:blue)
-	elseif plot_selector=="T(x,t)"
-		nx = 0.0:par.sys.L/1000:par.sys.L
-		nt = 0.0:sum(par.prog.time_steps)/1000:sum(par.prog.time_steps)
-		T = Array{Float64}(undef, length(nx), length(nt))
-		for j=1:length(nt)
-			for i=1:length(nx)
-				T[i,j] = par.prog.T_itp(nx[i], nt[j])-273.15
-			end
-		end
-		Tplot = plot(nx, nt, T', st=:surface, xlabel="x in m", ylabel="t in s", zlabel="T in °C", size=(800,500))
-	end
-	return Tplot
-end
 
 	md"""
-	Definition of functions.
+	Definition of UI functions.
 	"""
 end
 
@@ -325,18 +249,18 @@ begin
 		md"""
 		**_Temperature T(x,t)_**
 		
-		$(embed_display(temperature_plot(par, Tplot)))
+		$(embed_display(GasChromatographySimulator.plot_temperature(par; selector=Tplot)))
 		"""
 	elseif Tplot=="T(x)"
 		md"""
 		**_Temperature T(x)_**
 		
-		$(embed_display(temperature_plot(par, Tplot)))
+		$(embed_display(GasChromatographySimulator.plot_temperature(par; selector=Tplot)))
 		"""
 	elseif Tplot=="T(t)"
 		md"""
 		**_Temperature T(t)_**
-		$(embed_display(temperature_plot(par, Tplot)))
+		$(embed_display(GasChromatographySimulator.plot_temperature(par; selector=Tplot)))
 		"""
 	end
 end
@@ -345,14 +269,14 @@ end
 md"""
 ## Plot of pressure program
 
-$(embed_display(plot_pressure(par)))
+$(embed_display(GasChromatographySimulator.plot_pressure(par.prog)))
 """
 
 # ╔═╡ 834a26d2-8f7b-4a00-843f-19e13dc686f2
 md"""
 ## Plot of column flow
 
-$(embed_display(plot_flow(par)))
+$(embed_display(GasChromatographySimulator.plot_flow(par)))
 """
 
 # ╔═╡ 49faa7ea-0f22-45ca-9ab5-338d0db25564
@@ -369,14 +293,9 @@ md"""
 $(embed_display(peaklist))
 """
 
-# ╔═╡ a2287fe8-5aa2-4259-bf7c-f715cc866243
+# ╔═╡ 51cf3736-6f0d-442e-bec5-8cc18f84e3cb
 begin
-	pchrom = plot_chromatogram(peaklist)[1]
-	md"""
-	### Chromatogram
-
-	$(embed_display(pchrom))
-	"""
+	plot(solution[1], vars=2)
 end
 
 # ╔═╡ 48f91bc4-35ce-470a-9b6d-eb3c08da27dc
@@ -459,30 +378,41 @@ end
 	"""
 end
 
+# ╔═╡ a2287fe8-5aa2-4259-bf7c-f715cc866243
+begin
+	pchrom = GasChromatographySimulator.plot_chromatogram(peaklist, (0,sum(par.prog.time_steps)))[1]
+	md"""
+	### Chromatogram
+
+	$(embed_display(pchrom))
+	"""
+end
+
 # ╔═╡ 0740f2e6-bce0-4590-acf1-ad4d7cb7c523
 md"""
 $(embed_display(add_plots(xx, yy, solution, par)))
 """
 
 # ╔═╡ Cell order:
-# ╟─7272450e-73b1-11ec-080d-1d1efd32e836
-# ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
+# ╠═7272450e-73b1-11ec-080d-1d1efd32e836
+# ╠═9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
 # ╟─273dcf96-6de4-4380-a00f-ed119bfa13b7
 # ╟─e0669a58-d5ac-4d01-b079-05412b413dda
-# ╠═a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
+# ╟─a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
 # ╟─7a00bb54-553f-47f5-b5db-b40d226f4183
 # ╟─3e053ac1-db7b-47c1-b52c-00e26b59912f
 # ╠═323a769f-55f9-41dd-b8f1-db7928996a52
 # ╟─96580972-6ef1-4a88-b872-2f74cba4dbf4
-# ╠═1554aee2-41dc-4a39-b6fc-5e02ad4c24e2
-# ╠═834a26d2-8f7b-4a00-843f-19e13dc686f2
-# ╠═49faa7ea-0f22-45ca-9ab5-338d0db25564
+# ╟─1554aee2-41dc-4a39-b6fc-5e02ad4c24e2
+# ╟─834a26d2-8f7b-4a00-843f-19e13dc686f2
+# ╟─49faa7ea-0f22-45ca-9ab5-338d0db25564
 # ╟─14db2d66-eea6-43b1-9caf-2039709d1ddb
 # ╟─a2287fe8-5aa2-4259-bf7c-f715cc866243
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
-# ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
+# ╠═0740f2e6-bce0-4590-acf1-ad4d7cb7c523
+# ╠═51cf3736-6f0d-442e-bec5-8cc18f84e3cb
 # ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
 # ╟─802e4071-b22b-4411-b589-205292aabc75
 # ╟─48f91bc4-35ce-470a-9b6d-eb3c08da27dc
