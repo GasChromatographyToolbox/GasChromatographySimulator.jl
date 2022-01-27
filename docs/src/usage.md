@@ -169,7 +169,7 @@ peaklist # hide
 From the `peaklist` a chromatogram can be calculated (gaussian peak form with the same area are assumed) and plotted:
 
 ```@example ex
-using Plots # hide
+using Plots; gr() # hide
 p_chrom, t, abundance = GasChromatographySimulator.plot_chromatogram(peaklist, (100.0, 200.0))
 savefig(p_chrom, "plot_chromatogram.png"); nothing # hide
 ```

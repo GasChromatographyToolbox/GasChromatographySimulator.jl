@@ -1,8 +1,5 @@
 # Functions 
 
-```@index
-```
-
 ```@docs
 GasChromatographySimulator.System
 ```
@@ -147,21 +144,24 @@ GasChromatographySimulator.sol_extraction(sol, peak, par)
 ```
 
 ```@docs
-GasChromatographySimulator.plot_chromatogram(peaklist, tlims; annotation=true, number=true, mirror=false, offset=0.0)
+GasChromatographySimulator.plot_chromatogram
 ```
 
 ```@docs
-GasChromatographySimulator.plot_chromatogram!(peaklist, tlims; annotation=true, number=true, mirror=false, offset=0.0)
+GasChromatographySimulator.plot_chromatogram!
 ```
 
 ```@docs
-GasChromatographySimulator.plot_flow(par)
+GasChromatographySimulator.plot_flow
 ```
 
 ```@docs
-GasChromatographySimulator.plot_pressure(prog)
+GasChromatographySimulator.plot_pressure
 ```
 
 ```@docs
-GasChromatographySimulator.plot_temperature(par; selector="T(t)")
+GasChromatographySimulator.plot_temperature
+```
+
+```@index
 ```
