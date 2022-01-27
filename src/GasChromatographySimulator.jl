@@ -1704,7 +1704,7 @@ Plot the chromatogram of the peaks listed in `peaklist` over the time tupel `tli
 * `offset`: Float64, this value is added to the chromatogram; default = 0.0.
 
 # Output
-Tupel `(p_chrom, t, chrom)``
+Tupel `(p_chrom, t, chrom)`
 * `p_chrom`: the plot of the chromatogram `chrom` over time `t`
 * `t`: Array of time of the chromatogram
 * `chrom`: Array of the abundance values of the chromatogram
@@ -1744,7 +1744,7 @@ Add the chromatogram of the peaks listed in `peaklist` over the time tupel `tlim
 * `offset`: Float64, this value is added to the chromatogram; default = 0.0.
 
 # Output
-Tupel (p_chrom, t, chrom)
+Tupel `(p_chrom, t, chrom)`
 * `p_chrom`: the plot of the chromatogram `chrom` over time `t`
 * `t`: Array of time of the chromatogram
 * `chrom`: Array of the abundance values of the chromatogram
@@ -1773,13 +1773,12 @@ end
 	plot_flow(par)
 
 Calculate and plot the flow (in mL/min, normalized) of the carrier gas in a GC system with a program defined in the parameters `par::GasChromatography.Parameters`.
-
 """
 function plot_flow(par)
 	t = 0.0:sum(par.prog.time_steps)/1000.0:sum(par.prog.time_steps)
 	F = Array{Float64}(undef, length(t))
 	for i=1:length(t)
-		F[i] = GasChromatographySimulator.flow(t[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas)
+		F[i] = flow(t[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas)
 	end
 	p_flow = plot(t, F.*60e6, xlabel="time in s", ylabel="column flow in mL/min", legend=false)
 	return p_flow
@@ -1789,7 +1788,6 @@ end
 	plot_pressure(prog)
 
 Plot the inlet and outlet pressure over time of the program `prog::GasChromatographySimulator.Program`.
-
 """
 function plot_pressure(prog)
 	t = 0.0:sum(prog.time_steps)/1000.0:sum(prog.time_steps)
