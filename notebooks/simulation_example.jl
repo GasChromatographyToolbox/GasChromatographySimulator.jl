@@ -14,21 +14,25 @@ macro bind(def, element)
     end
 end
 
-# ╔═╡ 7272450e-73b1-11ec-080d-1d1efd32e836
+# ╔═╡ 115b320f-be42-4116-a40a-9cf1b55d39b5
 begin
-	import Pkg
-    # activate the shared project environment
-    Pkg.activate(Base.current_project())
-	using Plots
-	using GasChromatographySimulator
-	using Plots
-	using PlutoUI
-	TableOfContents()
+    import Pkg
+    Pkg.activate(mktempdir())
+    Pkg.add([
+        Pkg.PackageSpec(name="Plots", version="1"),
+        Pkg.PackageSpec(name="PlutoUI", version="0.7"),
+		Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographySimulator.jl")
+    ])
+    using Plots, PlutoUI, GasChromatographySimulator
+	md"""
+	Packages
+	"""
 end
 
 # ╔═╡ 9c54bef9-5b70-4cf7-b110-a2f48f5db066
 begin
-	plotly()
+	#plotly()
+	gr()
 	html"""
 	<style>
 	  main {
@@ -36,6 +40,7 @@ begin
 	  }
 	</style>
 	"""
+	TableOfContents()
 end
 
 # ╔═╡ c9246396-3c01-4a36-bc9c-4ed72fd9e325
@@ -64,7 +69,7 @@ end
 
 # ╔═╡ 323a769f-55f9-41dd-b8f1-db7928996a52
 md"""
-## Plot of temperature program
+## Plot of the program
 
 select temperature plot: $(@bind Tplot Select(["T(x,t)", "T(x)", "T(t)"]; default="T(t)"))
 """
@@ -74,11 +79,6 @@ md"""
 ### Plot of local values
 
 Plot $(@bind yy Select(["z", "t", "T", "τ", "σ", "u"]; default="t")) over $(@bind xx Select(["z", "t", "T", "τ", "σ", "u"]; default="z"))
-"""
-
-# ╔═╡ 95e1ca30-9442-4f39-9af0-34bd202fcc24
-md"""
-# End
 """
 
 # ╔═╡ 802e4071-b22b-4411-b589-205292aabc75
@@ -243,41 +243,22 @@ prog = GasChromatographySimulator.Program(parse.(Float64, split(prog_values[1]))
 # ╔═╡ 85954bdb-d649-4772-a1cd-0bda5d9917e9
 par = GasChromatographySimulator.Parameters(sys, prog, sub, opt);
 
-# ╔═╡ 96580972-6ef1-4a88-b872-2f74cba4dbf4
+# ╔═╡ fdb39284-201b-432f-bff6-986ddbc49a7d
 begin
-	if Tplot=="T(x,t)"
-		md"""
-		**_Temperature T(x,t)_**
-		
-		$(embed_display(GasChromatographySimulator.plot_temperature(par; selector=Tplot)))
-		"""
-	elseif Tplot=="T(x)"
-		md"""
-		**_Temperature T(x)_**
-		
-		$(embed_display(GasChromatographySimulator.plot_temperature(par; selector=Tplot)))
-		"""
-	elseif Tplot=="T(t)"
-		md"""
-		**_Temperature T(t)_**
-		$(embed_display(GasChromatographySimulator.plot_temperature(par; selector=Tplot)))
-		"""
+	gr()
+	plot_T = GasChromatographySimulator.plot_temperature(par; selector=Tplot)
+	if Tplot=="T(x)"
+		plot!(plot_T, legend=:bottomleft)
 	end
+	plot_p = GasChromatographySimulator.plot_pressure(par.prog)
+	xlabel!(plot_p, "")
+	plot_F = GasChromatographySimulator.plot_flow(par)
+	l = @layout([a{0.65w} [b; c]])
+	p_TpF = plot(plot_T, plot_p, plot_F, layout=l)
+	md"""
+	$(embed_display(p_TpF))
+	"""
 end
-
-# ╔═╡ 1554aee2-41dc-4a39-b6fc-5e02ad4c24e2
-md"""
-## Plot of pressure program
-
-$(embed_display(GasChromatographySimulator.plot_pressure(par.prog)))
-"""
-
-# ╔═╡ 834a26d2-8f7b-4a00-843f-19e13dc686f2
-md"""
-## Plot of column flow
-
-$(embed_display(GasChromatographySimulator.plot_flow(par)))
-"""
 
 # ╔═╡ 49faa7ea-0f22-45ca-9ab5-338d0db25564
 begin	
@@ -292,11 +273,6 @@ md"""
 ### Peaklist
 $(embed_display(peaklist))
 """
-
-# ╔═╡ 51cf3736-6f0d-442e-bec5-8cc18f84e3cb
-begin
-	plot(solution[1], vars=2)
-end
 
 # ╔═╡ 48f91bc4-35ce-470a-9b6d-eb3c08da27dc
 begin
@@ -380,6 +356,7 @@ end
 
 # ╔═╡ a2287fe8-5aa2-4259-bf7c-f715cc866243
 begin
+	plotly()
 	pchrom = GasChromatographySimulator.plot_chromatogram(peaklist, (0,sum(par.prog.time_steps)))[1]
 	md"""
 	### Chromatogram
@@ -389,13 +366,19 @@ begin
 end
 
 # ╔═╡ 0740f2e6-bce0-4590-acf1-ad4d7cb7c523
+begin
+	plotly()
+	add_plots(xx, yy, solution, par)
+end
+
+# ╔═╡ 95e1ca30-9442-4f39-9af0-34bd202fcc24
 md"""
-$(embed_display(add_plots(xx, yy, solution, par)))
+# End
 """
 
 # ╔═╡ Cell order:
-# ╠═7272450e-73b1-11ec-080d-1d1efd32e836
-# ╠═9c54bef9-5b70-4cf7-b110-a2f48f5db066
+# ╟─115b320f-be42-4116-a40a-9cf1b55d39b5
+# ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
 # ╟─273dcf96-6de4-4380-a00f-ed119bfa13b7
@@ -403,17 +386,13 @@ $(embed_display(add_plots(xx, yy, solution, par)))
 # ╟─a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
 # ╟─7a00bb54-553f-47f5-b5db-b40d226f4183
 # ╟─3e053ac1-db7b-47c1-b52c-00e26b59912f
-# ╠═323a769f-55f9-41dd-b8f1-db7928996a52
-# ╟─96580972-6ef1-4a88-b872-2f74cba4dbf4
-# ╟─1554aee2-41dc-4a39-b6fc-5e02ad4c24e2
-# ╟─834a26d2-8f7b-4a00-843f-19e13dc686f2
+# ╟─323a769f-55f9-41dd-b8f1-db7928996a52
+# ╟─fdb39284-201b-432f-bff6-986ddbc49a7d
 # ╟─49faa7ea-0f22-45ca-9ab5-338d0db25564
 # ╟─14db2d66-eea6-43b1-9caf-2039709d1ddb
 # ╟─a2287fe8-5aa2-4259-bf7c-f715cc866243
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
-# ╠═0740f2e6-bce0-4590-acf1-ad4d7cb7c523
-# ╠═51cf3736-6f0d-442e-bec5-8cc18f84e3cb
-# ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
+# ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
 # ╟─802e4071-b22b-4411-b589-205292aabc75
 # ╟─48f91bc4-35ce-470a-9b6d-eb3c08da27dc
 # ╟─f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
@@ -421,3 +400,4 @@ $(embed_display(add_plots(xx, yy, solution, par)))
 # ╟─e3277bb4-301a-4a1e-a838-311832b6d6aa
 # ╟─115fa61e-8e82-42b2-8eea-9c7e21d97ea8
 # ╟─85954bdb-d649-4772-a1cd-0bda5d9917e9
+# ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
