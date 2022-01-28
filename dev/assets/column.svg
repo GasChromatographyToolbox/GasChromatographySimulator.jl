@@ -300,17 +300,17 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.0698455"
-     inkscape:cx="414.06692"
-     inkscape:cy="342.05812"
+     inkscape:zoom="1.0177914"
+     inkscape:cx="269.60394"
+     inkscape:cy="352.73592"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      inkscape:document-rotation="0"
      showgrid="false"
-     inkscape:window-width="1775"
-     inkscape:window-height="943"
+     inkscape:window-width="1920"
+     inkscape:window-height="1080"
      inkscape:window-x="0"
-     inkscape:window-y="25"
+     inkscape:window-y="0"
      inkscape:window-maximized="0" />
   <metadata
      id="metadata5">
@@ -320,7 +320,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -328,51 +328,60 @@
      inkscape:label="Ebene 1"
      inkscape:groupmode="layer"
      id="layer1">
+    <rect
+       style="fill:#ffffff;fill-rule:evenodd;stroke-width:0.264583;fill-opacity:1"
+       id="rect1024"
+       width="202.76749"
+       height="160.13431"
+       x="4.419291"
+       y="5.9790406"
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858" />
     <path
        id="path846"
        style="opacity:0.97;fill:#fa4900;fill-opacity:0.997333;stroke:#000000;stroke-width:0.5;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        d="m 182.35712,91.001451 c 0,13.767999 -3.583,28.442999 -9.9684,40.810999 -6.3953,12.387 -15.08505,21.459 -24.16533,25.212 -9.10017,3.762 -17.84647,1.873 -24.30687,-5.265 -6.4705,-7.15 -10.1101,-18.971 -10.1101,-32.853 0,-13.883 3.6396,-28.666999 10.1101,-41.083999 6.4604,-12.399 15.2067,-21.4078 24.30687,-25.055 9.08028,-3.6392 17.77003,-1.6416 24.16533,5.5386 6.3854,7.1694 9.9684,18.9264 9.9684,32.6954 z"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96" />
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858" />
     <path
        id="path842"
        style="opacity:0.97;fill:#0a8fff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        d="m 179.14392,92.309451 c 0,25.971999 -13.8151,52.728999 -30.92053,59.789999 -8.23947,3.401 -16.15687,1.686 -22.00407,-4.78 -5.8555,-6.475 -9.1486,-17.176 -9.1486,-29.742 0,-12.566 3.2931,-25.947999 9.1486,-37.189999 5.8472,-11.227 13.7646,-19.3873 22.00407,-22.6945 17.10543,-6.8657 30.92053,8.6435 30.92053,34.6165 z"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96" />
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858" />
     <path
        id="path848"
        style="opacity:1;fill:url(#radialGradient3442);fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        d="m 175.12382,93.945451 c 0,22.595999 -12.0221,45.866999 -26.90043,51.996999 -14.93187,6.152 -27.07607,-7.281 -27.07607,-30.025 0,-10.921 2.861,-22.552999 7.9487,-32.325999 5.0815,-9.762 11.9635,-16.861 19.12737,-19.742 14.87833,-5.9824 26.90043,7.501 26.90043,30.096 z"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96" />
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858" />
     <path
        style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Arrow2Lstart);marker-end:url(#marker1274)"
        d="m 121.49942,115.77445 53.2323,-21.668999"
        id="path850"
        sodipodi:nodetypes="cc"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96" />
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858" />
     <path
        style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker1486)"
        d="m 130.58902,58.642051 3.6491,8.9224"
        id="path1397"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96" />
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858" />
     <path
        style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker1440)"
        d="m 136.28932,73.660451 3.6442,8.91"
        id="path1397-9"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96" />
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858" />
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
        x="151.7699"
        y="100.86813"
        id="text1544"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96"><tspan
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858"><tspan
          sodipodi:role="line"
          id="tspan1542"
          x="151.7699"
@@ -381,8 +390,8 @@
     <g
        id="g1572"
        transform="translate(63.920652,-18.201308)"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96">
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858">
       <text
          xml:space="preserve"
          style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
@@ -437,7 +446,7 @@
     </g>
     <path
        style="fill:none;stroke:#000000;stroke-width:0.595011px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 7.1012627,295.99573 V 190.11066 L 75.65191,162.64647 v 105.0138 z"
+       d="M 6.3213878,310.5534 V 204.66833 L 74.872035,177.20414 v 105.0138 z"
        id="path1803-7"
        sodipodi:nodetypes="ccccc" />
     <path
@@ -445,23 +454,23 @@
        d="m 159.95497,51.080892 c 0,0 -66.103483,-11.919834 -88.082568,-19.148382 C 49.893317,24.703962 27.44816,12.018195 27.44816,12.018195"
        id="path2529"
        sodipodi:nodetypes="czc"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96" />
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858" />
     <path
        style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        d="m 136.80402,158.84961 c 0,0 -66.10345,-11.91983 -88.082535,-19.14838 C 26.742399,132.47268 4.2972439,119.78691 4.2972439,119.78691"
        id="path2529-1"
        sodipodi:nodetypes="czc"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96" />
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858" />
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:8.46667px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
        x="156.09784"
        y="39.009007"
        id="text2596"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96"><tspan
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858"><tspan
          sodipodi:role="line"
          id="tspan2594"
          x="156.09784"
@@ -473,8 +482,8 @@
        x="48.441818"
        y="77.049385"
        id="text2600"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96"><tspan
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858"><tspan
          sodipodi:role="line"
          id="tspan2598"
          x="48.441818"
@@ -484,13 +493,13 @@
        style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker3252);stroke-miterlimit:4;stroke-dasharray:none"
        d="m 181.03081,40.558815 -9.15046,18.79555"
        id="path2626"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96" />
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858" />
     <path
        style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker3140);stroke-miterlimit:4;stroke-dasharray:none"
        d="M 92.741193,80.128392 123.16031,92.741193"
        id="path2628"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96" />
+       inkscape:export-xdpi="47.543858"
+       inkscape:export-ydpi="47.543858" />
   </g>
 </svg>
