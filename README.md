@@ -9,3 +9,29 @@ A package for the simulation of gas chromatography (GC) with additional velocity
 - thermal gradients
 - film thickness gradient
 - column diameter gradient
+
+## Installation
+
+To install the (unregistered) package type:
+
+```julia
+julia> ] add https://github.com/JanLeppert/GasChromatographySimulator.jl
+```
+
+To use the package type:
+
+```julia
+julia> using GasChromatographySimulator
+```
+
+## Documentation
+
+Please read the [documentation page](https://janleppert.github.io/GasChromatographySimulator.jl/dev/) for more information.
+
+## Citation
+
+@misc{GCSimulator,
+  title = {GasChromatographySimulator.jl},
+  author = {Jan Leppert},
+  howpublished = {\url{https://github.com/JanLeppert/GasChromatographySimulator.jl}}
+}
