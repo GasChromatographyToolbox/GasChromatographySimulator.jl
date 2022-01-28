@@ -8,7 +8,7 @@ A GC-system for the simulation is defined by four sets of parameters:
 
 A GC-system is defined by the dimensions of the GC column, length `L`, diameter `d` and film thickness of the stationary phase `df`, all measured in meters, the name of the stationary phase and the name of the mobile phase (with the allowed values "He", "H2" and "N2").
 
-![GC-column](./assets/Column1.png)
+![GC-column](./assets/column.png)
 
 These values are collected in the type structure [`GasChromatographySimulator.System`](@ref), which allows to define a function depending on column position `x` of the diameter `d(x, a_d)` and film thickness `df(x, a_df)`, where `a_d`, resp. `a_df` are parameters of the function.
 
@@ -100,7 +100,7 @@ From the parameters `time_steps`, `temp_steps`, `a_gf` and gradient function `gf
 
 ## Substance parameters
 
-A third set of parameters, [`GasChromatographySimulator.Substance`](@ref), is used to store the informations about the substances which are separated in the simulated GC-run. The stored information are the name, the CAS-number, three thermodynamic parameters (`Tchar` `θchar` `ΔCp`), the dimensionless film thickness (df/d) of the system for which the thermodynamic parameters were estimated, the diffusivity (calculated from the molecular formula, number of rings in the molecule and mol mass), the injection time and initial peak width. For several substances an array of the type [`GasChromatographySimulator.Substance`](@ref) is used.
+A third set of parameters, [`GasChromatographySimulator.Substance`](@ref), is used to store the informations about the substances which are separated in the simulated GC-run. The stored information are the name, the CAS-number, three thermodynamic parameters (`Tchar` `θchar` `ΔCp`, see also [`6`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References)), the dimensionless film thickness (df/d) of the system for which the thermodynamic parameters were estimated, the diffusivity (calculated from the molecular formula, number of rings in the molecule and mol mass), the injection time and initial peak width. For several substances an array of the type [`GasChromatographySimulator.Substance`](@ref) is used.
 
 With the function [`GasChromatographySimulator.load_solute_database`](@ref) the data for selected substances and a selected stationary phase is loaded from an external database (a .csv-file).
 
@@ -139,12 +139,19 @@ nothing # hide
 
 ## Run the simulation and evaluate the results
 
+The GC-system is simulated by numerically solving two ordinary differential equations (ODE):
 
-ODEs (see [Leppert.2020a, Leppert.2020b, Leppert.2021])
+The first ODE describes the migration ``t(x)`` of a substance through the GC column with the velocity ``u(x,t)``:
+``\frac{dt}{dx} = \frac{1}{u(x,t)}``
+The second ODE describes the development of the temporal peak variance ``\tau^2(x,t(x))`` during the migration:
+``\frac{dτ^2}{dx} = H(x, t(x)) r(x, t(x)) + 2 τ^2(x, t(x)) \frac{∂r}{∂t}(x,t(x))``
+Hereby is ``r(x,t)`` the inverse velocity of the substance (``1/u(x,t)``, also called residency) and ``H(x,t)`` is the local plate height. For more information about the physical model see the [`docstrings of the physical model`]((https://janleppert.github.io/GasChromatographySimulator.jl/dev/functions/#Physical-Model) and the references [`7`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References) and [`8`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References).
+
+With the argument `odesys` of [`GasChromatographySimulator.Options`](@ref) the two differential equations can be solved as a system of ODEs (`odesys = true`) or separately, using the solution of the first ODE to solve the second ODE (`odesys = false`).   
 
 With the function [`GasChromatographySimulator.simulate`](@ref) the simulation is initiated.
 
-An example of the above defined GC-system `sys`, with the program with a temperature gradient `prog_g`, the five substances `sub` and the default options `opt` (collected in the parameters `par_g`) is simulated by 
+An example of the above defined GC-system `sys`, with a temperature gradient program `prog_g`, the five substances `sub` and the default options `opt` (collected in the parameters `par_g`) is simulated by 
 
 ```@example ex
 peaklist, sol = GasChromatographySimulator.simulate(par_g)
