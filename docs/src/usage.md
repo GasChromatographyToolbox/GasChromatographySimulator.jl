@@ -149,7 +149,7 @@ The second ODE describes the development of the temporal peak variance ``\tau^2(
 
 ``\frac{dτ^2}{dx} = H(x, t(x)) r(x, t(x)) + 2 τ^2(x, t(x)) \frac{∂r}{∂t}(x,t(x))``
 
-Hereby is ``r(x,t)`` the inverse velocity of the substance (``1/u(x,t)``, also called residency) and ``H(x,t)`` is the local plate height. For more information about the physical model see the [`docstrings of the physical model`]((https://janleppert.github.io/GasChromatographySimulator.jl/dev/functions/#Physical-Model) and the references [`7`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References) and [`8`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References).
+Hereby is ``r(x,t)`` the inverse velocity of the substance (``1/u(x,t)``, also called residency) and ``H(x,t)`` is the local plate height. For more information about the physical model see the [`docstrings of the physical model`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/functions/#Physical-Model) and the references [`7`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References) and [`8`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References).
 
 With the argument `odesys` of [`GasChromatographySimulator.Options`](@ref) the two differential equations can be solved as a system of ODEs (`odesys = true`) or separately, using the solution of the first ODE to solve the second ODE (`odesys = false`).   
 
