@@ -2,7 +2,7 @@
 
 [1] Rackauckas, Christopher and Nie, Qing. Differentialequations.jl - a performant and feature-rich ecosystem for solving differential equations in julia. _Journal of Open Research Software_ (2017). DOI: [`http://doi.org/10.5334/jors.151`](http://doi.org/10.5334/jors.151), [`https://github.com/SciML/DifferentialEquations.jl`](https://github.com/SciML/DifferentialEquations.jl)
 
-[2] [`Interpolations.jl`](https://github.com/JuliaMath/Interpolations.jl)
+[2] Interpolations.jl [`https://github.com/JuliaMath/Interpolations.jl`](https://github.com/JuliaMath/Interpolations.jl)
 
 [3] Johnson, Steven G. QuadGK.jl: Gauss-Kronrod integration in Julia. [`https://github.com/JuliaMath/QuadGK.jl`](https://github.com/JuliaMath/QuadGK.jl)
 
