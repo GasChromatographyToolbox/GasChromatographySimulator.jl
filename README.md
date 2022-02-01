@@ -28,10 +28,32 @@ julia> using GasChromatographySimulator
 
 Please read the [documentation page](https://janleppert.github.io/GasChromatographySimulator.jl/dev/) for more information.
 
+## Notebooks
+
+In the folder [notebooks](https://github.com/JanLeppert/GasChromatographySimulator.jl/tree/main/notebooks) several notebooks, using [Pluto.jl](https://github.com/fonsp/Pluto.jl), for the simulation of GC-systems are available. 
+
+To use these notebooks [Julia, v1.6 or above,](https://julialang.org/downloads/#current_stable_release) must be installed and **Pluto** must be added:
+
+```julia
+julia> ]
+(v1.7) pkg> add Pluto
+```
+
+To run Pluto, use the following commands:
+
+```julia
+julia> using Pluto
+julia> Pluto.run()
+```
+
+Pluto will open your browser. In the field `Open from file` the URL of a notebook or the path to a locally downloaded notebook can be insert and the notebook will open and load the necessary packages. 
+
 ## Citation
 
+```
 @misc{GCSimulator,
   title = {GasChromatographySimulator.jl},
   author = {Jan Leppert},
   howpublished = {\url{https://github.com/JanLeppert/GasChromatographySimulator.jl}}
 }
+```
