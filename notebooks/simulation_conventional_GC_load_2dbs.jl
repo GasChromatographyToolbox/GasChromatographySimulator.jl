@@ -21,13 +21,14 @@ begin
     Pkg.add([
         Pkg.PackageSpec(name="Plots", version="1"),
         Pkg.PackageSpec(name="PlutoUI", version="0.7"),
-	Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographySimulator.jl"),
-Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographyTools.jl")		
+		Pkg.PackageSpec(name="UrlDownload", version="1"),
+	Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographySimulator.jl", rev="main"),
+Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographyTools.jl", rev="main")		
     ])
 
-    using Plots, PlutoUI, GasChromatographySimulator, GasChromatographyTools
+    using Plots, PlutoUI, UrlDownload, GasChromatographySimulator, GasChromatographyTools
 	md"""
-	Packages
+	Packages, simulation\_conventional\_GC\_load\_2dbs.jl, v0.1.0
 	"""
 end
 
@@ -47,8 +48,8 @@ end
 
 # ╔═╡ c9246396-3c01-4a36-bc9c-4ed72fd9e325
 md"""
-# Gas Chromatography Simulator - load two databases
-
+# Gas Chromatography Simulator
+$(Resource("https://raw.githubusercontent.com/JanLeppert/GasChromatographySimulator.jl/main/docs/src/assets/logo.svg"))
 A Simulation of a conventional Gas Chromatography (GC) System (without a thermal gradient).
 """
 
@@ -110,9 +111,22 @@ elseif @isdefined db_1
 	Only data from the 1st database is used.
 	"""
 elseif @isdefined db_2
-	sp = unique(db_2.Phase)
+	online_db = DataFrame(urldownload("https://github.com/JanLeppert/GasChromatographySimulator.jl/raw/main/data/Database_test.csv"))
+	sp_online = unique(online_db.Phase)
+	sp_2 = unique(db_2.Phase)
+	sp = GasChromatographyTools.common(sp_online, sp_2)
+	common_db = innerjoin(online_db[!, [:Name, :Phase, :Tchar, :thetachar, :DeltaCp, :phi0]], db_2[!, [:Name, :Phase, :Tchar, :thetachar, :DeltaCp, :phi0]], on=[:Name, :Phase], makeunique=true)
+	rename!(common_db, [:Name, :Phase, :Tchar_1, :θchar_1, :ΔCp_1, :φ₀_1, :Tchar_2, :θchar_2, :ΔCp_2, :φ₀_2])
 	md"""
-	Only data from the 2nd database is used.
+	Common data from the 2nd database and the database from the Github page is used.
+	$(embed_display(common_db))
+	"""
+else
+	online_db = DataFrame(urldownload("https://github.com/JanLeppert/GasChromatographySimulator.jl/raw/main/data/Database_test.csv"))
+	sp = unique(online_db.Phase)
+	md"""
+	If no database is selected as 1st database, the database from the Github page is used.
+	$(embed_display(online_db))
 	"""
 end
 
@@ -120,7 +134,7 @@ end
 @bind sys_values confirm(GasChromatographyTools.UI_System(sp))
 
 # ╔═╡ a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
-@bind prog_values confirm(GasChromatographyTools.UI_Program_ng())
+@bind prog_values confirm(GasChromatographyTools.UI_Program(default=("0 60 600 120", "40 40 300 300", "18 18 98 98", "vacuum")))
 
 # ╔═╡ 603e0868-dda5-4063-872f-ce966b6fa8ad
 md"""
@@ -159,34 +173,40 @@ begin
 		sub_names = GasChromatographySimulator.all_solutes(sys.sp, db_1)
 	elseif @isdefined db_2
 		sub_names = GasChromatographySimulator.all_solutes(sys.sp, db_2)
+	else
+		sub_names = GasChromatographySimulator.all_solutes(sys.sp, online_db)
 	end
-	@bind sub_values confirm(GasChromatographyTools.UI_Substance_name(sub_names))
+	@bind sub_values confirm(GasChromatographyTools.UI_Substance(sub_names))
 end
 
 # ╔═╡ 0bb1bc3e-9c23-4fbd-9872-fe2e4a2dbdea
 prog = GasChromatographyTools.setting_prog(prog_values, sys.L);
 
 # ╔═╡ e3277bb4-301a-4a1e-a838-311832b6d6aa
-if @isdefined db_1
-	sub_1 = GasChromatographySimulator.load_solute_database(db_1, sys.sp, sys.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])))
-end;
-
-# ╔═╡ d201c020-9311-418d-a652-200667d2d64e
-if @isdefined db_2
-	sub_2 = GasChromatographySimulator.load_solute_database(db_2, sys.sp, sys.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])))
+begin
+	if @isdefined db_1
+		sub_1 = GasChromatographySimulator.load_solute_database(db_1, sys.sp, sys.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])))
+	elseif @isdefined online_db
+		sub_1 = GasChromatographySimulator.load_solute_database(online_db, sys.sp, sys.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])))
+	end
+	if @isdefined db_2
+		sub_2 = GasChromatographySimulator.load_solute_database(db_2, sys.sp, sys.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])))
+	end
 end;
 
 # ╔═╡ 115fa61e-8e82-42b2-8eea-9c7e21d97ea8
 opt = GasChromatographySimulator.Options(;abstol=1e-8, reltol=1e-5);
 
 # ╔═╡ 85954bdb-d649-4772-a1cd-0bda5d9917e9
-if @isdefined db_1
-	par_1 = GasChromatographySimulator.Parameters(sys, prog, sub_1, opt)
-end;
-
-# ╔═╡ 63d59b94-bea6-4a9a-a0f3-e97602ceeb7e
-if @isdefined db_2
-	par_2 = GasChromatographySimulator.Parameters(sys, prog, sub_2, opt)
+begin
+	if @isdefined db_1
+		par_1 = GasChromatographySimulator.Parameters(sys, prog, sub_1, opt)
+	elseif @isdefined online_db
+		par_1 = GasChromatographySimulator.Parameters(sys, prog, sub_1, opt)	
+	end
+	if @isdefined db_2
+		par_2 = GasChromatographySimulator.Parameters(sys, prog, sub_2, opt)
+	end
 end;
 
 # ╔═╡ fdb39284-201b-432f-bff6-986ddbc49a7d
@@ -194,7 +214,7 @@ begin
 	gr()
 	if (@isdefined db_1) && (@isdefined db_2)
 		par = par_1
-	elseif @isdefined db_1
+	elseif (@isdefined db_1) || (@isdefined online_db)
 		par = par_1
 	elseif @isdefined db_2
 		par = par_2
@@ -215,6 +235,8 @@ end
 # ╔═╡ 49faa7ea-0f22-45ca-9ab5-338d0db25564
 begin
 	if @isdefined db_1
+		peaklist_1, solution_1 = GasChromatographySimulator.simulate(par_1)
+	elseif @isdefined online_db
 		peaklist_1, solution_1 = GasChromatographySimulator.simulate(par_1)
 	end
 	if @isdefined db_2
@@ -306,8 +328,15 @@ begin
 		ymax = maximum(pchrom[1][1][:y])*1.1
 		ymin = 0.0
 	elseif @isdefined db_2
-		pchrom = GasChromatographySimulator.plot_chromatogram(peaklist_2, (0,sum(par_2.prog.time_steps)))[1]
-		pchrom[1][1][:label] = "2nd database"
+		pchrom = GasChromatographySimulator.plot_chromatogram(peaklist_1, (0,sum(par_1.prog.time_steps)))[1]
+		GasChromatographySimulator.plot_chromatogram!(pchrom, peaklist_2, (0,sum(par_2.prog.time_steps)); mirror=true)
+		pchrom[1][1][:label] = "online database"
+		pchrom[1][2][:label] = "2nd database"
+		ymax = maximum(pchrom[1][1][:y])*1.1
+		ymin = minimum(pchrom[1][2][:y])*1.1
+	else
+		pchrom = GasChromatographySimulator.plot_chromatogram(peaklist_1, (0,sum(par_1.prog.time_steps)))[1]
+		pchrom[1][1][:label] = "online database"
 		ymax = maximum(pchrom[1][1][:y])*1.1
 		ymin = 0.0
 	end
@@ -340,8 +369,14 @@ begin
 		p_local = GasChromatographyTools.local_plots(xx, yy, solution_1, par_1)
 		plot!(p_local, title="1st database")
 	elseif @isdefined db_2
-		p_local = GasChromatographyTools.local_plots(xx, yy, solution_2, par_2)
-		plot!(p_local, title="2nd database")
+		p_1 = GasChromatographyTools.local_plots(xx, yy, solution_1, par_1)
+		plot!(p_1, title="online database")
+		p_2 = GasChromatographyTools.local_plots(xx, yy, solution_2, par_2)
+		plot!(p_2, title="2nd database")
+		p_local = plot(p_1, p_2)
+	else
+		p_local = GasChromatographyTools.local_plots(xx, yy, solution_1, par_1)
+		plot!(p_local, title="online database")
 	end
 	md"""
 	$(embed_display(p_local))
@@ -354,11 +389,11 @@ md"""
 """
 
 # ╔═╡ Cell order:
-# ╠═115b320f-be42-4116-a40a-9cf1b55d39b5
+# ╟─115b320f-be42-4116-a40a-9cf1b55d39b5
 # ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
-# ╠═84b0de13-2653-4e68-abf4-d98830809844
+# ╟─84b0de13-2653-4e68-abf4-d98830809844
 # ╟─c7c5da86-57ad-4a35-bbaa-39871ee3205d
 # ╟─1b827021-05a6-4fc8-bdce-31302f4a5d0f
 # ╟─59e7dff6-7db0-4262-b4f5-ffe8f1a28542
@@ -374,11 +409,9 @@ md"""
 # ╟─9c1e5bc5-8396-4caf-bb80-fe89fea0a5c5
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
 # ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
-# ╠═f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
-# ╠═0bb1bc3e-9c23-4fbd-9872-fe2e4a2dbdea
-# ╠═e3277bb4-301a-4a1e-a838-311832b6d6aa
-# ╠═d201c020-9311-418d-a652-200667d2d64e
-# ╠═115fa61e-8e82-42b2-8eea-9c7e21d97ea8
-# ╠═85954bdb-d649-4772-a1cd-0bda5d9917e9
-# ╠═63d59b94-bea6-4a9a-a0f3-e97602ceeb7e
+# ╟─f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
+# ╟─0bb1bc3e-9c23-4fbd-9872-fe2e4a2dbdea
+# ╟─e3277bb4-301a-4a1e-a838-311832b6d6aa
+# ╟─115fa61e-8e82-42b2-8eea-9c7e21d97ea8
+# ╟─85954bdb-d649-4772-a1cd-0bda5d9917e9
 # ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24

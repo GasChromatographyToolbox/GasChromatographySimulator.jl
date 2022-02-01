@@ -21,13 +21,13 @@ begin
     Pkg.add([
         Pkg.PackageSpec(name="Plots", version="1"),
         Pkg.PackageSpec(name="PlutoUI", version="0.7"),
-		Pkg.PackageSpec(name="UrlDownload"),
-		Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographySimulator.jl"),
-	Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographyTools.jl")
+		Pkg.PackageSpec(name="UrlDownload", version="1"),
+		Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographySimulator.jl", rev="main"),
+	Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographyTools.jl", rev="main")
     ])
     using Plots, PlutoUI, UrlDownload, GasChromatographySimulator, GasChromatographyTools
 	md"""
-	Packages
+	Packages, simulation\_example.jl, v0.1.0
 	"""
 end
 
@@ -48,7 +48,7 @@ end
 # ╔═╡ c9246396-3c01-4a36-bc9c-4ed72fd9e325
 md"""
 # Gas Chromatography Simulator
-
+$(Resource("https://raw.githubusercontent.com/JanLeppert/GasChromatographySimulator.jl/main/docs/src/assets/logo.svg"))
 An example Simulation of a Gas Chromatography (GC) System with a thermal gradient.
 """
 
@@ -57,14 +57,28 @@ md"""
 ## Settings
 """
 
+# ╔═╡ 7fdd3112-c8df-431c-a514-f386423bca17
+md"""
+### Solute Database
+Load own database: $(@bind own_db CheckBox(default=false))
+"""
+
+# ╔═╡ 77a34d59-bc6e-4c5a-ad51-f69903449cb0
+if own_db == true
+	md"""
+	$(@bind db_file FilePicker())
+	"""
+end
+
 # ╔═╡ 273dcf96-6de4-4380-a00f-ed119bfa13b7
 begin
-	solute_db_path = "../data"
-	solute_db = "Database_test.csv"
-	db = DataFrame(urldownload("https://github.com/JanLeppert/GasChromatographySimulator.jl/raw/main/data/Database_test.csv"))
+	if own_db == false
+		db = DataFrame(urldownload("https://github.com/JanLeppert/GasChromatographySimulator.jl/raw/main/data/Database_test.csv"))
+	else
+		db = DataFrame(CSV.File(db_file["data"]))
+	end
 	sp = unique(db.Phase)
 	md"""
-	### Solute Database
 	$(embed_display(db))
 	"""
 end
@@ -96,7 +110,7 @@ Plot $(@bind yy Select(["z", "t", "T", "τ", "σ", "u"]; default="t")) over $(@b
 sys = GasChromatographySimulator.System(sys_values[1], sys_values[2]*1e-3, sys_values[3]*1e-6, sys_values[4], sys_values[5]);
 
 # ╔═╡ 7a00bb54-553f-47f5-b5db-b40d226f4183
-@bind sub_values confirm(GasChromatographyTools.UI_Substance(GasChromatographySimulator.all_solutes(sys.sp, db)))
+@bind sub_values confirm(GasChromatographyTools.UI_Substance(GasChromatographySimulator.all_solutes(sys.sp, db); default=(1:5, 0.0, 0.0)))
 
 # ╔═╡ e3277bb4-301a-4a1e-a838-311832b6d6aa
 sub = GasChromatographySimulator.load_solute_database(db, sys.sp, sys.gas, sub_values[1], sub_values[2].*ones(length(sub_values[1])), sub_values[3].*ones(length(sub_values[1])));
@@ -174,25 +188,27 @@ md"""
 """
 
 # ╔═╡ Cell order:
-# ╠═115b320f-be42-4116-a40a-9cf1b55d39b5
+# ╟─115b320f-be42-4116-a40a-9cf1b55d39b5
 # ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
-# ╠═273dcf96-6de4-4380-a00f-ed119bfa13b7
-# ╠═e0669a58-d5ac-4d01-b079-05412b413dda
-# ╠═a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
-# ╠═7a00bb54-553f-47f5-b5db-b40d226f4183
-# ╠═3e053ac1-db7b-47c1-b52c-00e26b59912f
+# ╟─7fdd3112-c8df-431c-a514-f386423bca17
+# ╟─77a34d59-bc6e-4c5a-ad51-f69903449cb0
+# ╟─273dcf96-6de4-4380-a00f-ed119bfa13b7
+# ╟─e0669a58-d5ac-4d01-b079-05412b413dda
+# ╟─a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
+# ╟─7a00bb54-553f-47f5-b5db-b40d226f4183
+# ╟─3e053ac1-db7b-47c1-b52c-00e26b59912f
 # ╟─323a769f-55f9-41dd-b8f1-db7928996a52
 # ╟─fdb39284-201b-432f-bff6-986ddbc49a7d
-# ╠═49faa7ea-0f22-45ca-9ab5-338d0db25564
+# ╟─49faa7ea-0f22-45ca-9ab5-338d0db25564
 # ╟─14db2d66-eea6-43b1-9caf-2039709d1ddb
 # ╟─a2287fe8-5aa2-4259-bf7c-f715cc866243
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
-# ╠═0740f2e6-bce0-4590-acf1-ad4d7cb7c523
-# ╠═f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
-# ╠═ee267b33-4086-4e04-9f39-b7f53f2ec920
-# ╠═e3277bb4-301a-4a1e-a838-311832b6d6aa
-# ╠═115fa61e-8e82-42b2-8eea-9c7e21d97ea8
-# ╠═85954bdb-d649-4772-a1cd-0bda5d9917e9
+# ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
+# ╟─f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
+# ╟─ee267b33-4086-4e04-9f39-b7f53f2ec920
+# ╟─e3277bb4-301a-4a1e-a838-311832b6d6aa
+# ╟─115fa61e-8e82-42b2-8eea-9c7e21d97ea8
+# ╟─85954bdb-d649-4772-a1cd-0bda5d9917e9
 # ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
