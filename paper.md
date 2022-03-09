@@ -29,7 +29,7 @@ The modeling of GC separations is used for the prediction of retention times and
 
 - column (length, diameter, film thickness, type of stationary and mobile phase) 
 - program (temperature and pressure program, optional thermal spatial change)
-- substance parameters
+- substance parameters (thermodynamic parameters, diffusion coefficient)
 - additional options (e.g. tolerances, solver algorithm) 
 
 By providing the thermodynamic parameters [@Blumberg:2017] for the interaction of substances and stationary phase, which can be estimated by isothermal GC measurements, the separation of mixtures of substances on can be simulated for a wide range of GC systems. 
