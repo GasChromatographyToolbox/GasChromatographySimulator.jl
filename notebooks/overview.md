@@ -1,11 +1,9 @@
 # Overview notebooks
 
-- FINISHED[x] `simulation_example.jl` - general example of simulation of a GC-system with optional thermal gradient (exponential/linear model)
-- FINISHED[x] `simulation_conventional_GC.jl` - simulation of a GC-system without thermal gradient and outlet pressure as "vacuum" or "atmospheric" -> [] base of a future notebook for teaching (there: definition of two GC-systems, one set of substances and compare the simulation results)
-- DELETED[x] `simulation_conventional_GC_load_db.jl` - simulation of a GC-system without thermal gradient and loading of a self-defined substance database -> [] add the option of also loading measured retention times for a given GC-system
-- FINISHED[x] `simulation_conventional_GC_load_2dbs.jl` - simulation of a GC-system without thermal gradient and loading of two different substance databases and simulation of the common substances with the same GC-system and comparing the result -> [x] add the option of also loading measured retention times for a given GC-system + [x] option of only loading one database -> `simulation_conventional_GC_load_db.jl` obsolete
-- [] `simulation_example_input_gradient_function.jl` - simulation of a GC-system with optional thermal gradient (self-defined equation)
+- `simulation_conventional_GC.jl` - simulation of a conventional GC-system (constant temperature, constant diameter and constant film thickness along the column) and outlet pressure as "vacuum" or "atmospheric"
+- `simulation_conventional_GC_load_2dbs.jl` - simulation of a conventional GC-system (constant temperature, constant diameter and constant film thickness along the column) and loading of up to two different substance databases and simulation of the common substances with the same GC-system and comparing the result. Also, an option is given, to load measured retention times and compare these to the simulations.
+- `simulation_example.jl` - general example of simulation of a GC-system with optional thermal gradient (exponential/linear model of temperature change along the column) and constant diameter and constant film thickness along the column. 
+- `simulation_example_input_gradient_function.jl` - simulation of a GC-system with optional thermal gradient where the temperature change along the column is defined by a user-defined equation (cosine-function as example)
+- 
 - [] `test_abstol_reltol.jl` - test of the simulation with different absolute and relative tolerances for the solver of the ODEs -> [] copy this to another place?
 
-For all notebooks:
-- [] change the name to easier/shorter description
