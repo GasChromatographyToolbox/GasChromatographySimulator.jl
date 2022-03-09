@@ -26,12 +26,13 @@ The modeling of GC separations is used for the prediction of retention times and
 
 # Statement of need
 `GasChromatographySimulator.jl` provides an interface to define a GC system consisting of: 
-- column (length, diameter, film thickness, type of stationary and mobile phase), 
-- program (temperature and pressure program, optional thermal spatial change) and 
+
+- column (length, diameter, film thickness, type of stationary and mobile phase) 
+- program (temperature and pressure program, optional thermal spatial change)
 - substance parameters
 - additional options (e.g. tolerances, solver algorithm) 
 
-By providing the thermodynamic parameters [@Blumberg:2014] for the interaction of substances and stationary phase, which can be estimated by isothermal GC measurements, the separation of mixtures of substances on can be simulated for a wide range of GC systems. 
+By providing the thermodynamic parameters [@Blumberg:2017] for the interaction of substances and stationary phase, which can be estimated by isothermal GC measurements, the separation of mixtures of substances on can be simulated for a wide range of GC systems. 
 
 The model is based on solving the ODEs for migration of the substances through the GC system $t(x)$ and for the development of the temporal variance of the substance distribution $\tau^2(x,t)$, using the Julia package `DifferentialEquations.jl` [@DifferentialEquations]. 
 $$
@@ -46,7 +47,7 @@ with $r$ the inverse substance velocity ($r=1/u$) and $H$ the local plate height
 A collection of `Pluto.jl` notebooks [@Pluto] are made available together with this package to provide a simple to use user interface to setup and simulate arbitrary GC systems.
 
 # Acknowledgment
-Jan Leppert is supported by the DFG research grant 452897652. (PRÜFEN)
+Jan Leppert is supported by the DFG research grant 452897652.
 
 # References
 
