@@ -7,13 +7,13 @@ tags:
 	- thermodynamic parameters
 	- simulation
 authors:
-	- name: Jan Leppert
-		orcid: 0000-0001-8857-8103
-		affiliation: 1
+  - name: Jan Leppert
+    orcid: 0000-0001-8857-8103
+    affiliation: 1
 affiliations:
-	- name: Institute of Nutritional and Food Sciences, University of Bonn
-		index: 1
-date: 19 February 2022
+ - name: Institute of Nutritional and Food Sciences, University of Bonn
+   index: 1
+date: 9 March 2022
 bibliography: paper.bib
 ---
 
