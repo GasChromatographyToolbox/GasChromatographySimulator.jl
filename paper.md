@@ -4,7 +4,8 @@ tags:
 	- Julia
 	- gas chromatography
 	- separation
-	- 
+	- thermodynamic parameters
+	- simulation
 authors:
 	- name: Jan Leppert
 		orcid: 0000-0001-8857-8103
