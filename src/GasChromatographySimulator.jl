@@ -129,13 +129,9 @@ struct Options
     reltol              # relative tolerance for ODE solver 
     Tcontrol::String    # temperature control at 'inlet' (top) or 'outlet' (bottom) of the column
 	odesys::Bool  		# calculate the two ODEs (migration and peak-width) separately (false) or 
-                        # combined as a system of ODEs (true)
-                        # ??? add 'ng' as option ???
-                        # for compatibility with previous code make constructor
-                        # Options(alg, abstol, reltol, Tcontrol, odesys) =
-                        # Options(alg, abstol, reltol, Tcontrol, odesys, false)
-                        # (ng=false as default)
-    ng::Bool
+                        # combined as a system of ODEs (true)                        
+    ng::Bool            # non-gradient calculation, ignores a defined spatial change of d, df or T
+    vis::String         # viscosity model `HP` or `Blumberg`
 end
 
 """
@@ -323,7 +319,7 @@ function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin
 end
 
 """
-    Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false)
+    Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg")
 
 Construct the structure `Options` with default values. 
 
@@ -343,6 +339,8 @@ Construct the structure `Options` with default values.
     partly manuall differentiation (problem of automatic differentiation with
     integrals, e.g. in the `flow_restriction()` function. -> TODO: test
     package Quadrature.jl as alternative to QuadGK.jl for integration)
+* `vis`: Used model of viscosity. `HP` is a second-order polynomial taken from the HP flow calculator. `Blumberg` is an emperical formula according to the book
+    `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH) 
 
 For more informations about the arguments `alg`, `abstol` and `reltol` see
 the documentation of the DifferentialEquations.jl package.
@@ -356,13 +354,13 @@ julia> Options()
 julia> Options(abstol=1e-8, Tcontrol="outlet")
 ```
 """
-function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false)
-    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng)
+function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg")
+    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis)
     return opt
 end
 
 """
-    Options(alg, abstol, reltol, Tcontrol, odesys; ng=false)
+    Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg")
 
 Construct the structure `Options` with given values. 
 
@@ -377,26 +375,30 @@ Construct the structure `Options` with given values.
     program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
 * `odesys`: Combine the ODEs for migration and peak-width into a system of
     ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
+* `vis`: Used model of viscosity. `HP` is a second-order polynomial taken from the HP flow calculator. `Blumberg` is an emperical formula according to the book
+    `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH) 
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
     or with a gradient (`ng = false`). This distinction is made because of
     partly manuall differentiation (problem of automatic differentiation with
     integrals, e.g. in the `flow_restriction()` function. -> TODO: test
     package Quadrature.jl as alternative to QuadGK.jl for integration)
+* `vis`: Used model of viscosity. `HP` is a second-order polynomial taken from the HP flow calculator. `Blumberg` is an emperical formula according to the book
+    `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH) 
 
 For more informations about the arguments `alg`, `abstol` and `reltol` see
 the documentation of the DifferentialEquations.jl package.
 
 # Examples
 ```julia
-julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true)
+julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true, "Blumberg")
 ```
 
 ```julia
-julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true; ng=true)
+julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true, "HP"; ng=true)
 ```
 """
-function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false)
-    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng)
+function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg")
+    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis)
     return opt
 end
 
@@ -764,7 +766,7 @@ end
 
 #---Begin-Functions-of-the-physical-model---
 """
-    pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
+    pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
 
 Calculate the pressure at position `x` at time `t`.
 
@@ -779,7 +781,8 @@ Calculate the pressure at position `x` at time `t`.
 * `gas`: Name of the mobile phase gas.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`,
     eq. 2)
-or with a gradient (`ng = false`, eq. 1).
+    or with a gradient (`ng = false`, eq. 1).
+* `vis`: used model for viscosity "Blumberg" or "HP"
 
 ``p(x,t) =
 \\sqrt(p_{in}(t)^2-\\frac{κ(x,t)}{κ_L(t)}\\left(p_{in}^2-p_{out}^2\\right))``
@@ -794,17 +797,17 @@ time `t`.
 
 See also: [`flow_restriction`](@ref)
 """
-function pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
+function pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
     if ng==true
         pp = sqrt(pin_itp(t)^2 - x/L*(pin_itp(t)^2-pout_itp(t)^2))
     else
-        pp = sqrt(pin_itp(t)^2 - flow_restriction(x, t, T_itp, d, gas)/flow_restriction(L, t, T_itp, d, gas)*(pin_itp(t)^2-pout_itp(t)^2))
+        pp = sqrt(pin_itp(t)^2 - flow_restriction(x, t, T_itp, d, gas, vis=vis)/flow_restriction(L, t, T_itp, d, gas, vis=vis)*(pin_itp(t)^2-pout_itp(t)^2))
     end
     return pp
 end
 
 """
-    flow_restriction(x, t, T_itp, d, gas; ng=false)
+    flow_restriction(x, t, T_itp, d, gas; ng=false, vis="Blumberg")
 
 Calculate the flow restriction ``κ`` up to position `x` at time `t`.
 
@@ -816,7 +819,8 @@ Calculate the flow restriction ``κ`` up to position `x` at time `t`.
 * `gas`: Name of the mobile phase gas.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`,
     eq. 2)
-or with a gradient (`ng = false`, eq. 1).
+    or with a gradient (`ng = false`, eq. 1).
+* `vis`: used model for viscosity "Blumberg" or "HP"
 
 ``κ(x,t) = \\int_0^x \\frac{η(y,t) T(y,t)}{d(y)^4}dy``
 Eq. 1
@@ -827,17 +831,17 @@ with ``η(x,t)`` the viscosity of the mobile phase gas.
 
 See also: [`viscosity`](@ref)
 """
-function flow_restriction(x, t, T_itp, d, gas; ng=false)
+function flow_restriction(x, t, T_itp, d, gas; ng=false, vis="Blumberg")
     if ng==true
         κ = x*viscosity(x, t, T_itp, gas)*T_itp(x, t)*d(x)^-4
     else
-        κ = quadgk(y -> viscosity(y, t, T_itp, gas)*T_itp(y, t)*d(y)^-4, 0, x)[1]
+        κ = quadgk(y -> viscosity(y, t, T_itp, gas, vis=vis)*T_itp(y, t)*d(y)^-4, 0, x)[1]
     end
     return κ
 end
 
 """
-    viscosity(x, t, T_itp, gas)
+    viscosity(x, t, T_itp, gas; vis="Blumberg")
 
 Calculate the (dynamic) viscosity of the mobile phase gas at position `x`
 at time `t` in Pa s.
@@ -847,6 +851,15 @@ at time `t` in Pa s.
 * `t`: Time in s.
 * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
 * `gas`: Name of the mobile phase gas.
+* `vis`: used model
+
+`vis = "HP"`
+
+Simple model used in the HP Flow calculator
+
+``η(x,t) = C_1 * \\left(T(x,t) + T_{st}\\right) + C_2`
+
+`vis = "Blumberg"`
 
 ``η(x,t) = η_{st}\\left(\\frac{T(x,t)}{T_{st}}\\right)^{(ξ_0 + ξ_1 \\frac{T(x,t)-T_{st}}{T_{st}})}`` 
 
@@ -856,39 +869,67 @@ mobile phase gas [1].
 [1] Blumberg, Leonid M., Temperature-Programmed Gas Chromatography,
 Wiley-VCH, 2010.
 """
-function viscosity(x, t, T_itp, gas)
-    if gas=="He"
-        ηst = 18.63e-6
-        ξ₀ = 0.6958
-        ξ₁ = -0.0071
-    elseif gas=="H2"
-        ηst = 8.382e-6
-        ξ₀ = 0.6892
-        ξ₁ = 0.005
-    elseif gas=="N2"
-        ηst = 16.62e-6
-        ξ₀ = 0.7665
-        ξ₁ = -0.0378
-    elseif gas=="Ar"
-        ηst = 21.04e-6
-        ξ₀ = 0.8131
-        ξ₁ = -0.0426
+function viscosity(x, t, T_itp, gas; vis="Blumberg")
+    if vis == "Blumberg"
+        if gas=="He"
+            ηst = 18.63e-6
+            ξ₀ = 0.6958
+            ξ₁ = -0.0071
+        elseif gas=="H2"
+            ηst = 8.382e-6
+            ξ₀ = 0.6892
+            ξ₁ = 0.005
+        elseif gas=="N2"
+            ηst = 16.62e-6
+            ξ₀ = 0.7665
+            ξ₁ = -0.0378
+        elseif gas=="Ar"
+            ηst = 21.04e-6
+            ξ₀ = 0.8131
+            ξ₁ = -0.0426
+        else
+            error("Unknown selection of gas. Choose one of these: He, H2, N2 or Ar.")
+        end
+        T = T_itp(x, t)
+        η = ηst*(T/Tst)^(ξ₀ + ξ₁*(T-Tst)/Tst)
+    elseif vis == "HP"
+        if gas=="He"
+            C₁ = 4.28e-8
+            C₂ = 6.968e-6
+        elseif gas=="H2"
+            C₁ = 3.5e-8
+            C₂ = 7.994e-6
+        elseif gas=="N2"
+            C₁ = 1.83e-8
+            C₂ = 4.416e-6
+        else
+            error("Unknown selection of gas. Choose one of these: He, H2 or N2.")
+        end
+        T = T_itp(x, t)
+        η = C₁*T + C₂
     else
-        error("Unknown selection of gas. Choose one of these: He, H2, N2 or Ar.")
+        error("Unknown selection for the viscosity model. Choose one of these options: 'Blumberg' or 'HP'.")
     end
-    T = T_itp(x, t)
-    η = ηst*(T/Tst)^(ξ₀ + ξ₁*(T-Tst)/Tst)
     return η
 end
 
 """
-    viscosity(T, gas)
+    viscosity(T, gas; vis="Blumberg")
 
 Calculate the (dynamic) viscosity of the mobile phase gas at temperature `T` in Pa s.
 
 # Arguments
 * `T`: Temperature in K.
 * `gas`: Name of the mobile phase gas.
+* `vis`: used model for viscosity "Blumberg" or "HP".
+
+`vis = "HP"`
+
+Simple model used in the HP Flow calculator
+
+``η(x,t) = C_1 * \\left(T(x,t) + T_{st}\\right) + C_2`
+
+`vis = "Blumberg"``
 
 ``η(x,t) = η_{st}\\left(\\frac{T)}{T_{st}}\right)^{(ξ_0 + ξ_1 \\frac{T-T_{st}}{T_{st}})}`` 
 
@@ -898,33 +939,50 @@ mobile phase gas [1].
 [1] Blumberg, Leonid M., Temperature-Programmed Gas Chromatography,
 Wiley-VCH, 2010.
 """
-function viscosity(T::Float64, gas::String)
-    # using empiric model from Blumberg.2010
-    if gas=="He"
-        ηst = 18.63e-6
-        ξ₀ = 0.6958
-        ξ₁ = -0.0071
-    elseif gas=="H2"
-        ηst = 8.382e-6
-        ξ₀ = 0.6892
-        ξ₁ = 0.005
-    elseif gas=="N2"
-        ηst = 16.62e-6
-        ξ₀ = 0.7665
-        ξ₁ = -0.0378
-    elseif gas=="Ar"
-        ηst = 21.04e-6
-        ξ₀ = 0.8131
-        ξ₁ = -0.0426
+function viscosity(T::Float64, gas::String; vis="Blumberg")
+    if vis == "Blumberg"
+        if gas=="He"
+            ηst = 18.63e-6
+            ξ₀ = 0.6958
+            ξ₁ = -0.0071
+        elseif gas=="H2"
+            ηst = 8.382e-6
+            ξ₀ = 0.6892
+            ξ₁ = 0.005
+        elseif gas=="N2"
+            ηst = 16.62e-6
+            ξ₀ = 0.7665
+            ξ₁ = -0.0378
+        elseif gas=="Ar"
+            ηst = 21.04e-6
+            ξ₀ = 0.8131
+            ξ₁ = -0.0426
+        else
+            error("Unknown selection of gas. Choose one of these: He, H2, N2 or Ar.")
+        end
+        η = ηst*(T/Tst)^(ξ₀ + ξ₁*(T-Tst)/Tst)
+    elseif vis == "HP"
+        if gas=="He"
+            C₁ = 4.28e-8
+            C₂ = 6.968e-6
+        elseif gas=="H2"
+            C₁ = 3.5e-8
+            C₂ = 7.994e-6
+        elseif gas=="N2"
+            C₁ = 1.83e-8
+            C₂ = 4.416e-6
+        else
+            error("Unknown selection of gas. Choose one of these: He, H2 or N2.")
+        end
+        η = C₁*T + C₂
     else
-        error("Unknown selection of gas. Choose one of these: He, H2, N2 or Ar.")
+        error("Unknown selection for the viscosity model. Choose one of these options: 'Blumberg' or 'HP'.")
     end
-    η = ηst*(T/Tst)^(ξ₀ + ξ₁*(T-Tst)/Tst)
     return η
 end
 
 """
-    holdup_time(T, pin, pout, L, d, gas)
+    holdup_time(T, pin, pout, L, d, gas; vis="Blumberg")
 
 Calculate the hold-up time in s without a gradient.
 
@@ -935,18 +993,19 @@ Calculate the hold-up time in s without a gradient.
 * `L`: Length of the capillary measured in m (meter).
 * `d`: Diameter of the GC column, in m.
 * `gas`: Name of the mobile phase gas.
+* `vis`: used model for viscosity "Blumberg" or "HP".
 
 ``t_M = \\frac{128}{3}\\frac{L^2}{d^2}η\\frac{p_{in}^3-p_{out}^3}{(p_{in}^2-p_{out}^2)^2}``
 """
-function holdup_time(T::Float64, pin::Float64, pout::Float64, L::Float64, d::Float64, gas::String)
+function holdup_time(T::Float64, pin::Float64, pout::Float64, L::Float64, d::Float64, gas::String; vis="Blumberg")
     # hold-up time at temperature T (non-gradient)
-	η = viscosity(T, gas)
+	η = viscosity(T, gas; vis=vis)
 	tM = 128/3*L^2/d^2*η*(pin^3-pout^3)/(pin^2-pout^2)^2
 	return tM
 end
 
 """
-    holdup_time(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
+    holdup_time(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
 
 Calculate the hold-up time in s at time `t` with a gradient.
 
@@ -960,7 +1019,8 @@ Calculate the hold-up time in s at time `t` with a gradient.
 * `gas`: Name of the mobile phase gas.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`,
     eq. 2)
-or with a gradient (`ng = false`, eq. 1).
+    or with a gradient (`ng = false`, eq. 1).
+* `vis`: used model for viscosity "Blumberg" or "HP".
 
 ``t_M(t) = 64\\frac{κ_L(t)}{p_{in}(t)^2-p_{out}(t)^2} \\int_0^L
 d(y)^2\\frac{p(y,t)}{T(y,t)}dy`` Eq. 1
@@ -969,21 +1029,21 @@ d(y)^2\\frac{p(y,t)}{T(y,t)}dy`` Eq. 1
 \\frac{128}{3}\\frac{L^2}{d^2}η(t)\\frac{p_{in}(t)^3-p_{out}(t)^3}{(p_{in}(t)^2-p_{out}(t)^2)^2}``
 Eq. 2
 """
-function holdup_time(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
+function holdup_time(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
     # hold-up time at time t in a temperature program with potential thermal gradient
     if ng==true
-        η = viscosity(L, t, T_itp, gas)
+        η = GasChromatographySimulator.viscosity(L, t, T_itp, gas; vis=vis)
         tM = 128/3*L^2/d(L)^2*η*(pin_itp(t)^3-pout_itp(t)^3)/(pin_itp(t)^2-pout_itp(t)^2)^2
     else
-        κL = flow_restriction(L, t, T_itp, d, gas; ng=false)
-        integral = quadgk(y -> d(y)^2*pressure(y, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)/T_itp(y, t), 0, L)[1]
+        κL = flow_restriction(L, t, T_itp, d, gas; ng=false, vis=vis)
+        integral = quadgk(y -> d(y)^2*pressure(y, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis=vis)/T_itp(y, t), 0, L)[1]
         tM = 64*κL/(pin_itp(t)^2-pout_itp(t)^2)*integral
     end
     return tM
 end
 
 """
-    flow(T, pin, pout, L, d, gas)
+    flow(T, pin, pout, L, d, gas; vis="Blumberg")
 
 Calculate the normalized flow through the GC column in m³/s without a gradient.
 
@@ -994,6 +1054,7 @@ Calculate the normalized flow through the GC column in m³/s without a gradient.
 * `L`: Length of the capillary measured in m (meter).
 * `d`: Diameter of the GC column, in m.
 * `gas`: Name of the mobile phase gas.
+* `vis`: used model for viscosity "Blumberg" or "HP".
 
 ``F =
 \\frac{π}{256}\\frac{T_n}{p_n}\\frac{d^4}{L}\\frac{p_{in}^2-p_{out}^2}{η T}``
@@ -1002,15 +1063,15 @@ with ``T_n`` the normalized temperature (``T_n=(25 + 273.15)``K), ``p_n``
 the normalized pressure (``p_n = 101300`` Pa(a)) and ``η`` the viscosity
 the mobile phase gas at temperature ``T``.
 """
-function flow(T::Float64, pin::Float64, pout::Float64, L::Float64, d::Float64, gas::String)
+function flow(T::Float64, pin::Float64, pout::Float64, L::Float64, d::Float64, gas::String; vis="Blumberg")
 	# normalized Flow at temperature T (non-gradient)
-	η = GasChromatographySimulator.viscosity(T, gas)
+	η = viscosity(T, gas; vis=vis)
 	F = π/256 * Tn/pn * d^4/L * (pin^2-pout^2)/(η*T)
 	return F
 end
 
 """
-    flow(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
+    flow(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
 
 Calculate the normalized flow through the GC column in m³/s at time `t`.
 
@@ -1024,7 +1085,8 @@ Calculate the normalized flow through the GC column in m³/s at time `t`.
 * `gas`: Name of the mobile phase gas.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`,
     eq. 2)
-or with a gradient (`ng = false`, eq. 1).
+    or with a gradient (`ng = false`, eq. 1).
+* `vis`: used model for viscosity "Blumberg" or "HP".
 
 ``F(t) =
 \\frac{π}{256}\\frac{T_n}{p_n}\\frac{p_{in}(t)^2-p_{out}(t)^2}{κ_L(t)}``
@@ -1040,22 +1102,22 @@ the normalized pressure (``p_n = 101300`` Pa(a)), ``κ_L`` the flow
 restriction of the column and ``η`` the viscosity
 the mobile phase gas at temperature ``T``.
 """
-function flow(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
+function flow(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
 	# normalized Flow at time t in a temperature program with potential thermal
 	# gradient
     # TODO: test for gradient in d(x)
     if ng==true
-	    η = GasChromatographySimulator.viscosity(L, t, T_itp, gas)
+	    η = GasChromatographySimulator.viscosity(L, t, T_itp, gas, vis=vis)
 	    F = π/256 * Tn/pn * d(L)^4/L * (pin_itp(t)^2-pout_itp(t)^2)/(η*T_itp(L,t))
     else
-        κL = flow_restriction(L, t, T_itp, d, gas; ng=false)
+        κL = flow_restriction(L, t, T_itp, d, gas; ng=false, vis=vis)
         F = π/256 * Tn/pn * (pin_itp(t)^2-pout_itp(t)^2)/κL
     end
 	return F
 end
 
 """
-    mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
+    mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
 
 Calculate the residency (the inverse velocity) of the mobile phase at
 position `x` at time `t`.
@@ -1071,6 +1133,7 @@ position `x` at time `t`.
 * `gas`: Name of the mobile phase gas.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
 or with a gradient (`ng = false`).
+* `vis`: used model for viscosity "Blumberg" or "HP".
 
 ``r_M(x,t) = 64 \\frac{d^2 κ_L}{T(x,t)}\\frac{p(x,t)}{p_{in}^2-p_{out}^2}``
 
@@ -1080,15 +1143,15 @@ restriction of the column and ``p(x,t)`` the local pressure.
 
 See also: [`pressure`](@ref), [`flow_restriction`](@ref)
 """
-function mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false)
-    pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng)
-    κL = flow_restriction(L, t, T_itp, d, gas; ng=ng)
+function mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
+    pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis)
+    κL = flow_restriction(L, t, T_itp, d, gas; ng=ng, vis=vis)
     rM = 64*(pp*(d(x))^2)/T_itp(x, t)*κL/(pin_itp(t)^2-pout_itp(t)^2)
     return rM
 end
 
 """
-    residency(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp,  φ₀; ng=false)
+    residency(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp,  φ₀; ng=false, vis="Blumberg")
 
 Calculate the residency (the inverse velocity) of the solute at
 position `x` at time `t`.
@@ -1111,6 +1174,7 @@ stationary phase, in J mol⁻¹ K⁻¹.
 thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
 or with a gradient (`ng = false`).
+* `vis`: used model for viscosity "Blumberg" or "HP".
 
 ``r(x,t) = r_M(x,t) \\left(1+k(x,t)\\right)``
 
@@ -1119,8 +1183,8 @@ factor of the solute on the stationary phase.
 
 See also: [`mobile_phase_residency`](@ref), [`retention_factor`](@ref)
 """
-function residency(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=false)
-    r = mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng)*(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀))
+function residency(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=false, vis="Blumberg")
+    r = mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis)*(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀))
     return r
 end
 
@@ -1166,7 +1230,7 @@ function retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀)
 end
 
 """
-    plate_height(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Dag; ng=false)
+    plate_height(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Dag; ng=false, vis="Blumberg")
 
 Calculate the plate height of the solute at position `x` at time `t`
 according to the Golay equation.
@@ -1190,6 +1254,7 @@ thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
 * `Dag`: diffusivity of solute `a` in gas `g`.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
 or with a gradient (`ng = false`).
+* `vis`: used model for viscosity "Blumberg" or "HP".
 
 ``H(x,t) = 2 \\frac{D_M}{u_M} + \\frac{d^2}{96}\\left(6 μ^2-16 μ +11
 \\right) \\frac{u_M}{D_M} + \\frac{2}{3} d_f^2 μ(1-μ) \\frac{u_M}{D_S}``
@@ -1214,11 +1279,11 @@ with ``D_M`` the diffusion coefficient of the solute in the mobile phase,
 
 See also: [`diffusion_mobile`](@ref), [`mobile_phase_residency`](@ref), [`retention_factor`](@ref)
 """
-function plate_height(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Dag; ng=false)
+function plate_height(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Dag; ng=false, vis="Blumberg")
     id = d(x)# - 2.0*df(x)
-    uM = 1/mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng)
+    uM = 1/mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis)
     μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀))
-    DM = diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=ng)
+    DM = diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=ng, vis=vis)
     DS = DM/10000
     H1 = 2*DM/uM
     H2 = id^2/96*(6*μ^2-16*μ+11)*uM/DM
@@ -1228,7 +1293,7 @@ function plate_height(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θch
 end
 
 """
-    diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=false)
+    diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=false, vis="Blumberg")
 
 Calculate the diffusion coefficient of the solute in the mobile phase at
 position `x` at time `t`.
@@ -1245,11 +1310,12 @@ position `x` at time `t`.
 * `Dag`: diffusivity of solute `a` in gas `g`.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
 or with a gradient (`ng = false`).
+* `vis`: used model for viscosity "Blumberg" or "HP".
 
 ``D_M(x,t) = D_{ag} \\frac{T(x,t)^{1.75}}{p(x,t)}``
 """
-function diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=false)
-    DM = T_itp(x, t)^1.75/pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng)*Dag
+function diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=false, vis="Blumberg")
+    DM = T_itp(x, t)^1.75/pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis)*Dag
     return DM
 end
 #---End-Functions-of-the-physical-model---
@@ -1340,7 +1406,7 @@ Note: The result is the solution structure from
 DifferentialEquations.jl.
 """
 function solving_migration(sys::System, prog::Program, sub::Substance, opt::Options)
-	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng)
+	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis)
     t₀ = sub.t₀
     zspan = (0.0,sys.L)
     prob_tz = ODEProblem(f_tz, t₀, zspan)
@@ -1413,7 +1479,7 @@ function odesystem_r!(dt, t, p, z)
 	prog = p[2]
 	sub = p[3]
 	opt = p[4]
-    dt[1] = residency(z, t[1], prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng)
+    dt[1] = residency(z, t[1], prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis)
     dt[2] = peakode(z, t[1], t[2], sys, prog, sub, opt)
 end
 
@@ -1434,29 +1500,29 @@ See also: [`solving_odesystem_r`](@ref), [`odesystem_r!`](@ref)
 function peakode(z, t, τ², sys, prog, sub, opt)
 	# alternative function
     if opt.ng==true
-        r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true)
-        H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; ng=true)
+        r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis)
+        H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; ng=true, vis=opt.vis)
         ∂r∂t_ng(z,t) = ForwardDiff.gradient(r_ng, [z, t])[2]
         return H_ng(z,t)*r_ng([z,t])^2 + 2*τ²*∂r∂t_ng(z,t)
     else
 		d(z) = sys.d(z)
 		T(z,t) = prog.T_itp(z, t)
-		η(z,t) = viscosity(z, t, prog.T_itp, sys.gas)
+		η(z,t) = GasChromatographySimulator.viscosity(z, t, prog.T_itp, sys.gas; vis=opt.vis)
 		c(zt) = η(zt[1], zt[2])*T(zt[1], zt[2])
 		∂c∂t(z,t) = ForwardDiff.gradient(c, [z,t])[2]
 		pi2(t) = prog.pin_itp(t)^2
 		po2(t) = prog.pout_itp(t)^2
 		∂pi2∂t(t) = ForwardDiff.derivative(pi2, t)
 		∂po2∂t(t) = ForwardDiff.derivative(po2, t)
-        κ(z,t) = flow_restriction(z, t, prog.T_itp, sys.d, sys.gas)
+        κ(z,t) = flow_restriction(z, t, prog.T_itp, sys.d, sys.gas; vis=opt.vis)
 		κL(t) = κ(sys.L,t)
 		∂κ∂t(z,t) = quadgk(y -> d(y)^-4*∂c∂t(y,t), 0.0, z)[1]
         ∂κL∂t(t) = ∂κ∂t(sys.L,t)
 		e(z,t) = κ(z,t)/κL(t)
 		∂e∂t(z,t) = (∂κ∂t(z,t)*κL(t)-κ(z,t)*∂κL∂t(t))/κL(t)^2
-		p(z,t) = pressure(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.gas)
+		p(z,t) = pressure(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.gas; vis=opt.vis)
 		∂p∂t(z,t) = 1/(2*p(z,t))*(∂pi2∂t(t)-(∂e∂t(z,t)*(pi2(t)-po2(t))+e(z,t)*(∂pi2∂t(t)-∂po2∂t(t))))
-		rM(z,t) = mobile_phase_residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.gas)
+		rM(z,t) = mobile_phase_residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.gas; vis=opt.vis)
 		a(z,t) = κL(t)*p(z,t)
 		∂a∂t(z,t) = ∂κL∂t(t)*p(z,t)+κL(t)*∂p∂t(z,t)
 		b(zt) = T(zt[1],zt[2])*(pi2(zt[2])-po2(zt[2]))
@@ -1466,8 +1532,8 @@ function peakode(z, t, τ², sys, prog, sub, opt)
 		k(zt) = retention_factor(zt[1], zt[2], prog.T_itp, sys.d, sys.df, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀)
         ∂k∂t(z,t) = ForwardDiff.gradient(k, [z, t])[2]
 		
-		r(z,t) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀)
-        H(z,t) = plate_height(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag)
+		r(z,t) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; vis=opt.vis)
+        H(z,t) = plate_height(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; vis=opt.vis)
         ∂r∂t(z,t) = ∂rM∂t(z,t)*(1+k([z,t])) + rM(z,t)*∂k∂t(z,t)
         # AutoDiff problems with the intgral in flow_restriction κ and κL makes 
         # it nessecary to partly calculate the derivative manually
@@ -1521,7 +1587,7 @@ function peaklist(sol, par)
         if sol[i].t[end]==par.sys.L
             tR[i] = sol[i].u[end][1]
             TR[i] = par.prog.T_itp(par.sys.L, tR[i]) - 273.15 
-            uR[i] = 1/residency(par.sys.L, tR[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.df, par.sys.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
+            uR[i] = 1/residency(par.sys.L, tR[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.df, par.sys.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis)
             τR[i] = sqrt(sol[i].u[end][2])
             σR[i] = τR[i]*uR[i]
             kR[i] = retention_factor(par.sys.L, tR[i], par.prog.T_itp, par.sys.d, par.sys.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
@@ -1582,7 +1648,7 @@ function peaklist(sol, peak, par)
         if sol[i].t[end]==par.sys.L
             tR[i] = sol[i].u[end]
             TR[i] = par.prog.T_itp(par.sys.L, tR[i]) - 273.15 
-            uR[i] = 1/residency(par.sys.L, tR[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.df, par.sys.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
+            uR[i] = 1/residency(par.sys.L, tR[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.df, par.sys.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis)
             τR[i] = sqrt(peak[i].u[end])
             σR[i] = τR[i]*uR[i]
             kR[i] = retention_factor(par.sys.L, tR[i], par.prog.T_itp, par.sys.d, par.sys.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
@@ -1777,7 +1843,7 @@ function plot_flow(par)
 	t = 0.0:sum(par.prog.time_steps)/1000.0:sum(par.prog.time_steps)
 	F = Array{Float64}(undef, length(t))
 	for i=1:length(t)
-		F[i] = flow(t[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas)
+		F[i] = flow(t[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas; vis=par.opt.vis)
 	end
 	p_flow = plot(t, F.*60e6, xlabel="time in s", ylabel="column flow in mL/min", legend=false)
 	return p_flow
