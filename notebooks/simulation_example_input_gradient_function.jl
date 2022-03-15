@@ -86,7 +86,7 @@ begin
 end
 
 # ╔═╡ e0669a58-d5ac-4d01-b079-05412b413dda
-@bind sys_values confirm(GasChromatographyTools.UI_System(sp))
+@bind col_values confirm(GasChromatographyTools.UI_Column(sp))
 
 # ╔═╡ 49ac3705-9dbb-48e3-9db3-fc229edb9479
 md"""
@@ -117,7 +117,7 @@ Plot $(@bind yy Select(["z", "t", "T", "τ", "σ", "u"]; default="t")) over $(@b
 """
     prog_set_UI_b(sp)
 
-Construct a combined PlutoUI widget for the settings of the program of a GC system.    
+Construct a combined PlutoUI widget for the settings of the program of a GC Column.    
 """
 function prog_set_UI_b()
 	PlutoUI.combine() do Child
@@ -159,10 +159,10 @@ end
 @bind prog_values confirm(prog_set_UI_b())
 
 # ╔═╡ f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
-sys = GasChromatographySimulator.System(sys_values[1], sys_values[2]*1e-3, sys_values[3]*1e-6, sys_values[4], sys_values[5]);
+col = GasChromatographySimulator.Column(col_values[1], col_values[2]*1e-3, col_values[3]*1e-6, col_values[4], col_values[5]);
 
 # ╔═╡ 7a00bb54-553f-47f5-b5db-b40d226f4183
-@bind sub_values confirm(GasChromatographyTools.UI_Substance(GasChromatographySimulator.all_solutes(sys.sp, db); default=(1:5, 0.0, 0.0)))
+@bind sub_values confirm(GasChromatographyTools.UI_Substance(GasChromatographySimulator.all_solutes(col.sp, db); default=(1:5, 0.0, 0.0)))
 
 # ╔═╡ ee267b33-4086-4e04-9f39-b7f53f2ec920
 begin
@@ -174,7 +174,7 @@ begin
 	a_gf = parse.(Float64, split(prog_values[5]))
 	b_gf = parse.(Float64, split(prog_values[6]))
 	gf(x) = T(x, a_gf, b_gf)
-	T_itp = GasChromatographySimulator.temperature_interpolation(time_steps, temp_steps, gf, sys.L)
+	T_itp = GasChromatographySimulator.temperature_interpolation(time_steps, temp_steps, gf, col.L)
 	pin_itp = GasChromatographySimulator.pressure_interpolation(time_steps, pin_steps)
     pout_itp = GasChromatographySimulator.pressure_interpolation(time_steps, pout_steps)
 	
@@ -191,13 +191,13 @@ prog = GasChromatographySimulator.Program(time_steps,
 end;
 
 # ╔═╡ e3277bb4-301a-4a1e-a838-311832b6d6aa
-sub = GasChromatographySimulator.load_solute_database(db, sys.sp, sys.gas, sub_values[1], sub_values[2].*ones(length(sub_values[1])), sub_values[3].*ones(length(sub_values[1])));
+sub = GasChromatographySimulator.load_solute_database(db, col.sp, col.gas, sub_values[1], sub_values[2].*ones(length(sub_values[1])), sub_values[3].*ones(length(sub_values[1])));
 
 # ╔═╡ 115fa61e-8e82-42b2-8eea-9c7e21d97ea8
 opt = GasChromatographySimulator.Options(;abstol=10.0^opt_values[1], reltol=10.0^opt_values[2], Tcontrol=opt_values[3]);
 
 # ╔═╡ 85954bdb-d649-4772-a1cd-0bda5d9917e9
-par = GasChromatographySimulator.Parameters(sys, prog, sub, opt);
+par = GasChromatographySimulator.Parameters(col, prog, sub, opt);
 
 # ╔═╡ 96580972-6ef1-4a88-b872-2f74cba4dbf4
 begin

@@ -21,24 +21,24 @@ db = "Database_test.csv"
     opt = GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true)
     @test GasChromatographySimulator.Options() == opt
 
-    # System
+    # Column
     a_d = [d]
     a_df = [df]
     d_fun(x) = GasChromatographySimulator.gradient(x, a_d)
     df_fun(x) = GasChromatographySimulator.gradient(x, a_df)
-    sys = GasChromatographySimulator.System(L, d_fun, a_d, df_fun, a_df, sp, gas)
-    sys_c = GasChromatographySimulator.constructor_System(L, a_d[1], a_df[1], sp, gas)
-    @test sys.d(sys.L) == sys_c.d(sys_c.L)
+    col = GasChromatographySimulator.Column(L, d_fun, a_d, df_fun, a_df, sp, gas)
+    col_c = GasChromatographySimulator.constructor_System(L, a_d[1], a_df[1], sp, gas)
+    @test col.d(col.L) == col_c.d(col_c.L)
 
     # Program 
     a_gf = [ΔT_steps x₀_steps L₀_steps α_steps]
     gf(x) = GasChromatographySimulator.gradient(x, a_gf)
-    T_itp = GasChromatographySimulator.temperature_interpolation(time_steps, temp_steps, gf, sys.L)
+    T_itp = GasChromatographySimulator.temperature_interpolation(time_steps, temp_steps, gf, col.L)
     pin_itp = GasChromatographySimulator.pressure_interpolation(time_steps, pin_steps)
     pout_itp = GasChromatographySimulator.pressure_interpolation(time_steps, pout_steps)
     prog = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
-    prog_c = GasChromatographySimulator.constructor_Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, opt.Tcontrol, sys.L)
-    prog_c_ng = GasChromatographySimulator.constructor_Program(time_steps, temp_steps, pin_steps, pout_steps, sys.L) # without gradient
+    prog_c = GasChromatographySimulator.constructor_Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, opt.Tcontrol, col.L)
+    prog_c_ng = GasChromatographySimulator.constructor_Program(time_steps, temp_steps, pin_steps, pout_steps, col.L) # without gradient
     @test prog.T_itp == prog_c.T_itp
     @test prog_c.T_itp != prog_c_ng.T_itp
     @test prog.pin_itp == prog_c.pin_itp
@@ -50,13 +50,13 @@ db = "Database_test.csv"
     solutes = ["C10", "C11"]
     init_t = zeros(length(solutes))
     init_τ = zeros(length(solutes))
-    sub = GasChromatographySimulator.load_solute_database(db_path, db, sys.sp, sys.gas, solutes, init_t, init_τ)
+    sub = GasChromatographySimulator.load_solute_database(db_path, db, col.sp, col.gas, solutes, init_t, init_τ)
     @test sub[1].name == "C10"
     @test sub[2].Tchar == 124.746 + 273.15
 
     # parameters
-    par = GasChromatographySimulator.Parameters(sys, prog, sub, opt)
-    @test par.sys.L == L
+    par = GasChromatographySimulator.Parameters(col, prog, sub, opt)
+    @test par.col.L == L
     @test par.prog.gf(0.0) == par.prog.gf(L) + par.prog.a_gf[:,1]
     @test par.prog.T_itp(0.0, 0.0) == temp_steps[1] + 273.15
     @test par.prog.T_itp(L, sum(time_steps)) == temp_steps[end] - ΔT_steps[end] + 273.15
@@ -71,20 +71,20 @@ end
     # - odesys = true/false
     # - alg = OwrenZen3/OwrenZen5
     # same settings for:
-    # - the System
+    # - the Column
     # - the Substances
     # - temperature and pressure program
     a_d = [d]
     a_df = [df]
     d_fun(x) = GasChromatographySimulator.gradient(x, a_d)
     df_fun(x) = GasChromatographySimulator.gradient(x, a_df)
-    sys = GasChromatographySimulator.System(L, d_fun, a_d, df_fun, a_df, sp, gas)
+    col = GasChromatographySimulator.Column(L, d_fun, a_d, df_fun, a_df, sp, gas)
 
     
     solutes = ["C10", "C11"]
     init_t = zeros(length(solutes))
     init_τ = zeros(length(solutes))
-    sub = GasChromatographySimulator.load_solute_database(db_path, db, sys.sp, sys.gas, solutes, init_t, init_τ)
+    sub = GasChromatographySimulator.load_solute_database(db_path, db, col.sp, col.gas, solutes, init_t, init_τ)
 
     opt = [ GasChromatographySimulator.Options(alg=OwrenZen3()),
             GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true),
@@ -99,10 +99,10 @@ end
     results_g = Array{Any}(undef, length(opt))
     results_ng = Array{Any}(undef, length(opt))
     for i=1:length(opt)
-        prog_g = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, opt[i].Tcontrol, sys.L)
-        prog_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt[i].Tcontrol, sys.L)
-        par_g[i] = GasChromatographySimulator.Parameters(sys, prog_g, sub, opt[i])
-        par_ng[i] = GasChromatographySimulator.Parameters(sys, prog_ng, sub, opt[i])
+        prog_g = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, opt[i].Tcontrol, col.L)
+        prog_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt[i].Tcontrol, col.L)
+        par_g[i] = GasChromatographySimulator.Parameters(col, prog_g, sub, opt[i])
+        par_ng[i] = GasChromatographySimulator.Parameters(col, prog_ng, sub, opt[i])
         # simulate()
         results_g[i] = GasChromatographySimulator.simulate(par_g[i]) 
         results_ng[i] = GasChromatographySimulator.simulate(par_ng[i]) 
@@ -167,16 +167,16 @@ end
 
     # ng = true
     opt_ng = GasChromatographySimulator.Options(ng=true)
-    prog_o_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_ng.Tcontrol, sys.L)
-    par_o_ng = GasChromatographySimulator.Parameters(sys, prog_o_ng, sub, opt_ng)
+    prog_o_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_ng.Tcontrol, col.L)
+    par_o_ng = GasChromatographySimulator.Parameters(col, prog_o_ng, sub, opt_ng)
     results_o_ng = GasChromatographySimulator.simulate(par_o_ng)
     @test isapprox(results_o_ng[1].tR[1], 87.401, atol=1e-3)
     @test isapprox(results_o_ng[1].τR[2], 0.59028, atol=1e-5)
 
     # vis = "HP"
     opt_vis = GasChromatographySimulator.Options(vis="HP")
-    prog_vis = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_vis.Tcontrol, sys.L)
-    par_vis = GasChromatographySimulator.Parameters(sys, prog_vis, sub, opt_vis)
+    prog_vis = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_vis.Tcontrol, col.L)
+    par_vis = GasChromatographySimulator.Parameters(col, prog_vis, sub, opt_vis)
     results_vis = GasChromatographySimulator.simulate(par_vis)
     isapprox(results_vis[1].tR[1], 87.078, atol=1e-3)
     isapprox(results_vis[1].τR[2], 0.59294, atol=1e-5)
@@ -190,16 +190,16 @@ end
     a_df = [df]
     d_fun(x) = GasChromatographySimulator.gradient(x, a_d)
     df_fun(x) = GasChromatographySimulator.gradient(x, a_df)
-    sys = GasChromatographySimulator.System(L, d_fun, a_d, df_fun, a_df, sp, gas)
+    col = GasChromatographySimulator.Column(L, d_fun, a_d, df_fun, a_df, sp, gas)
 
     solutes = ["C10", "C11"]
     init_t = zeros(length(solutes))
     init_τ = zeros(length(solutes))
-    sub = GasChromatographySimulator.load_solute_database(db_path, db, sys.sp, sys.gas, solutes, init_t, init_τ)
+    sub = GasChromatographySimulator.load_solute_database(db_path, db, col.sp, col.gas, solutes, init_t, init_τ)
     
     opt_ng = GasChromatographySimulator.Options(ng=true)
-    prog_o_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_ng.Tcontrol, sys.L)
-    par_o_ng = GasChromatographySimulator.Parameters(sys, prog_o_ng, sub, opt_ng)
+    prog_o_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_ng.Tcontrol, col.L)
+    par_o_ng = GasChromatographySimulator.Parameters(col, prog_o_ng, sub, opt_ng)
     results_o_ng = GasChromatographySimulator.simulate(par_o_ng)
 
     # separat testset
@@ -239,11 +239,11 @@ end
     p_temp = GasChromatographySimulator.plot_temperature(par_o_ng; selector="T(x)")
     @test p_temp[1][1][:y][1] == par_o_ng.prog.temp_steps[1]
     @test p_temp[1][end][:y][end] == par_o_ng.prog.temp_steps[end]
-    @test p_temp[1][2][:x][end] == par_o_ng.sys.L
+    @test p_temp[1][2][:x][end] == par_o_ng.col.L
 
     p_temp = GasChromatographySimulator.plot_temperature(par_o_ng; selector="T(x,t)")
     @test p_temp[1][1][:y][end] == sum(par_o_ng.prog.time_steps)
-    @test p_temp[1][1][:x][end] == par_o_ng.sys.L
+    @test p_temp[1][1][:x][end] == par_o_ng.col.L
 end
 
 @testset "misc checks" begin
@@ -254,14 +254,14 @@ end
     a_df = [df]
     d_fun(x) = GasChromatographySimulator.gradient(x, a_d)
     df_fun(x) = GasChromatographySimulator.gradient(x, a_df)
-    sys = GasChromatographySimulator.System(L, d_fun, a_d, df_fun, a_df, sp, gas)
+    col = GasChromatographySimulator.Column(L, d_fun, a_d, df_fun, a_df, sp, gas)
     a_gf = [ΔT_steps x₀_steps L₀_steps α_steps]
     gf(x) = GasChromatographySimulator.gradient(x, a_gf)
-    T_itp = GasChromatographySimulator.temperature_interpolation(time_steps, temp_steps, gf, sys.L)
+    T_itp = GasChromatographySimulator.temperature_interpolation(time_steps, temp_steps, gf, col.L)
     pin_itp = GasChromatographySimulator.pressure_interpolation(time_steps, pin_steps)
     pout_itp = GasChromatographySimulator.pressure_interpolation(time_steps, pout_steps)
     # without gradient
-    prog_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, sys.L)
+    prog_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, col.L)
 
     # random time in the temperature program
     t = rand()*sum(time_steps)
@@ -270,17 +270,17 @@ end
 
     η_T = GasChromatographySimulator.viscosity(T_test, "He")
 
-    η_t = GasChromatographySimulator.viscosity(0.0, t, prog_ng.T_itp, sys.gas)
+    η_t = GasChromatographySimulator.viscosity(0.0, t, prog_ng.T_itp, col.gas)
 
     @test η_T ≈ η_t
 
-    tM_T = GasChromatographySimulator.holdup_time(T_test, prog_ng.pin_itp(t), prog_ng.pout_itp(t), sys.L, sys.a_d[1], sys.gas) # only defined for non-gradient case
-    tM_t = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.pin_itp, prog_ng.pout_itp, sys.L, sys.d, sys.gas)
+    tM_T = GasChromatographySimulator.holdup_time(T_test, prog_ng.pin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
+    tM_t = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.pin_itp, prog_ng.pout_itp, col.L, col.d, col.gas)
 
     @test tM_T ≈ tM_t
 
-    F_T = GasChromatographySimulator.flow(T_test, prog_ng.pin_itp(t), prog_ng.pout_itp(t), sys.L, sys.a_d[1], sys.gas) # only defined for non-gradient case
-    F_t = GasChromatographySimulator.flow(t, prog_ng.T_itp, prog_ng.pin_itp, prog_ng.pout_itp, sys.L, sys.d, sys.gas)
+    F_T = GasChromatographySimulator.flow(T_test, prog_ng.pin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
+    F_t = GasChromatographySimulator.flow(t, prog_ng.T_itp, prog_ng.pin_itp, prog_ng.pout_itp, col.L, col.d, col.gas)
 
     @test F_T  ≈  F_t
 

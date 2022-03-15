@@ -84,7 +84,7 @@ begin
 end
 
 # ╔═╡ e0669a58-d5ac-4d01-b079-05412b413dda
-@bind sys_values confirm(GasChromatographyTools.UI_System(sp))
+@bind col_values confirm(GasChromatographyTools.UI_Column(sp))
 
 # ╔═╡ a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
 @bind prog_values confirm(GasChromatographyTools.UI_Program())
@@ -107,13 +107,13 @@ Plot $(@bind yy Select(["z", "t", "T", "τ", "σ", "u"]; default="t")) over $(@b
 """
 
 # ╔═╡ f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
-sys = GasChromatographySimulator.System(sys_values[1], sys_values[2]*1e-3, sys_values[3]*1e-6, sys_values[4], sys_values[5]);
+col = GasChromatographySimulator.Column(col_values[1], col_values[2]*1e-3, col_values[3]*1e-6, col_values[4], col_values[5]);
 
 # ╔═╡ 7a00bb54-553f-47f5-b5db-b40d226f4183
-@bind sub_values confirm(GasChromatographyTools.UI_Substance(GasChromatographySimulator.all_solutes(sys.sp, db); default=(1:5, 0.0, 0.0)))
+@bind sub_values confirm(GasChromatographyTools.UI_Substance(GasChromatographySimulator.all_solutes(col.sp, db); default=(1:5, 0.0, 0.0)))
 
 # ╔═╡ e3277bb4-301a-4a1e-a838-311832b6d6aa
-sub = GasChromatographySimulator.load_solute_database(db, sys.sp, sys.gas, sub_values[1], sub_values[2].*ones(length(sub_values[1])), sub_values[3].*ones(length(sub_values[1])));
+sub = GasChromatographySimulator.load_solute_database(db, col.sp, col.gas, sub_values[1], sub_values[2].*ones(length(sub_values[1])), sub_values[3].*ones(length(sub_values[1])));
 
 # ╔═╡ 115fa61e-8e82-42b2-8eea-9c7e21d97ea8
 opt = GasChromatographySimulator.Options(;abstol=10.0^opt_values[1], reltol=10.0^opt_values[2], Tcontrol=opt_values[3]);
@@ -125,14 +125,14 @@ prog = GasChromatographySimulator.Program(parse.(Float64, split(prog_values[1]))
 										parse.(Float64, split(prog_values[6])).*1000.0,
 										parse.(Float64, split(prog_values[3])),
 										zeros(length(split(prog_values[1]))),
-										sys.L.*ones(length(split(prog_values[1]))),
+										col.L.*ones(length(split(prog_values[1]))),
 										parse.(Float64, split(prog_values[4])),
 										opt.Tcontrol,
-										sys.L
+										col.L
 );
 
 # ╔═╡ 85954bdb-d649-4772-a1cd-0bda5d9917e9
-par = GasChromatographySimulator.Parameters(sys, prog, sub, opt);
+par = GasChromatographySimulator.Parameters(col, prog, sub, opt);
 
 # ╔═╡ fdb39284-201b-432f-bff6-986ddbc49a7d
 begin
