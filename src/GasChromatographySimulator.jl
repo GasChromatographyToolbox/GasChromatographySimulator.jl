@@ -17,9 +17,9 @@ pn = 101300             # Pa
 
 # ---Begin-Structures---
 """
-    System(L, d, a_d, df, a_df, sp, gas)
+    Column(L, d, a_d, df, a_df, sp, gas)
 
-Structure describing the GC system. 
+Structure describing the GC Column. 
 
 # Arguments
 
@@ -30,7 +30,7 @@ Structure describing the GC system.
 * `sp`: The name of the stationary phase.
 * `gas`: The name of the mobile phase. Allowed values: He, H2 or N2.
 """
-struct System{Fd<:Function, Fdf<:Function}
+struct Column{Fd<:Function, Fdf<:Function}
     L                       # column length in m
     d::Fd                   # column internal diameter in m as function of x
     a_d::Array{Float64,1}   # parameters of the diameters function d(x)
@@ -38,13 +38,13 @@ struct System{Fd<:Function, Fdf<:Function}
     a_df::Array{Float64}    # parameters of the film thickness function df(x)
     sp::String              # stationary phase of the column
     gas::String             # gas of the mobile phase ["He", "H2", "N2"]
-    System(L, d, a_d, df, a_df, sp, gas) = (gas!="He" && gas!="H2" && gas!="N2") ? error("Wrong selection for 'gas'. Choose 'He', 'H2' or 'N2'.") : new{typeof(d), typeof(df)}(L, d, a_d, df, a_df, sp, gas)
+    Column(L, d, a_d, df, a_df, sp, gas) = (gas!="He" && gas!="H2" && gas!="N2") ? error("Wrong selection for 'gas'. Choose 'He', 'H2' or 'N2'.") : new{typeof(d), typeof(df)}(L, d, a_d, df, a_df, sp, gas)
 end
 
 """
     Program(time_steps, temp_steps, pin_steps, pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
 
-Structure to describe the temperature and pressure program of a GC system. The function `gf` describes an optional thermal gradient.
+Structure to describe the temperature and pressure program of a GC Column. The function `gf` describes an optional thermal gradient.
 
 # Arguments
 * `time_steps`: Time steps in s (seconds). 
@@ -77,7 +77,7 @@ end
 """
     Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Dag, t₀, τ₀)
 
-Structure to describe the properties of a solute, which migrates through the GC system. These datas are in most cases read from a database with the function `load_solute_database()`.
+Structure to describe the properties of a solute, which migrates through the GC Column. These datas are in most cases read from a database with the function `load_solute_database()`.
 
 # Arguments
 * `name`: Name of the solute. 
@@ -107,7 +107,7 @@ struct Substance
 end
 
 """
-    Options(alg, abstol, reltol, Tcontrol, odesys, ng)
+    Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis)
 
 Structure describing some general options for the simulation. 
 
@@ -118,6 +118,8 @@ Structure describing some general options for the simulation.
 * `Tcontrol`: Option defining at which point of the column the temperature program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
 * `odesys`: Combine the ODEs for migration and peak-width into a system of ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`) or with a gradient (`ng = false`). This distinction is made because of partly manuall differentiation (problem of automatic differentiation with integrals, e.g. in the `flow_restriction()` function. -> **TODO**: test package Quadrature.jl as alternative to QuadGK.jl for integration)
+* `vis`: Used model of viscosity. `HP` is a second-order polynomial taken from the HP flow calculator. `Blumberg` is an emperical formula according to the book
+    `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH) 
 
 **TODO**: add option for the retention model ('ABC', 'K-centric')
 
@@ -135,21 +137,21 @@ struct Options
 end
 
 """
-    Parameters(sys, prog, sub, opt)
+    Parameters(col, prog, sub, opt)
 
 Structure describing all parameters for the simulation of a GC system. 
 
 # Arguments
-* `sys`: Structure `Systems` describing the parameters of the GC column and
+* `col`: Structure `Column` describing the parameters of the GC column and
     mobile phase gas.
 * `prog`: Structure `Program` describing the temperature and pressure
-    program of a GC system.
+    program of a GC Column.
 * `sub`: An array of the structure `Substance` describing the parameters of
     the solutes which are separated in the GC simulation. 
 * `opt`: Structure `Options` describing additional option parameters.
 """
 struct Parameters
-    sys::System
+    col::Column
     prog::Program
     sub::Array{Substance,1}
     opt::Options
@@ -159,9 +161,9 @@ end
 # ---Begin-Constructor-functions-for-Structures---
 
 """
-    System(L, d, df, sp, gas)
+    Column(L, d, df, sp, gas)
 
-Construct the structure `Systems` with given values for the case
+Construct the structure `Column` with given values for the case
 of constant diameter `d` and film thickness `df`. 
 
 # Arguments
@@ -173,16 +175,16 @@ of constant diameter `d` and film thickness `df`.
 
 # Examples
 ```julia
-julia> System(10.0, 0.1e-3, 0.1e-6, "DB5", "He")
+julia> Column(10.0, 0.1e-3, 0.1e-6, "DB5", "He")
 	```
 """
-function System(L, d, df, sp, gas)
-    # function to construct the System structure
+function Column(L, d, df, sp, gas)
+    # function to construct the Column structure
     # for the case of constant diameter and constant film thickness
     d_func(x) = gradient(x, [d])
     df_func(x) = gradient(x, [df])
-    sys = System(L, d_func, [d], df_func, [df], sp, gas)
-    return sys
+    col = Column(L, d_func, [d], df_func, [df], sp, gas)
+    return col
 end
 
 """
@@ -403,7 +405,7 @@ function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg"
 end
 
 # Aliases for compatibility
-constructor_System = System
+constructor_System = Column
 constructor_Program = Program
 constructor_Options = Options
 #---End-Constructor-functions-for-Structures---
@@ -1212,7 +1214,7 @@ thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
     \\frac{ΔC_p}{R}\\ln{(\\frac{T}{T_{char}})}\\right)}``
 
 with ``R`` the molar gas constant and ``φ`` the dimensionless film thickness
-of the simulated GC system (``φ = d_f/d``).
+of the simulated GC Column (``φ = d_f/d``).
 
 **TODO**: add option for the retention model ('ABC', 'K-centric')
 """
@@ -1363,7 +1365,7 @@ function solve_system_multithreads(par)
 	n = length(par.sub)
 	sol = Array{Any}(undef, n)
 	Threads.@threads for i=1:n
-		sol[i] = solving_odesystem_r(par.sys, par.prog, par.sub[i], par.opt)
+		sol[i] = solving_odesystem_r(par.col, par.prog, par.sub[i], par.opt)
 	end
 	return sol
 end
@@ -1390,54 +1392,54 @@ function solve_multithreads(par)
     sol = Array{Any}(undef, n)
     peak = Array{Any}(undef, n)
     Threads.@threads for i=1:n
-        sol[i] = solving_migration(par.sys, par.prog, par.sub[i], par.opt)
-        peak[i] = solving_peakvariance(sol[i], par.sys, par.prog, par.sub[i], par.opt)
+        sol[i] = solving_migration(par.col, par.prog, par.sub[i], par.opt)
+        peak[i] = solving_peakvariance(sol[i], par.col, par.prog, par.sub[i], par.opt)
     end
     return sol, peak
 end
 
 """
-    solving_migration(sys::System, prog::Program, sub::Substance, opt::Options)
+    solving_migration(col::Column, prog::Program, sub::Substance, opt::Options)
 
-Solve for the migration ``t(z)`` of solute `sub` in the GC system `sys` with
+Solve for the migration ``t(z)`` of solute `sub` in the GC Column `col` with
 the program `prog` and the options `opt`.
 
 Note: The result is the solution structure from
 DifferentialEquations.jl.
 """
-function solving_migration(sys::System, prog::Program, sub::Substance, opt::Options)
-	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis)
+function solving_migration(col::Column, prog::Program, sub::Substance, opt::Options)
+	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis)
     t₀ = sub.t₀
-    zspan = (0.0,sys.L)
+    zspan = (0.0,col.L)
     prob_tz = ODEProblem(f_tz, t₀, zspan)
     solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
     return solution_tz
 end
 
 """
-    solving_peakvariance(solution_tz, sys::System, prog::Program, sub::Substance, opt::Options)
+    solving_peakvariance(solution_tz, col::Column, prog::Program, sub::Substance, opt::Options)
 
-Solve for the development of the peak variance ``τ²(z)`` of solute `sub` in the GC system `sys` with
+Solve for the development of the peak variance ``τ²(z)`` of solute `sub` in the GC Column `col` with
 the program `prog` and the options `opt` during its migration defined by `solution_tz`.
 
 Note: The result is the solution structure from
 DifferentialEquations.jl.
 """
-function solving_peakvariance(solution_tz, sys, prog, sub, opt)
+function solving_peakvariance(solution_tz, col, prog, sub, opt)
     t(z) = solution_tz(z)
-    p = [sys, prog, sub, opt]
-    f_τ²z(τ²,p,z) = peakode(z, t(z), τ², sys, prog, sub, opt)
+    p = [col, prog, sub, opt]
+    f_τ²z(τ²,p,z) = peakode(z, t(z), τ², col, prog, sub, opt)
     τ²₀ = sub.τ₀^2
-    zspan = (0.0, sys.L)
+    zspan = (0.0, col.L)
     prob_τ²z = ODEProblem(f_τ²z, τ²₀, zspan, p)
     solution_τ²z = solve(prob_τ²z, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
     return solution_τ²z
 end
 
 """
-    solving_odesystem_r(sys::System, prog::Program, sub::Substance, opt::Options)
+    solving_odesystem_r(col::Column, prog::Program, sub::Substance, opt::Options)
 
-Solve the migration ``t(z)`` and peak variance development ``τ²(z)`` of solute `sub` in the GC system `sys` with
+Solve the migration ``t(z)`` and peak variance development ``τ²(z)`` of solute `sub` in the GC Column `col` with
 the program `prog` and the options `opt` as a system of ODEs.
 
 Note: The result is the solution structure from
@@ -1445,16 +1447,16 @@ DifferentialEquations.jl.
 
 See also: [`odesystem_r!`](@ref)
 """
-function solving_odesystem_r(sys::System, prog::Program, sub::Substance, opt::Options)
+function solving_odesystem_r(col::Column, prog::Program, sub::Substance, opt::Options)
     t₀ = [sub.t₀; sub.τ₀^2]
-    zspan = (0.0,sys.L)
-	p = [sys, prog, sub, opt]
+    zspan = (0.0,col.L)
+	p = [col, prog, sub, opt]
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
 
     solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
 
-    if solution.t[end]<sys.L
-        solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol, dt=sys.L/1000000)
+    if solution.t[end]<col.L
+        solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol, dt=col.L/1000000)
     end
     return solution
 end
@@ -1475,16 +1477,16 @@ See also: [`solving_odesystem_r`](@ref), [`peakode`](@ref)
 function odesystem_r!(dt, t, p, z)
     # t[1] ... t time
     # t[2] ... τ² band variance
-	sys = p[1]
+	col = p[1]
 	prog = p[2]
 	sub = p[3]
 	opt = p[4]
-    dt[1] = residency(z, t[1], prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis)
-    dt[2] = peakode(z, t[1], t[2], sys, prog, sub, opt)
+    dt[1] = residency(z, t[1], prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis)
+    dt[2] = peakode(z, t[1], t[2], col, prog, sub, opt)
 end
 
 """
-    peakode(z, t, τ², sys, prog, sub, opt)
+    peakode(z, t, τ², col, prog, sub, opt)
 
 The second ODE function for the ODE system describing the peak variance
 development ``τ²(z)``, using (in parts) automatic differentiation.
@@ -1497,43 +1499,43 @@ ForwardDiff.jl
 
 See also: [`solving_odesystem_r`](@ref), [`odesystem_r!`](@ref)
 """
-function peakode(z, t, τ², sys, prog, sub, opt)
+function peakode(z, t, τ², col, prog, sub, opt)
 	# alternative function
     if opt.ng==true
-        r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis)
-        H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; ng=true, vis=opt.vis)
+        r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis)
+        H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; ng=true, vis=opt.vis)
         ∂r∂t_ng(z,t) = ForwardDiff.gradient(r_ng, [z, t])[2]
         return H_ng(z,t)*r_ng([z,t])^2 + 2*τ²*∂r∂t_ng(z,t)
     else
-		d(z) = sys.d(z)
+		d(z) = col.d(z)
 		T(z,t) = prog.T_itp(z, t)
-		η(z,t) = GasChromatographySimulator.viscosity(z, t, prog.T_itp, sys.gas; vis=opt.vis)
+		η(z,t) = GasChromatographySimulator.viscosity(z, t, prog.T_itp, col.gas; vis=opt.vis)
 		c(zt) = η(zt[1], zt[2])*T(zt[1], zt[2])
 		∂c∂t(z,t) = ForwardDiff.gradient(c, [z,t])[2]
 		pi2(t) = prog.pin_itp(t)^2
 		po2(t) = prog.pout_itp(t)^2
 		∂pi2∂t(t) = ForwardDiff.derivative(pi2, t)
 		∂po2∂t(t) = ForwardDiff.derivative(po2, t)
-        κ(z,t) = flow_restriction(z, t, prog.T_itp, sys.d, sys.gas; vis=opt.vis)
-		κL(t) = κ(sys.L,t)
+        κ(z,t) = flow_restriction(z, t, prog.T_itp, col.d, col.gas; vis=opt.vis)
+		κL(t) = κ(col.L,t)
 		∂κ∂t(z,t) = quadgk(y -> d(y)^-4*∂c∂t(y,t), 0.0, z)[1]
-        ∂κL∂t(t) = ∂κ∂t(sys.L,t)
+        ∂κL∂t(t) = ∂κ∂t(col.L,t)
 		e(z,t) = κ(z,t)/κL(t)
 		∂e∂t(z,t) = (∂κ∂t(z,t)*κL(t)-κ(z,t)*∂κL∂t(t))/κL(t)^2
-		p(z,t) = pressure(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.gas; vis=opt.vis)
+		p(z,t) = pressure(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.gas; vis=opt.vis)
 		∂p∂t(z,t) = 1/(2*p(z,t))*(∂pi2∂t(t)-(∂e∂t(z,t)*(pi2(t)-po2(t))+e(z,t)*(∂pi2∂t(t)-∂po2∂t(t))))
-		rM(z,t) = mobile_phase_residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.gas; vis=opt.vis)
+		rM(z,t) = mobile_phase_residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.gas; vis=opt.vis)
 		a(z,t) = κL(t)*p(z,t)
 		∂a∂t(z,t) = ∂κL∂t(t)*p(z,t)+κL(t)*∂p∂t(z,t)
 		b(zt) = T(zt[1],zt[2])*(pi2(zt[2])-po2(zt[2]))
 		∂b∂t(z,t) = ForwardDiff.gradient(b, [z,t])[2]
 		∂rM∂t(z,t) = 64*d(z)^2*((∂a∂t(z,t)*b([z,t])-a(z,t)*∂b∂t(z,t))/b([z,t])^2)
 		
-		k(zt) = retention_factor(zt[1], zt[2], prog.T_itp, sys.d, sys.df, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀)
+		k(zt) = retention_factor(zt[1], zt[2], prog.T_itp, col.d, col.df, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀)
         ∂k∂t(z,t) = ForwardDiff.gradient(k, [z, t])[2]
 		
-		r(z,t) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; vis=opt.vis)
-        H(z,t) = plate_height(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, sys.L, sys.d, sys.df, sys.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; vis=opt.vis)
+		r(z,t) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; vis=opt.vis)
+        H(z,t) = plate_height(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; vis=opt.vis)
         ∂r∂t(z,t) = ∂rM∂t(z,t)*(1+k([z,t])) + rM(z,t)*∂k∂t(z,t)
         # AutoDiff problems with the intgral in flow_restriction κ and κL makes 
         # it nessecary to partly calculate the derivative manually
@@ -1584,13 +1586,13 @@ function peaklist(sol, par)
     Res = fill(NaN, n)
     Threads.@threads for i=1:n
         Name[i] = par.sub[i].name
-        if sol[i].t[end]==par.sys.L
+        if sol[i].t[end]==par.col.L
             tR[i] = sol[i].u[end][1]
-            TR[i] = par.prog.T_itp(par.sys.L, tR[i]) - 273.15 
-            uR[i] = 1/residency(par.sys.L, tR[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.df, par.sys.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis)
+            TR[i] = par.prog.T_itp(par.col.L, tR[i]) - 273.15 
+            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis)
             τR[i] = sqrt(sol[i].u[end][2])
             σR[i] = τR[i]*uR[i]
-            kR[i] = retention_factor(par.sys.L, tR[i], par.prog.T_itp, par.sys.d, par.sys.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
+            kR[i] = retention_factor(par.col.L, tR[i], par.prog.T_itp, par.col.d, par.col.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
         else
             tR[i] = NaN
             TR[i] = NaN
@@ -1645,13 +1647,13 @@ function peaklist(sol, peak, par)
     Res = fill(NaN, n)
     Threads.@threads for i=1:n
         Name[i] = par.sub[i].name
-        if sol[i].t[end]==par.sys.L
+        if sol[i].t[end]==par.col.L
             tR[i] = sol[i].u[end]
-            TR[i] = par.prog.T_itp(par.sys.L, tR[i]) - 273.15 
-            uR[i] = 1/residency(par.sys.L, tR[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.df, par.sys.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis)
+            TR[i] = par.prog.T_itp(par.col.L, tR[i]) - 273.15 
+            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis)
             τR[i] = sqrt(peak[i].u[end])
             σR[i] = τR[i]*uR[i]
-            kR[i] = retention_factor(par.sys.L, tR[i], par.prog.T_itp, par.sys.d, par.sys.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
+            kR[i] = retention_factor(par.col.L, tR[i], par.prog.T_itp, par.col.d, par.col.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
         else
             tR[i] = NaN
             TR[i] = NaN
@@ -1837,13 +1839,13 @@ end
 """
 	plot_flow(par)
 
-Calculate and plot the flow (in mL/min, normalized) of the carrier gas in a GC system with a program defined in the parameters `par::GasChromatography.Parameters`.
+Calculate and plot the flow (in mL/min, normalized) of the carrier gas in a GC Column with a program defined in the parameters `par::GasChromatography.Parameters`.
 """
 function plot_flow(par)
 	t = 0.0:sum(par.prog.time_steps)/1000.0:sum(par.prog.time_steps)
 	F = Array{Float64}(undef, length(t))
 	for i=1:length(t)
-		F[i] = flow(t[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.sys.L, par.sys.d, par.sys.gas; vis=par.opt.vis)
+		F[i] = flow(t[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.gas; vis=par.opt.vis)
 	end
 	p_flow = plot(t, F.*60e6, xlabel="time in s", ylabel="column flow in mL/min", legend=false)
 	return p_flow
@@ -1870,7 +1872,7 @@ end
 """
 	plot_temperature(par; selector="T(t)")
 
-Plot the temperature program of the GC system. 
+Plot the temperature program of the GC Column. 
 
 # Arguments
 * `par::GasChromatographySimulator.Parameters`: parameters of the GC system
@@ -1881,7 +1883,7 @@ Plot the temperature program of the GC system.
 """
 function plot_temperature(par::GasChromatographySimulator.Parameters; selector="T(t)")
 	if selector=="T(x)"
-		nx = 0.0:par.sys.L/1000:par.sys.L
+		nx = 0.0:par.col.L/1000:par.col.L
 		p_temp = plot(xlabel="x in m", ylabel="T in °C", legend=:top)
 		for i=1:length(par.prog.time_steps)
 			T = par.prog.T_itp.(nx, cumsum(par.prog.time_steps)[i]).-273.15
@@ -1891,10 +1893,10 @@ function plot_temperature(par::GasChromatographySimulator.Parameters; selector="
 		nt = 0.0:sum(par.prog.time_steps)/1000:sum(par.prog.time_steps)
 		T0 = par.prog.T_itp.(0.0, nt).-273.15
 		p_temp = plot(nt, T0, xlabel="t in s", ylabel="T in °C", legend=:top, label="inlet", c=:red)
-		TL = par.prog.T_itp.(par.sys.L, nt).-273.15
+		TL = par.prog.T_itp.(par.col.L, nt).-273.15
 		plot!(p_temp, nt, TL, label="outlet", c=:blue)
 	elseif selector=="T(x,t)"
-		nx = 0.0:par.sys.L/1000:par.sys.L
+		nx = 0.0:par.col.L/1000:par.col.L
 		nt = 0.0:sum(par.prog.time_steps)/1000:sum(par.prog.time_steps)
 		T = Array{Float64}(undef, length(nx), length(nt))
 		for j=1:length(nt)

@@ -1,11 +1,11 @@
 # Functions 
 
 ```@docs
-GasChromatographySimulator.System
+GasChromatographySimulator.Column
 ```
 
 ```@docs
-GasChromatographySimulator.System(L, d, df, sp, gas)
+GasChromatographySimulator.Column(L, d, df, sp, gas)
 ```
 
 ```@docs

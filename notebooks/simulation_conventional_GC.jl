@@ -84,7 +84,7 @@ begin
 end
 
 # ╔═╡ e0669a58-d5ac-4d01-b079-05412b413dda
-@bind sys_values confirm(GasChromatographyTools.UI_System(sp))
+@bind col_values confirm(GasChromatographyTools.UI_Column(sp))
 
 # ╔═╡ a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
 @bind prog_values confirm(GasChromatographyTools.UI_Program(default=("0 60 600 120", "40 40 300 300", "18 18 98 98", "vacuum")))
@@ -97,22 +97,22 @@ Plot $(@bind yy Select(["z", "t", "T", "τ", "σ", "u"]; default="t")) over $(@b
 """
 
 # ╔═╡ f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
-sys = GasChromatographySimulator.System(sys_values[1], sys_values[2]*1e-3, sys_values[3]*1e-6, sys_values[4], sys_values[5]);
+col = GasChromatographySimulator.Column(col_values[1], col_values[2]*1e-3, col_values[3]*1e-6, col_values[4], col_values[5]);
 
 # ╔═╡ 7a00bb54-553f-47f5-b5db-b40d226f4183
-@bind sub_values confirm(GasChromatographyTools.UI_Substance(GasChromatographySimulator.all_solutes(sys.sp, db)))
+@bind sub_values confirm(GasChromatographyTools.UI_Substance(GasChromatographySimulator.all_solutes(col.sp, db)))
 
 # ╔═╡ 0bb1bc3e-9c23-4fbd-9872-fe2e4a2dbdea
-prog = GasChromatographyTools.setting_prog(prog_values, sys.L);
+prog = GasChromatographyTools.setting_prog(prog_values, col.L);
 
 # ╔═╡ e3277bb4-301a-4a1e-a838-311832b6d6aa
-sub = GasChromatographySimulator.load_solute_database(db, sys.sp, sys.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])));
+sub = GasChromatographySimulator.load_solute_database(db, col.sp, col.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])));
 
 # ╔═╡ 115fa61e-8e82-42b2-8eea-9c7e21d97ea8
 opt = GasChromatographySimulator.Options(;abstol=1e-8, reltol=1e-5);
 
 # ╔═╡ 85954bdb-d649-4772-a1cd-0bda5d9917e9
-par = GasChromatographySimulator.Parameters(sys, prog, sub, opt);
+par = GasChromatographySimulator.Parameters(col, prog, sub, opt);
 
 # ╔═╡ fdb39284-201b-432f-bff6-986ddbc49a7d
 begin

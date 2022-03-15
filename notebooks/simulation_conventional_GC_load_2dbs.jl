@@ -131,7 +131,7 @@ else
 end
 
 # ╔═╡ e0669a58-d5ac-4d01-b079-05412b413dda
-@bind sys_values confirm(GasChromatographyTools.UI_System(sp))
+@bind col_values confirm(GasChromatographyTools.UI_Column(sp))
 
 # ╔═╡ a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
 @bind prog_values confirm(GasChromatographyTools.UI_Program(default=("0 60 600 120", "40 40 300 300", "18 18 98 98", "vacuum")))
@@ -161,36 +161,36 @@ Plot $(@bind yy Select(["z", "t", "T", "τ", "σ", "u"]; default="t")) over $(@b
 """
 
 # ╔═╡ f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
-sys = GasChromatographySimulator.System(sys_values[1], sys_values[2]*1e-3, sys_values[3]*1e-6, sys_values[4], sys_values[5]);
+col = GasChromatographySimulator.Column(col_values[1], col_values[2]*1e-3, col_values[3]*1e-6, col_values[4], col_values[5]);
 
 # ╔═╡ 7a00bb54-553f-47f5-b5db-b40d226f4183
 begin
 	if (@isdefined db_1) && (@isdefined db_2)
 		sub_names = GasChromatographyTools.common(
-							GasChromatographySimulator.all_solutes(sys.sp, db_1), 								GasChromatographySimulator.all_solutes(sys.sp, db_2)
+							GasChromatographySimulator.all_solutes(col.sp, db_1), 								GasChromatographySimulator.all_solutes(col.sp, db_2)
 							)
 	elseif @isdefined db_1
-		sub_names = GasChromatographySimulator.all_solutes(sys.sp, db_1)
+		sub_names = GasChromatographySimulator.all_solutes(col.sp, db_1)
 	elseif @isdefined db_2
-		sub_names = GasChromatographySimulator.all_solutes(sys.sp, db_2)
+		sub_names = GasChromatographySimulator.all_solutes(col.sp, db_2)
 	else
-		sub_names = GasChromatographySimulator.all_solutes(sys.sp, online_db)
+		sub_names = GasChromatographySimulator.all_solutes(col.sp, online_db)
 	end
 	@bind sub_values confirm(GasChromatographyTools.UI_Substance(sub_names))
 end
 
 # ╔═╡ 0bb1bc3e-9c23-4fbd-9872-fe2e4a2dbdea
-prog = GasChromatographyTools.setting_prog(prog_values, sys.L);
+prog = GasChromatographyTools.setting_prog(prog_values, col.L);
 
 # ╔═╡ e3277bb4-301a-4a1e-a838-311832b6d6aa
 begin
 	if @isdefined db_1
-		sub_1 = GasChromatographySimulator.load_solute_database(db_1, sys.sp, sys.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])))
+		sub_1 = GasChromatographySimulator.load_solute_database(db_1, col.sp, col.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])))
 	elseif @isdefined online_db
-		sub_1 = GasChromatographySimulator.load_solute_database(online_db, sys.sp, sys.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])))
+		sub_1 = GasChromatographySimulator.load_solute_database(online_db, col.sp, col.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])))
 	end
 	if @isdefined db_2
-		sub_2 = GasChromatographySimulator.load_solute_database(db_2, sys.sp, sys.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])))
+		sub_2 = GasChromatographySimulator.load_solute_database(db_2, col.sp, col.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])))
 	end
 end;
 
@@ -200,12 +200,12 @@ opt = GasChromatographySimulator.Options(;abstol=1e-8, reltol=1e-5);
 # ╔═╡ 85954bdb-d649-4772-a1cd-0bda5d9917e9
 begin
 	if @isdefined db_1
-		par_1 = GasChromatographySimulator.Parameters(sys, prog, sub_1, opt)
+		par_1 = GasChromatographySimulator.Parameters(col, prog, sub_1, opt)
 	elseif @isdefined online_db
-		par_1 = GasChromatographySimulator.Parameters(sys, prog, sub_1, opt)	
+		par_1 = GasChromatographySimulator.Parameters(col, prog, sub_1, opt)	
 	end
 	if @isdefined db_2
-		par_2 = GasChromatographySimulator.Parameters(sys, prog, sub_2, opt)
+		par_2 = GasChromatographySimulator.Parameters(col, prog, sub_2, opt)
 	end
 end;
 
