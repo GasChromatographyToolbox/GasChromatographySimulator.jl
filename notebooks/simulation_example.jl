@@ -22,12 +22,11 @@ begin
         Pkg.PackageSpec(name="Plots", version="1"),
         Pkg.PackageSpec(name="PlutoUI", version="0.7"),
 		Pkg.PackageSpec(name="UrlDownload", version="1"),
-		Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographySimulator.jl", rev="main"),
-	Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographyTools.jl", rev="main")
+		Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographySimulator.jl", rev="main")
     ])
-    using Plots, PlutoUI, UrlDownload, GasChromatographySimulator, GasChromatographyTools
+    using Plots, PlutoUI, UrlDownload, GasChromatographySimulator
 	md"""
-	Packages, simulation\_example.jl, v0.1.0
+	Packages, simulation\_example.jl, v0.1.1
 	"""
 end
 
@@ -84,13 +83,13 @@ begin
 end
 
 # ╔═╡ e0669a58-d5ac-4d01-b079-05412b413dda
-@bind col_values confirm(GasChromatographyTools.UI_Column(sp))
+@bind col_values confirm(GasChromatographySimulator.UI_Column(sp))
 
 # ╔═╡ a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
-@bind prog_values confirm(GasChromatographyTools.UI_Program())
+@bind prog_values confirm(GasChromatographySimulator.UI_Program())
 
 # ╔═╡ 3e053ac1-db7b-47c1-b52c-00e26b59912f
-@bind opt_values confirm(GasChromatographyTools.UI_Options())
+@bind opt_values confirm(GasChromatographySimulator.UI_Options())
 
 # ╔═╡ 323a769f-55f9-41dd-b8f1-db7928996a52
 md"""
@@ -110,7 +109,7 @@ Plot $(@bind yy Select(["z", "t", "T", "τ", "σ", "u"]; default="t")) over $(@b
 col = GasChromatographySimulator.Column(col_values[1], col_values[2]*1e-3, col_values[3]*1e-6, col_values[4], col_values[5]);
 
 # ╔═╡ 7a00bb54-553f-47f5-b5db-b40d226f4183
-@bind sub_values confirm(GasChromatographyTools.UI_Substance(GasChromatographySimulator.all_solutes(col.sp, db); default=(1:5, 0.0, 0.0)))
+@bind sub_values confirm(GasChromatographySimulator.UI_Substance(GasChromatographySimulator.all_solutes(col.sp, db); default=(1:5, 0.0, 0.0)))
 
 # ╔═╡ e3277bb4-301a-4a1e-a838-311832b6d6aa
 sub = GasChromatographySimulator.load_solute_database(db, col.sp, col.gas, sub_values[1], sub_values[2].*ones(length(sub_values[1])), sub_values[3].*ones(length(sub_values[1])));
@@ -179,7 +178,7 @@ end
 # ╔═╡ 0740f2e6-bce0-4590-acf1-ad4d7cb7c523
 begin
 	plotly()
-	GasChromatographyTools.local_plots(xx, yy, solution, par)
+	GasChromatographySimulator.local_plots(xx, yy, solution, par)
 end
 
 # ╔═╡ 95e1ca30-9442-4f39-9af0-34bd202fcc24
