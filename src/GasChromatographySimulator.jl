@@ -1745,11 +1745,6 @@ function sol_extraction(sol, peak, par)
     return df_sol
 end
 
-# add plot functions here
-
-
-#---End-Result-Functions---
-
 #----begin-notebooks-functions----------------------------------------------------------------------
 ## UI-functions
 include("./UI.jl")
@@ -1757,6 +1752,6 @@ include("./UI.jl")
 include("./Plot.jl")
 ## misc-functions
 include("./Misc.jl")
-##---begin-Plot-functions---------------------------------------------------------------------------
+##---end-notebooks-functions---------------------------------------------------------------------------
 
 end # module
