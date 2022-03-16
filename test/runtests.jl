@@ -1,4 +1,4 @@
-using Test, GasChromatographySimulator
+using Test, GasChromatographySimulator, PlutoUI
 
 # general parameters
 L = 10.0
@@ -16,6 +16,25 @@ L₀_steps = L.*ones(length(time_steps))
 α_steps = zeros(length(time_steps))
 db_path = string(@__DIR__, "/data")
 db = "Database_test.csv"
+
+@testset "gradient function check" begin
+    # Gradient function for d
+    a_d = [d, 0.0, 2*L, 0.0]
+    d_fun(x) = GasChromatographySimulator.gradient(x, a_d)
+    @test d_fun(L) == d/2
+
+    # Gradient function for T with all parameters equal zero
+    a_gf = zeros(2,3)
+    gf_fun(x) = GasChromatographySimulator.gradient(x, a_gf)
+    @test gf_fun(0.0) == zeros(size(a_gf)[1])
+
+    # Gradient function with changing α
+    αs = [-5.0, 0.0, 0.0, 5.0]
+    a_gf = [ΔT_steps x₀_steps L₀_steps αs]
+    gf_fun(x) = GasChromatographySimulator.gradient(x, a_gf)
+    @test gf_fun(L) == -ΔT_steps
+end
+
 @testset "parameters check" begin
     # default Options
     opt = GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true)
@@ -54,6 +73,20 @@ db = "Database_test.csv"
     @test sub[1].name == "C10"
     @test sub[2].Tchar == 124.746 + 273.15
 
+    # no stationary phase & other gas for diffusivity
+    # H2
+    sub_0 = GasChromatographySimulator.load_solute_database(db_path, db, "", "H2", solutes, init_t, init_τ)
+    @test sub_0[1].Tchar == 1.0
+    @test sub_0[2].ann == "no sp"
+    @test round(sub_0[1].Dag; sigdigits=5) == 0.00011885
+    # N2
+    sub_0 = GasChromatographySimulator.load_solute_database(db_path, db, "", "N2", solutes, init_t, init_τ)
+    @test round(sub_0[1].Dag; sigdigits=5) == 2.8398e-5
+    # Ar
+    sub_0 = GasChromatographySimulator.load_solute_database(db_path, db, "", "Ar", solutes, init_t, init_τ)
+    @test round(sub_0[1].Dag; sigdigits=5) == 2.5268e-5
+    # test for error-cases of GasChromatographySimulator.load_solute_database
+    
     # parameters
     par = GasChromatographySimulator.Parameters(col, prog, sub, opt)
     @test par.col.L == L
@@ -88,72 +121,72 @@ end
 
     opt = [ GasChromatographySimulator.Options(alg=OwrenZen3()),
             GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true),
-            GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "outlet", true),
+            #GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "outlet", true),
             GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "outlet", false),
-            GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", false)#,
+            #GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", false)#,
             #GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true; ng=true)
             ]
 
     par_g = Array{GasChromatographySimulator.Parameters}(undef, length(opt))
-    par_ng = Array{GasChromatographySimulator.Parameters}(undef, length(opt))
+    #par_ng = Array{GasChromatographySimulator.Parameters}(undef, length(opt))
     results_g = Array{Any}(undef, length(opt))
-    results_ng = Array{Any}(undef, length(opt))
+    #results_ng = Array{Any}(undef, length(opt))
     for i=1:length(opt)
         prog_g = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, opt[i].Tcontrol, col.L)
-        prog_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt[i].Tcontrol, col.L)
+        #prog_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt[i].Tcontrol, col.L)
         par_g[i] = GasChromatographySimulator.Parameters(col, prog_g, sub, opt[i])
-        par_ng[i] = GasChromatographySimulator.Parameters(col, prog_ng, sub, opt[i])
+        #par_ng[i] = GasChromatographySimulator.Parameters(col, prog_ng, sub, opt[i])
         # simulate()
         results_g[i] = GasChromatographySimulator.simulate(par_g[i]) 
-        results_ng[i] = GasChromatographySimulator.simulate(par_ng[i]) 
+        #results_ng[i] = GasChromatographySimulator.simulate(par_ng[i]) 
     end
 
-    @test length(results_g[3]) == 2
-    @test length(results_g[4]) == 3
+    @test length(results_g[2]) == 2
+    @test length(results_g[3]) == 3
 
-    @test length(results_ng[3]) == 2
-    @test length(results_ng[4]) == 3
+    #@test length(results_ng[3]) == 2
+    #@test length(results_ng[4]) == 3
 
     @test isapprox(results_g[1][1].tR[1], 123.184, atol=1e-3)
     @test isapprox(results_g[2][1].tR[1], 123.186, atol=1e-3)
-    @test isapprox(results_g[3][1].tR[1], 51.4549, atol=1e-4)
-    @test isapprox(results_g[4][1].tR[1], 51.4564, atol=1e-4)
-    @test isapprox(results_g[5][1].tR[1], 123.208, atol=1e-3)
+    #@test isapprox(results_g[3][1].tR[1], 51.4549, atol=1e-4)
+    @test isapprox(results_g[3][1].tR[1], 51.4564, atol=1e-4)
+    #@test isapprox(results_g[5][1].tR[1], 123.208, atol=1e-3)
     #@test isapprox(results_g[6][1].tR[1], 123.173, atol=1e-3)
 
     @test isapprox(results_g[1][1].τR[2], 0.548163, atol=1e-5)
     @test isapprox(results_g[2][1].τR[2], 0.547683, atol=1e-5)
-    @test isapprox(results_g[3][1].τR[2], 0.525259, atol=1e-5)
-    @test isapprox(results_g[4][1].τR[2], 0.524873, atol=1e-4)
-    @test isapprox(results_g[5][1].τR[2], 0.547757, atol=1e-5)
+    #@test isapprox(results_g[3][1].τR[2], 0.525259, atol=1e-5)
+    @test isapprox(results_g[3][1].τR[2], 0.524873, atol=1e-4)
+    #@test isapprox(results_g[5][1].τR[2], 0.547757, atol=1e-5)
     #@test isapprox(results_g[6][1].τR[2], 0.547965, atol=1e-5)
 
-    @test isapprox(results_g[1][1].Res[1], 18.5825, atol=1e-3)
-    @test isapprox(results_g[2][1].Res[1], 18.5838, atol=1e-3)
-    @test isapprox(results_g[3][1].Res[1], 19.8609, atol=1e-3)
-    @test isapprox(results_g[4][1].Res[1], 19.8635, atol=1e-3)
-    @test isapprox(results_g[5][1].Res[1], 18.5988, atol=1e-3)
+    #@test isapprox(results_g[1][1].Res[1], 18.5825, atol=1e-3)
+    #@test isapprox(results_g[2][1].Res[1], 18.5838, atol=1e-3)
+    #@test isapprox(results_g[3][1].Res[1], 19.8609, atol=1e-3)
+    #@test isapprox(results_g[4][1].Res[1], 19.8635, atol=1e-3)
+    #@test isapprox(results_g[5][1].Res[1], 18.5988, atol=1e-3)
     #@test isapprox(results_g[6][1].Res[1], 18.5814, atol=1e-3)
 
-    @test isapprox(results_ng[1][1].tR[1], 87.3973, atol=1e-3)
-    @test isapprox(results_ng[2][1].tR[1], 87.4008, atol=1e-3)
-    @test isapprox(results_ng[3][1].tR[1], 87.4008, atol=1e-3)
-    @test isapprox(results_ng[4][1].tR[1], 87.4003, atol=1e-3)
-    @test isapprox(results_ng[5][1].tR[1], 87.4003, atol=1e-3)
+    #@test isapprox(results_ng[1][1].tR[1], 87.3973, atol=1e-3)
+    #@test isapprox(results_ng[2][1].tR[1], 87.4008, atol=1e-3)
+    #@test isapprox(results_ng[3][1].tR[1], 87.4008, atol=1e-3)
+    #@test isapprox(results_ng[4][1].tR[1], 87.4003, atol=1e-3)
+    #@test isapprox(results_ng[5][1].tR[1], 87.4003, atol=1e-3)
     #@test isapprox(results_ng[6][1].tR[1], 87.3916, atol=1e-3)
 
-    @test isapprox(results_ng[1][1].τR[2], 0.590034, atol=1e-5)
-    @test isapprox(results_ng[2][1].τR[2], 0.590276, atol=1e-5)
-    @test isapprox(results_ng[3][1].τR[2], 0.590276, atol=1e-5)
-    @test isapprox(results_ng[4][1].τR[2], 0.595850, atol=1e-5)
-    @test isapprox(results_ng[5][1].τR[2], 0.595850, atol=1e-5)
+    #@test isapprox(results_ng[1][1].τR[2], 0.590034, atol=1e-5)
+    #@test isapprox(results_ng[2][1].τR[2], 0.590276, atol=1e-5)
+    #@test isapprox(results_ng[3][1].τR[2], 0.590276, atol=1e-5)
+    #@test isapprox(results_ng[4][1].τR[2], 0.595850, atol=1e-5)
+    #@test isapprox(results_ng[5][1].τR[2], 0.595850, atol=1e-5)
     #@test isapprox(results_ng[6][1].τR[2], 0.590284, atol=1e-5)
 
-    @test isapprox(results_ng[1][1].Res[1], 17.6590, atol=1e-3)
-    @test isapprox(results_ng[2][1].Res[1], 17.6196, atol=1e-3)
-    @test isapprox(results_ng[3][1].Res[1], 17.6196, atol=1e-3)
-    @test isapprox(results_ng[4][1].Res[1], 17.5605, atol=1e-3)
-    @test isapprox(results_ng[5][1].Res[1], 17.5605, atol=1e-3)
+    #@test isapprox(results_ng[1][1].Res[1], 17.6590, atol=1e-3)
+    #@test isapprox(results_ng[2][1].Res[1], 17.6196, atol=1e-3)
+    #@test isapprox(results_ng[3][1].Res[1], 17.6196, atol=1e-3)
+    #@test isapprox(results_ng[4][1].Res[1], 17.5605, atol=1e-3)
+    #@test isapprox(results_ng[5][1].Res[1], 17.5605, atol=1e-3)
     #@test isapprox(results_ng[6][1].Res[1], 17.6485, atol=1e-3)
 
     # sol_extraction()
@@ -180,6 +213,18 @@ end
     results_vis = GasChromatographySimulator.simulate(par_vis)
     isapprox(results_vis[1].tR[1], 87.078, atol=1e-3)
     isapprox(results_vis[1].τR[2], 0.59294, atol=1e-5)
+
+    # compare_peaklist from Misc.jl
+    pl1 = results_g[1][1]
+    pl2 = results_g[2][1]
+    comp = GasChromatographySimulator.compare_peaklist(pl1, pl2)
+    @test comp.ΔtR == pl1.tR .- pl2.tR
+
+    # compare_measurement_simulation from Misc.jl
+    meas = DataFrame(Name=["C9", "C10"], tR=[100.0, 123.0]) 
+    pl1 = results_g[1][1]
+    comp = GasChromatographySimulator.compare_measurement_simulation(meas, pl1)
+    @test isnothing(comp.simulated_tR[1])
 end
 
 
@@ -202,7 +247,6 @@ end
     par_o_ng = GasChromatographySimulator.Parameters(col, prog_o_ng, sub, opt_ng)
     results_o_ng = GasChromatographySimulator.simulate(par_o_ng)
 
-    # separat testset
     # plot functions
     t_start = 0.0
     t_end = 200.0
@@ -215,8 +259,18 @@ end
     t2, chrom2 = GasChromatographySimulator.plot_chromatogram!(p_chrom, results_o_ng[1], (t_start, t_end); mirror=true)
     @test t == t2
     @test chrom == -chrom2
-    #@test p_chrom[1][:xaxis][:optimized_ticks][1][1] = t_start 
-    #@test p_chrom[1][:xaxis][:optimized_ticks][1][end] = t_end 
+    @test p_chrom[1][1][:y] == - p_chrom[1][2][:y]
+    @test p_chrom[1][1][:x] == p_chrom[1][2][:x]
+    # mirrored the other way
+    p_chrom, t, chrom = GasChromatographySimulator.plot_chromatogram(results_o_ng[1], (t_start, t_end); mirror=true)
+    @test t[1] == t_start && t[end] == t_end
+    tR = results_o_ng[1].tR[1]
+    τR = results_o_ng[1].τR[1]
+    t0 = round(tR; digits=1)
+    @test chrom[findfirst(t.==t0)] == 1/sqrt(2*π*τR^2)*exp(-(t0-tR)^2/(2*τR^2))
+    t2, chrom2 = GasChromatographySimulator.plot_chromatogram!(p_chrom, results_o_ng[1], (t_start, t_end); mirror=false)
+    @test t == t2
+    @test chrom == -chrom2
     @test p_chrom[1][1][:y] == - p_chrom[1][2][:y]
     @test p_chrom[1][1][:x] == p_chrom[1][2][:x]
 
@@ -244,6 +298,38 @@ end
     p_temp = GasChromatographySimulator.plot_temperature(par_o_ng; selector="T(x,t)")
     @test p_temp[1][1][:y][end] == sum(par_o_ng.prog.time_steps)
     @test p_temp[1][1][:x][end] == par_o_ng.col.L
+
+    p_local = GasChromatographySimulator.local_plots("z", "z", results_o_ng[2], par_o_ng)
+    @test p_local[1][1][:x][end] == p_local[1][1][:y][end]
+    p_local = GasChromatographySimulator.local_plots("t", "t", results_o_ng[2], par_o_ng)
+    @test p_local[1][1][:x][end] == p_local[1][1][:y][end]
+    p_local = GasChromatographySimulator.local_plots("T", "T", results_o_ng[2], par_o_ng)
+    @test p_local[1][1][:x][end] == p_local[1][1][:y][end]
+    p_local = GasChromatographySimulator.local_plots("τ", "τ", results_o_ng[2], par_o_ng)
+    @test p_local[1][1][:x][end] == p_local[1][1][:y][end]
+    p_local = GasChromatographySimulator.local_plots("σ", "σ", results_o_ng[2], par_o_ng)
+    @test p_local[1][1][:x][end] == p_local[1][1][:y][end]
+    p_local = GasChromatographySimulator.local_plots("u", "u", results_o_ng[2], par_o_ng)
+    @test p_local[1][1][:x][end] == p_local[1][1][:y][end]
+end
+
+@testset "UI checks" begin
+    col_val = GasChromatographySimulator.UI_Column(["HP5", "DB5"])
+    @test typeof(col_val) == PlutoUI.CombineNotebook.CombinedBonds
+    prog_val = GasChromatographySimulator.UI_Program()
+    @test typeof(prog_val) == PlutoUI.CombineNotebook.CombinedBonds
+    prog_val = GasChromatographySimulator.UI_Program(default=("0 60", "40 140", "100 100", "vacuum"))
+    @test typeof(prog_val) == PlutoUI.CombineNotebook.CombinedBonds
+    sub_val = GasChromatographySimulator.UI_Substance(["C6", "C7", "C8", "C9"])
+    @test typeof(prog_val) == PlutoUI.CombineNotebook.CombinedBonds
+    sub_val = GasChromatographySimulator.UI_Substance(["C6", "C7", "C8", "C9"]; default=(1:2, 0.1, 1.0))
+    @test typeof(prog_val) == PlutoUI.CombineNotebook.CombinedBonds
+    opt_val = GasChromatographySimulator.UI_Options()
+    @test typeof(opt_val) == PlutoUI.CombineNotebook.CombinedBonds
+    prog = GasChromatographySimulator.setting_prog(("0 60", "40 140", "100 100", "vacuum"), L)
+    @test prog.pout_steps[1] == 0.0
+    prog = GasChromatographySimulator.setting_prog(("0 60", "40 140", "100 100", "atmosphere"), L)
+    @test prog.pout_steps[1] == 101300.0
 end
 
 @testset "misc checks" begin
@@ -268,22 +354,52 @@ end
     # temperature at random time at column inlet
     T_test = prog_ng.T_itp(0.0, t)
 
-    η_T = GasChromatographySimulator.viscosity(T_test, "He")
-
-    η_t = GasChromatographySimulator.viscosity(0.0, t, prog_ng.T_itp, col.gas)
-
-    @test η_T ≈ η_t
-
+    # viscosity tests
+    # vis = "Blumberg"
+        # gas = "He"
+        η_T = GasChromatographySimulator.viscosity(T_test, "He")
+        η_t = GasChromatographySimulator.viscosity(0.0, t, prog_ng.T_itp, col.gas)
+        @test η_T ≈ η_t
+        # gas = "H2"
+        η_T = GasChromatographySimulator.viscosity(T_test, "H2")
+        η_t = GasChromatographySimulator.viscosity(0.0, t, prog_ng.T_itp, "H2")
+        @test η_T ≈ η_t
+        # gas = "N2"
+        η_T = GasChromatographySimulator.viscosity(T_test, "N2")
+        η_t = GasChromatographySimulator.viscosity(0.0, t, prog_ng.T_itp, "N2")
+        @test η_T ≈ η_t
+        # gas = "Ar"
+        η_T = GasChromatographySimulator.viscosity(T_test, "Ar")
+        η_t = GasChromatographySimulator.viscosity(0.0, t, prog_ng.T_itp, "Ar")
+        @test η_T ≈ η_t
+    # vis = "HP
+        # gas = "He"
+        η_T = GasChromatographySimulator.viscosity(T_test, "He"; vis="HP")
+        η_t = GasChromatographySimulator.viscosity(0.0, t, prog_ng.T_itp, "He"; vis="HP")
+        @test η_T ≈ η_t
+        # gas = "H2"
+        η_T = GasChromatographySimulator.viscosity(T_test, "H2"; vis="HP")
+        η_t = GasChromatographySimulator.viscosity(0.0, t, prog_ng.T_itp, "H2"; vis="HP")
+        @test η_T ≈ η_t
+        # gas = "N2"
+        η_T = GasChromatographySimulator.viscosity(T_test, "N2"; vis="HP")
+        η_t = GasChromatographySimulator.viscosity(0.0, t, prog_ng.T_itp, "N2"; vis="HP")
+        @test η_T ≈ η_t
+    
     tM_T = GasChromatographySimulator.holdup_time(T_test, prog_ng.pin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
     tM_t = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.pin_itp, prog_ng.pout_itp, col.L, col.d, col.gas)
-
+    tM_t_ng = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.pin_itp, prog_ng.pout_itp, col.L, col.d, col.gas; ng=true)
     @test tM_T ≈ tM_t
+    @test tM_T ≈ tM_t_ng
 
     F_T = GasChromatographySimulator.flow(T_test, prog_ng.pin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
     F_t = GasChromatographySimulator.flow(t, prog_ng.T_itp, prog_ng.pin_itp, prog_ng.pout_itp, col.L, col.d, col.gas)
-
+    F_t_ng = GasChromatographySimulator.flow(t, prog_ng.T_itp, prog_ng.pin_itp, prog_ng.pout_itp, col.L, col.d, col.gas, ng=true)
     @test F_T  ≈  F_t
+    @test F_T  ≈  F_t_ng
 
+    common = GasChromatographySimulator.common(["aa", "bb", "cc"], ["dd", "aa", "ee"])
+    @test common == ["aa"]
 end
 
 println("Test run successful.")
