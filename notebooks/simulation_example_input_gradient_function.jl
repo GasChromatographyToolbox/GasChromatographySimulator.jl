@@ -174,8 +174,8 @@ begin
 	b_gf = parse.(Float64, split(prog_values[6]))
 	gf(x) = T(x, a_gf, b_gf)
 	T_itp = GasChromatographySimulator.temperature_interpolation(time_steps, temp_steps, gf, col.L)
-	pin_itp = GasChromatographySimulator.pressure_interpolation(time_steps, pin_steps)
-    pout_itp = GasChromatographySimulator.pressure_interpolation(time_steps, pout_steps)
+	pin_itp = GasChromatographySimulator.steps_interpolation(time_steps, pin_steps)
+    pout_itp = GasChromatographySimulator.steps_interpolation(time_steps, pout_steps)
 	
 prog = GasChromatographySimulator.Program(time_steps,
 										temp_steps,
@@ -205,7 +205,7 @@ begin
 	if Tplot=="T(x)"
 		plot!(plot_T, legend=:bottomleft)
 	end
-	plot_p = GasChromatographySimulator.plot_pressure(par.prog)
+	plot_p = GasChromatographySimulator.plot_pressure(par)
 	xlabel!(plot_p, "")
 	plot_F = GasChromatographySimulator.plot_flow(par)
 	l = @layout([a{0.65w} [b; c]])
