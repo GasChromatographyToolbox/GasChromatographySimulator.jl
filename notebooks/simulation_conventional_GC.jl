@@ -117,7 +117,7 @@ par = GasChromatographySimulator.Parameters(col, prog, sub, opt);
 begin
 	gr()
 	plot_T = GasChromatographySimulator.plot_temperature(par; selector="T(t)")
-	plot_p = GasChromatographySimulator.plot_pressure(par.prog)
+	plot_p = GasChromatographySimulator.plot_pressure(par)
 	xlabel!(plot_p, "")
 	plot_F = GasChromatographySimulator.plot_flow(par)
 	l = @layout([a{0.65w} [b; c]])
