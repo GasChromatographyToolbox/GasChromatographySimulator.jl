@@ -1590,11 +1590,11 @@ function peakode(z, t, τ², col, prog, sub, opt)
 		η(z,t) = GasChromatographySimulator.viscosity(z, t, prog.T_itp, col.gas; vis=opt.vis)
 		c(zt) = η(zt[1], zt[2])*T(zt[1], zt[2])
 		∂c∂t(z,t) = ForwardDiff.gradient(c, [z,t])[2]
-        if opt.control == "Pressure"
-		    pi2(t) = prog.Fpin_itp(t)^2
+        #if opt.control == "Pressure"
+		#    pi2(t) = prog.Fpin_itp(t)^2
         #elseif opt.control == "Flow"
-        #    pi2(t) = inlet_pressure(t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.gas; vis=opt.vis, control="Flow")^2
-        end
+            pi2(t) = inlet_pressure(t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.gas; vis=opt.vis, control=opt.control)^2
+        #end
 		po2(t) = prog.pout_itp(t)^2
 		∂pi2∂t(t) = ForwardDiff.derivative(pi2, t)
 		∂po2∂t(t) = ForwardDiff.derivative(po2, t)
