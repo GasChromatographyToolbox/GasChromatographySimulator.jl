@@ -253,7 +253,7 @@ function velocity(df_sol, i, par)
 	φ₀ = par.sub[i].φ₀
 	u = Array{Float64}(undef, length(x))
 	for j=1:length(x)
-		u[j] = 1/GasChromatographySimulator.residency(x[j], t[j], T_itp, pin_itp, pout_itp, L, d, df, gas, ΔCp, Tchar, θchar, φ₀)
+		u[j] = 1/GasChromatographySimulator.residency(x[j], t[j], T_itp, pin_itp, pout_itp, L, d, df, gas, ΔCp, Tchar, θchar, φ₀; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control)
 	end
 	return u
 end
