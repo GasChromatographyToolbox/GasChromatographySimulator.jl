@@ -121,82 +121,36 @@ end
 
     opt = [ GasChromatographySimulator.Options(alg=OwrenZen3()),
             GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true),
-            #GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "outlet", true),
-            GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "outlet", false),
-            #GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", false)#,
-            #GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true; ng=true)
+            GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "outlet", false)
             ]
 
     par_g = Array{GasChromatographySimulator.Parameters}(undef, length(opt))
-    #par_ng = Array{GasChromatographySimulator.Parameters}(undef, length(opt))
     results_g = Array{Any}(undef, length(opt))
-    #results_ng = Array{Any}(undef, length(opt))
     for i=1:length(opt)
         prog_g = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, opt[i].Tcontrol, col.L)
-        #prog_ng = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt[i].Tcontrol, col.L)
         par_g[i] = GasChromatographySimulator.Parameters(col, prog_g, sub, opt[i])
-        #par_ng[i] = GasChromatographySimulator.Parameters(col, prog_ng, sub, opt[i])
-        # simulate()
-        results_g[i] = GasChromatographySimulator.simulate(par_g[i]) 
-        #results_ng[i] = GasChromatographySimulator.simulate(par_ng[i]) 
+        results_g[i] = GasChromatographySimulator.simulate(par_g[i])
     end
 
     @test length(results_g[2]) == 2
     @test length(results_g[3]) == 3
 
-    #@test length(results_ng[3]) == 2
-    #@test length(results_ng[4]) == 3
-
     @test isapprox(results_g[1][1].tR[1], 123.184, atol=1e-3)
     @test isapprox(results_g[2][1].tR[1], 123.186, atol=1e-3)
-    #@test isapprox(results_g[3][1].tR[1], 51.4549, atol=1e-4)
     @test isapprox(results_g[3][1].tR[1], 51.4564, atol=1e-4)
-    #@test isapprox(results_g[5][1].tR[1], 123.208, atol=1e-3)
-    #@test isapprox(results_g[6][1].tR[1], 123.173, atol=1e-3)
 
     @test isapprox(results_g[1][1].τR[2], 0.548163, atol=1e-5)
     @test isapprox(results_g[2][1].τR[2], 0.547683, atol=1e-5)
-    #@test isapprox(results_g[3][1].τR[2], 0.525259, atol=1e-5)
     @test isapprox(results_g[3][1].τR[2], 0.524873, atol=1e-4)
-    #@test isapprox(results_g[5][1].τR[2], 0.547757, atol=1e-5)
-    #@test isapprox(results_g[6][1].τR[2], 0.547965, atol=1e-5)
-
-    #@test isapprox(results_g[1][1].Res[1], 18.5825, atol=1e-3)
-    #@test isapprox(results_g[2][1].Res[1], 18.5838, atol=1e-3)
-    #@test isapprox(results_g[3][1].Res[1], 19.8609, atol=1e-3)
-    #@test isapprox(results_g[4][1].Res[1], 19.8635, atol=1e-3)
-    #@test isapprox(results_g[5][1].Res[1], 18.5988, atol=1e-3)
-    #@test isapprox(results_g[6][1].Res[1], 18.5814, atol=1e-3)
-
-    #@test isapprox(results_ng[1][1].tR[1], 87.3973, atol=1e-3)
-    #@test isapprox(results_ng[2][1].tR[1], 87.4008, atol=1e-3)
-    #@test isapprox(results_ng[3][1].tR[1], 87.4008, atol=1e-3)
-    #@test isapprox(results_ng[4][1].tR[1], 87.4003, atol=1e-3)
-    #@test isapprox(results_ng[5][1].tR[1], 87.4003, atol=1e-3)
-    #@test isapprox(results_ng[6][1].tR[1], 87.3916, atol=1e-3)
-
-    #@test isapprox(results_ng[1][1].τR[2], 0.590034, atol=1e-5)
-    #@test isapprox(results_ng[2][1].τR[2], 0.590276, atol=1e-5)
-    #@test isapprox(results_ng[3][1].τR[2], 0.590276, atol=1e-5)
-    #@test isapprox(results_ng[4][1].τR[2], 0.595850, atol=1e-5)
-    #@test isapprox(results_ng[5][1].τR[2], 0.595850, atol=1e-5)
-    #@test isapprox(results_ng[6][1].τR[2], 0.590284, atol=1e-5)
-
-    #@test isapprox(results_ng[1][1].Res[1], 17.6590, atol=1e-3)
-    #@test isapprox(results_ng[2][1].Res[1], 17.6196, atol=1e-3)
-    #@test isapprox(results_ng[3][1].Res[1], 17.6196, atol=1e-3)
-    #@test isapprox(results_ng[4][1].Res[1], 17.5605, atol=1e-3)
-    #@test isapprox(results_ng[5][1].Res[1], 17.5605, atol=1e-3)
-    #@test isapprox(results_ng[6][1].Res[1], 17.6485, atol=1e-3)
 
     # sol_extraction()
     df_sol = GasChromatographySimulator.sol_extraction(results_g[1][2], par_g[1])
     @test df_sol.t[1][end] ≈ results_g[1][1].tR[1]
     @test df_sol.τ²[2][end] ≈ results_g[1][1].τR[2]^2
 
-    df_sol = GasChromatographySimulator.sol_extraction(results_g[4][2], results_g[4][3], par_g[4])
-    @test df_sol.t[1][end] ≈ results_g[4][1].tR[1]
-    @test df_sol.τ²[2][end] ≈ results_g[4][1].τR[2]^2
+    df_sol = GasChromatographySimulator.sol_extraction(results_g[3][2], results_g[3][3], par_g[3])
+    @test df_sol.t[1][end] ≈ results_g[3][1].tR[1]
+    @test df_sol.τ²[2][end] ≈ results_g[3][1].τR[2]^2
 
     # ng = true
     opt_ng = GasChromatographySimulator.Options(ng=true)
@@ -221,13 +175,11 @@ end
     @test comp.ΔtR == pl1.tR .- pl2.tR
 
     # compare_measurement_simulation from Misc.jl
-    meas = DataFrame(Name=["C9", "C10"], tR=[100.0, 123.0]) 
+    meas = DataFrame(Name=["C9", "C10"], RT=[100.0, 123.0]) 
     pl1 = results_g[1][1]
     comp = GasChromatographySimulator.compare_measurement_simulation(meas, pl1)
-    @test isnothing(comp.simulated_tR[1])
+    @test isnan(comp.simulated_tR[1])
 end
-
-
 
 @testset "plots check" begin
 
@@ -267,7 +219,7 @@ end
     tR = results_o_ng[1].tR[1]
     τR = results_o_ng[1].τR[1]
     t0 = round(tR; digits=1)
-    @test chrom[findfirst(t.==t0)] == 1/sqrt(2*π*τR^2)*exp(-(t0-tR)^2/(2*τR^2))
+    @test chrom[findfirst(t.==t0)] == -1/sqrt(2*π*τR^2)*exp(-(t0-tR)^2/(2*τR^2))
     t2, chrom2 = GasChromatographySimulator.plot_chromatogram!(p_chrom, results_o_ng[1], (t_start, t_end); mirror=false)
     @test t == t2
     @test chrom == -chrom2
@@ -308,9 +260,9 @@ end
     p_local = GasChromatographySimulator.local_plots("τ", "τ", results_o_ng[2], par_o_ng)
     @test p_local[1][1][:x][end] == p_local[1][1][:y][end]
     p_local = GasChromatographySimulator.local_plots("σ", "σ", results_o_ng[2], par_o_ng)
-    @test p_local[1][1][:x][end] == p_local[1][1][:y][end]
+    @test p_local[1][1][:x][end] === p_local[1][1][:y][end]
     p_local = GasChromatographySimulator.local_plots("u", "u", results_o_ng[2], par_o_ng)
-    @test p_local[1][1][:x][end] == p_local[1][1][:y][end]
+    @test p_local[1][1][:x][end] === p_local[1][1][:y][end]
 end
 
 @testset "UI checks" begin
