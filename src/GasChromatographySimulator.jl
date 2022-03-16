@@ -818,7 +818,7 @@ function pressure(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blu
             F_itp = Fpin_itp
             κL = flow_restriction(L, t, T_itp, d, gas, vis=vis)
             κx = flow_restriction(x, t, T_itp, d, gas, vis=vis)
-            pp = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * F_itp(t) * κL * (κL - κx))
+            pp = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * F_itp(t) * (κL - κx))
         end
     end
     return pp
@@ -1218,12 +1218,12 @@ See also: [`pressure`](@ref), [`flow_restriction`](@ref)
 function mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
     if control == "Pressure"
         pin_itp = Fpin_itp
-        pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
+        pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control="Pressure")
         κL = flow_restriction(L, t, T_itp, d, gas; ng=ng, vis=vis)
         rM = 64*(pp*(d(x))^2)/T_itp(x, t)*κL/(pin_itp(t)^2-pout_itp(t)^2)
     elseif control == "Flow"
         F_itp = Fpin_itp
-        pp = pressure(x, t, T_itp, F_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
+        pp = pressure(x, t, T_itp, F_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control="Flow")
         rM = π/4 * Tn/pn * d(x)^2/F_itp(t) * pp/T_itp(x,t)
     end
     return rM
