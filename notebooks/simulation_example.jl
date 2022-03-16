@@ -140,7 +140,7 @@ begin
 	if Tplot=="T(x)"
 		plot!(plot_T, legend=:bottomleft)
 	end
-	plot_p = GasChromatographySimulator.plot_pressure(par.prog)
+	plot_p = GasChromatographySimulator.plot_pressure(par)
 	xlabel!(plot_p, "")
 	plot_F = GasChromatographySimulator.plot_flow(par)
 	l = @layout([a{0.65w} [b; c]])
