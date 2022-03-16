@@ -243,10 +243,10 @@ function velocity(df_sol, i, par)
 	T_itp = par.prog.T_itp
 	pin_itp = par.prog.pin_itp
 	pout_itp = par.prog.pout_itp
-	L = par.sys.L
-	d = par.sys.d
-	df = par.sys.df
-	gas = par.sys.gas
+	L = par.col.L
+	d = par.col.d
+	df = par.col.df
+	gas = par.col.gas
 	ΔCp = par.sub[i].ΔCp
 	Tchar = par.sub[i].Tchar
 	θchar = par.sub[i].θchar
