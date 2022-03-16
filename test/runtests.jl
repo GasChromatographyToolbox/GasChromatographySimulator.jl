@@ -64,7 +64,7 @@ db = "Database_test.csv"
     @test par.sub[2].Dag == GasChromatographySimulator.diffusivity(156.31, 11, 24, 0, 0, 0, "He")
 end
 
-#@testset "solving check" begin
+@testset "solving check" begin
     # test simulation with different settings:
     # - with/without gradient
     # - Tcontrol = "inlet"/"outlet" (with gradient)
@@ -111,17 +111,13 @@ end
     @test length(results_g[2]) == 2
     @test length(results_g[3]) == 3
 
-    # error 1 -> introduction of if-elseif for control in peakode leads to difference to previous value
-    # even if control=Pressure and the new alternative for control=Flow is not used
-    # if the alternative for control=Flow is commented out the tests are passed !!!
-    # possible solution: -> two versions of the peakode-function for both cases
-    @test isapprox(results_g[1][1].tR[1], 123.184, atol=1e-3) # error 1
-    @test isapprox(results_g[2][1].tR[1], 123.186, atol=1e-3) # error 1
-    @test isapprox(results_g[3][1].tR[1], 51.4564, atol=1e-4) # error 1
+    @test isapprox(results_g[1][1].tR[1], 123.184, atol=1e-3)
+    @test isapprox(results_g[2][1].tR[1], 123.186, atol=1e-3)
+    @test isapprox(results_g[3][1].tR[1], 51.4564, atol=1e-4)
 
-    @test isapprox(results_g[1][1].τR[2], 0.548163, atol=1e-5) # error 1
-    @test isapprox(results_g[2][1].τR[2], 0.547683, atol=1e-5) # error 1
-    @test isapprox(results_g[3][1].τR[2], 0.524873, atol=1e-4) # error 1
+    @test isapprox(results_g[1][1].τR[2], 0.548163, atol=1e-5)
+    @test isapprox(results_g[2][1].τR[2], 0.547683, atol=1e-5)
+    @test isapprox(results_g[3][1].τR[2], 0.524873, atol=1e-4)
 
 
     # sol_extraction()
@@ -146,13 +142,21 @@ end
     prog_vis = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_vis.Tcontrol, col.L)
     par_vis = GasChromatographySimulator.Parameters(col, prog_vis, sub, opt_vis)
     results_vis = GasChromatographySimulator.simulate(par_vis)
-    @test isapprox(results_vis[1].tR[1], 87.078, atol=1e-3) # error 1
-    @test isapprox(results_vis[1].τR[2], 0.59294, atol=1e-5) # error 1
-#end
+    @test isapprox(results_vis[1].tR[1], 87.078, atol=1e-3)
+    @test isapprox(results_vis[1].τR[2], 0.59294, atol=1e-5)
+
+    # control = "Flow"
+    opt_control = GasChromatographySimulator.Options(control="Flow")
+    prog_control = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_control.Tcontrol, col.L)
+    par_control = GasChromatographySimulator.Parameters(col, prog_control, sub, opt_control)
+    results_control = GasChromatographySimulator.simulate(par_control)
+    @test isapprox(results_control[1].tR[1], 153.554, atol=1e-3) 
+    @test isapprox(results_control[1].τR[2], 0.59294, atol=1e-5) # much to high value for peakwidth
+end
 
 
 
-#@testset "plots check" begin
+@testset "plots check" begin
 
     a_d = [d]
     a_df = [df]
@@ -212,9 +216,9 @@ end
     p_temp = GasChromatographySimulator.plot_temperature(par_o_ng; selector="T(x,t)")
     @test p_temp[1][1][:y][end] == sum(par_o_ng.prog.time_steps)
     @test p_temp[1][1][:x][end] == par_o_ng.col.L
-#end
+end
 
-#@testset "misc checks" begin
+@testset "misc checks" begin
     @test "C10" in GasChromatographySimulator.all_solutes(sp, DataFrame(CSV.File(string(db_path,"/",db), header=1, silencewarnings=true)))
     @test "C11" in GasChromatographySimulator.all_solutes(sp, DataFrame(CSV.File(string(db_path,"/",db), header=1, silencewarnings=true)))
 
@@ -283,6 +287,6 @@ end
     tM_t = GasChromatographySimulator.holdup_time(t, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; control="Flow", ng=true)
     @test tM_T ≈ tM_t
     
-#end
+end
 
 println("Test run successful.")
