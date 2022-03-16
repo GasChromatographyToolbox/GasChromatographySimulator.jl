@@ -22,12 +22,11 @@ begin
         Pkg.PackageSpec(name="Plots", version="1"),
         Pkg.PackageSpec(name="PlutoUI", version="0.7"),
 		Pkg.PackageSpec(name="UrlDownload", version="1"),
-		Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographySimulator.jl", rev="main"),
-		Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographyTools.jl", rev="main")
+		Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographySimulator.jl", rev="main")
     ])
-    using Plots, PlutoUI, UrlDownload, GasChromatographySimulator, GasChromatographyTools
+    using Plots, PlutoUI, UrlDownload, GasChromatographySimulator
 	md"""
-	Packages, simulation\_example\_input\_gradient\_function.jl, v0.1.0
+	Packages, simulation\_example\_input\_gradient\_function.jl, v0.1.1
 	"""
 end
 
@@ -86,7 +85,7 @@ begin
 end
 
 # ╔═╡ e0669a58-d5ac-4d01-b079-05412b413dda
-@bind col_values confirm(GasChromatographyTools.UI_Column(sp))
+@bind col_values confirm(GasChromatographySimulator.UI_Column(sp))
 
 # ╔═╡ 49ac3705-9dbb-48e3-9db3-fc229edb9479
 md"""
@@ -97,7 +96,7 @@ md"""
 T(x,a,b) = a.*cos.(b.*π.*x)
 
 # ╔═╡ 3e053ac1-db7b-47c1-b52c-00e26b59912f
-@bind opt_values confirm(GasChromatographyTools.UI_Options())
+@bind opt_values confirm(GasChromatographySimulator.UI_Options())
 
 # ╔═╡ 323a769f-55f9-41dd-b8f1-db7928996a52
 md"""
@@ -162,7 +161,7 @@ end
 col = GasChromatographySimulator.Column(col_values[1], col_values[2]*1e-3, col_values[3]*1e-6, col_values[4], col_values[5]);
 
 # ╔═╡ 7a00bb54-553f-47f5-b5db-b40d226f4183
-@bind sub_values confirm(GasChromatographyTools.UI_Substance(GasChromatographySimulator.all_solutes(col.sp, db); default=(1:5, 0.0, 0.0)))
+@bind sub_values confirm(GasChromatographySimulator.UI_Substance(GasChromatographySimulator.all_solutes(col.sp, db); default=(1:5, 0.0, 0.0)))
 
 # ╔═╡ ee267b33-4086-4e04-9f39-b7f53f2ec920
 begin
@@ -244,7 +243,7 @@ end
 # ╔═╡ 0740f2e6-bce0-4590-acf1-ad4d7cb7c523
 begin
 	plotly()
-	GasChromatographyTools.local_plots(xx, yy, solution, par)
+	GasChromatographySimulator.local_plots(xx, yy, solution, par)
 end
 
 # ╔═╡ 95e1ca30-9442-4f39-9af0-34bd202fcc24

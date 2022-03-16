@@ -22,13 +22,12 @@ begin
         Pkg.PackageSpec(name="Plots", version="1"),
         Pkg.PackageSpec(name="PlutoUI", version="0.7"),
 		Pkg.PackageSpec(name="UrlDownload", version="1"),
-	Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographySimulator.jl", rev="main"),
-Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographyTools.jl", rev="main")		
+	Pkg.PackageSpec(url="https://github.com/JanLeppert/GasChromatographySimulator.jl", rev="main")
     ])
 
-    using Plots, PlutoUI, UrlDownload, GasChromatographySimulator, GasChromatographyTools
+    using Plots, PlutoUI, UrlDownload, GasChromatographySimulator
 	md"""
-	Packages, simulation\_conventional\_GC\_load\_2dbs.jl, v0.1.0
+	Packages, simulation\_conventional\_GC\_load\_2dbs.jl, v0.1.1
 	"""
 end
 
@@ -98,7 +97,7 @@ end
 if (@isdefined db_1) && (@isdefined db_2)
 	sp_1 = unique(db_1.Phase)
 	sp_2 = unique(db_2.Phase)
-	sp = GasChromatographyTools.common(sp_1, sp_2)
+	sp = GasChromatographySimulator.common(sp_1, sp_2)
 	common_db = innerjoin(db_1[!, [:Name, :Phase, :Tchar, :thetachar, :DeltaCp, :phi0]], db_2[!, [:Name, :Phase, :Tchar, :thetachar, :DeltaCp, :phi0]], on=[:Name, :Phase], makeunique=true)
 	rename!(common_db, [:Name, :Phase, :Tchar_1, :θchar_1, :ΔCp_1, :φ₀_1, :Tchar_2, :θchar_2, :ΔCp_2, :φ₀_2])
 	md"""
@@ -114,7 +113,7 @@ elseif @isdefined db_2
 	online_db = DataFrame(urldownload("https://github.com/JanLeppert/GasChromatographySimulator.jl/raw/main/data/Database_test.csv"))
 	sp_online = unique(online_db.Phase)
 	sp_2 = unique(db_2.Phase)
-	sp = GasChromatographyTools.common(sp_online, sp_2)
+	sp = GasChromatographySimulator.common(sp_online, sp_2)
 	common_db = innerjoin(online_db[!, [:Name, :Phase, :Tchar, :thetachar, :DeltaCp, :phi0]], db_2[!, [:Name, :Phase, :Tchar, :thetachar, :DeltaCp, :phi0]], on=[:Name, :Phase], makeunique=true)
 	rename!(common_db, [:Name, :Phase, :Tchar_1, :θchar_1, :ΔCp_1, :φ₀_1, :Tchar_2, :θchar_2, :ΔCp_2, :φ₀_2])
 	md"""
@@ -131,10 +130,10 @@ else
 end
 
 # ╔═╡ e0669a58-d5ac-4d01-b079-05412b413dda
-@bind col_values confirm(GasChromatographyTools.UI_Column(sp))
+@bind col_values confirm(GasChromatographySimulator.UI_Column(sp))
 
 # ╔═╡ a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
-@bind prog_values confirm(GasChromatographyTools.UI_Program(default=("0 60 600 120", "40 40 300 300", "18 18 98 98", "vacuum")))
+@bind prog_values confirm(GasChromatographySimulator.UI_Program(default=("0 60 600 120", "40 40 300 300", "18 18 98 98", "vacuum")))
 
 # ╔═╡ 603e0868-dda5-4063-872f-ce966b6fa8ad
 md"""
@@ -166,7 +165,7 @@ col = GasChromatographySimulator.Column(col_values[1], col_values[2]*1e-3, col_v
 # ╔═╡ 7a00bb54-553f-47f5-b5db-b40d226f4183
 begin
 	if (@isdefined db_1) && (@isdefined db_2)
-		sub_names = GasChromatographyTools.common(
+		sub_names = GasChromatographySimulator.common(
 							GasChromatographySimulator.all_solutes(col.sp, db_1), 								GasChromatographySimulator.all_solutes(col.sp, db_2)
 							)
 	elseif @isdefined db_1
@@ -176,11 +175,11 @@ begin
 	else
 		sub_names = GasChromatographySimulator.all_solutes(col.sp, online_db)
 	end
-	@bind sub_values confirm(GasChromatographyTools.UI_Substance(sub_names))
+	@bind sub_values confirm(GasChromatographySimulator.UI_Substance(sub_names))
 end
 
 # ╔═╡ 0bb1bc3e-9c23-4fbd-9872-fe2e4a2dbdea
-prog = GasChromatographyTools.setting_prog(prog_values, col.L);
+prog = GasChromatographySimulator.setting_prog(prog_values, col.L);
 
 # ╔═╡ e3277bb4-301a-4a1e-a838-311832b6d6aa
 begin
@@ -252,7 +251,7 @@ if (@isdefined db_1) && (@isdefined db_2)
 	md"""
 	### Peaklist
 	Comparison of simulation with both databases:
-	$(embed_display(GasChromatographyTools.compare_peaklist(peaklist_1, peaklist_2)))
+	$(embed_display(GasChromatographySimulator.compare_peaklist(peaklist_1, peaklist_2)))
 	"""
 elseif @isdefined db_1
 	md"""
@@ -270,8 +269,8 @@ end
 begin
 	if @isdefined meas_rt
 		if (@isdefined db_1) && (@isdefined db_2)
-			compare_1 = GasChromatographyTools.compare_measurement_simulation(meas_rt, peaklist_1)
-			compare_2 = GasChromatographyTools.compare_measurement_simulation(meas_rt, peaklist_2)
+			compare_1 = GasChromatographySimulator.compare_measurement_simulation(meas_rt, peaklist_1)
+			compare_2 = GasChromatographySimulator.compare_measurement_simulation(meas_rt, peaklist_2)
 			RSS_1 = sum(compare_1.ΔtR[isnan.(compare_1.ΔtR).==false].^2)
 			RSS_2 = sum(compare_2.ΔtR[isnan.(compare_2.ΔtR).==false].^2)
 			md"""
@@ -287,7 +286,7 @@ begin
 			- 2nd database: $(round(RSS_2; digits=2)) s²
 			"""
 		elseif @isdefined db_1
-			compare_1 = GasChromatographyTools.compare_measurement_simulation(meas_rt, peaklist_1)
+			compare_1 = GasChromatographySimulator.compare_measurement_simulation(meas_rt, peaklist_1)
 			RSS_1 = sum(compare_1.ΔtR[isnan.(compare_1.ΔtR).==false].^2)
 			md"""
 			### Measurement vs. Simulation
@@ -298,7 +297,7 @@ begin
 			$(round(RSS_1; digits=2)) s²
 			"""
 		elseif @isdefined db_2
-			compare_2 = GasChromatographyTools.compare_measurement_simulation(meas_rt, peaklist_2)
+			compare_2 = GasChromatographySimulator.compare_measurement_simulation(meas_rt, peaklist_2)
 			RSS_2 = sum(compare_2.ΔtR[isnan.(compare_2.ΔtR).==false].^2)
 			md"""
 			### Measurement vs. Simulation
@@ -360,22 +359,22 @@ end
 begin
 	plotly()
 	if (@isdefined db_1) && (@isdefined db_2)
-		p_1 = GasChromatographyTools.local_plots(xx, yy, solution_1, par_1)
+		p_1 = GasChromatographySimulator.local_plots(xx, yy, solution_1, par_1)
 		plot!(p_1, title="1st database")
-		p_2 = GasChromatographyTools.local_plots(xx, yy, solution_2, par_2)
+		p_2 = GasChromatographySimulator.local_plots(xx, yy, solution_2, par_2)
 		plot!(p_2, title="2nd database")
 		p_local = plot(p_1, p_2)
 	elseif @isdefined db_1
-		p_local = GasChromatographyTools.local_plots(xx, yy, solution_1, par_1)
+		p_local = GasChromatographySimulator.local_plots(xx, yy, solution_1, par_1)
 		plot!(p_local, title="1st database")
 	elseif @isdefined db_2
-		p_1 = GasChromatographyTools.local_plots(xx, yy, solution_1, par_1)
+		p_1 = GasChromatographySimulator.local_plots(xx, yy, solution_1, par_1)
 		plot!(p_1, title="online database")
-		p_2 = GasChromatographyTools.local_plots(xx, yy, solution_2, par_2)
+		p_2 = GasChromatographySimulator.local_plots(xx, yy, solution_2, par_2)
 		plot!(p_2, title="2nd database")
 		p_local = plot(p_1, p_2)
 	else
-		p_local = GasChromatographyTools.local_plots(xx, yy, solution_1, par_1)
+		p_local = GasChromatographySimulator.local_plots(xx, yy, solution_1, par_1)
 		plot!(p_local, title="online database")
 	end
 	md"""
