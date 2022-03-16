@@ -119,7 +119,8 @@ end
     init_τ = zeros(length(solutes))
     sub = GasChromatographySimulator.load_solute_database(db_path, db, col.sp, col.gas, solutes, init_t, init_τ)
 
-    opt = [ GasChromatographySimulator.Options(alg=OwrenZen3()),
+    # Tinlet = "inlet"/"outlet" and odesys = true/false 
+    opt = [ #GasChromatographySimulator.Options(alg=OwrenZen3()),
             GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true),
             GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "outlet", false)
             ]
@@ -132,25 +133,25 @@ end
         results_g[i] = GasChromatographySimulator.simulate(par_g[i])
     end
 
-    @test length(results_g[2]) == 2
-    @test length(results_g[3]) == 3
+    @test length(results_g[1]) == 2
+    @test length(results_g[2]) == 3
 
-    @test isapprox(results_g[1][1].tR[1], 123.184, atol=1e-3)
-    @test isapprox(results_g[2][1].tR[1], 123.186, atol=1e-3)
-    @test isapprox(results_g[3][1].tR[1], 51.4564, atol=1e-4)
+    #@test isapprox(results_g[1][1].tR[1], 123.184, atol=1e-3)
+    @test isapprox(results_g[1][1].tR[1], 123.186, atol=1e-3)
+    @test isapprox(results_g[2][1].tR[1], 51.4564, atol=1e-4)
 
-    @test isapprox(results_g[1][1].τR[2], 0.548163, atol=1e-5)
-    @test isapprox(results_g[2][1].τR[2], 0.547683, atol=1e-5)
-    @test isapprox(results_g[3][1].τR[2], 0.524873, atol=1e-4)
+    #@test isapprox(results_g[1][1].τR[2], 0.548163, atol=1e-5)
+    @test isapprox(results_g[1][1].τR[2], 0.547683, atol=1e-5)
+    @test isapprox(results_g[2][1].τR[2], 0.524873, atol=1e-4)
 
     # sol_extraction()
     df_sol = GasChromatographySimulator.sol_extraction(results_g[1][2], par_g[1])
     @test df_sol.t[1][end] ≈ results_g[1][1].tR[1]
     @test df_sol.τ²[2][end] ≈ results_g[1][1].τR[2]^2
 
-    df_sol = GasChromatographySimulator.sol_extraction(results_g[3][2], results_g[3][3], par_g[3])
-    @test df_sol.t[1][end] ≈ results_g[3][1].tR[1]
-    @test df_sol.τ²[2][end] ≈ results_g[3][1].τR[2]^2
+    df_sol = GasChromatographySimulator.sol_extraction(results_g[2][2], results_g[2][3], par_g[2])
+    @test df_sol.t[1][end] ≈ results_g[2][1].tR[1]
+    @test df_sol.τ²[2][end] ≈ results_g[2][1].τR[2]^2
 
     # ng = true
     opt_ng = GasChromatographySimulator.Options(ng=true)
@@ -161,20 +162,21 @@ end
     @test isapprox(results_o_ng[1].τR[2], 0.59028, atol=1e-5)
 
     # vis = "HP"
-    opt_vis = GasChromatographySimulator.Options(vis="HP")
-    prog_vis = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_vis.Tcontrol, col.L)
-    par_vis = GasChromatographySimulator.Parameters(col, prog_vis, sub, opt_vis)
-    results_vis = GasChromatographySimulator.simulate(par_vis)
-    @test isapprox(results_vis[1].tR[1], 87.078, atol=1e-3)
-    @test isapprox(results_vis[1].τR[2], 0.59294, atol=1e-5)
+    #opt_vis = GasChromatographySimulator.Options(vis="HP")
+    #prog_vis = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_vis.Tcontrol, col.L)
+    #par_vis = GasChromatographySimulator.Parameters(col, prog_vis, sub, opt_vis)
+    #results_vis = GasChromatographySimulator.simulate(par_vis)
+    #@test isapprox(results_vis[1].tR[1], 87.078, atol=1e-3)
+    #@test isapprox(results_vis[1].τR[2], 0.59294, atol=1e-5)
 
-    # control = "Flow"
-    opt_control = GasChromatographySimulator.Options(control="Flow")
-    prog_control = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_control.Tcontrol, col.L)
+    # vis = "HP" and control = "Flow"
+    F_steps = [1.0, 1.0, 1.5, 1.2]./(60e6)
+    opt_control = GasChromatographySimulator.Options(vis="HP", control="Flow")
+    prog_control = GasChromatographySimulator.Program(time_steps, temp_steps, F_steps, pout_steps, [ΔT_steps x₀_steps L₀_steps α_steps], opt_control.Tcontrol, col.L)
     par_control = GasChromatographySimulator.Parameters(col, prog_control, sub, opt_control)
     results_control = GasChromatographySimulator.simulate(par_control)
-    @test isapprox(results_control[1].tR[1], 153.554, atol=1e-3) 
-    #@test isapprox(results_control[1].τR[2], 0.59294, atol=1e-5) # much to high value for peakwidth
+    @test isapprox(results_control[1].tR[1], 184.280, atol=1e-3) 
+    @test isapprox(results_control[1].τR[2], 0.25771, atol=1e-5) 
 
     # compare_peaklist from Misc.jl
     pl1 = results_g[1][1]
@@ -346,9 +348,9 @@ end
         η_t = GasChromatographySimulator.viscosity(0.0, t, prog_ng.T_itp, "N2"; vis="HP")
         @test η_T ≈ η_t
     
-    tM_T = GasChromatographySimulator.holdup_time(T_test, prog_ng.pin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
-    tM_t = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.pin_itp, prog_ng.pout_itp, col.L, col.d, col.gas)
-    tM_t_ng = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.pin_itp, prog_ng.pout_itp, col.L, col.d, col.gas; ng=true)
+    tM_T = GasChromatographySimulator.holdup_time(T_test, prog_ng.Fpin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
+    tM_t = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.Fpin_itp, prog_ng.pout_itp, col.L, col.d, col.gas)
+    tM_t_ng = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.Fpin_itp, prog_ng.pout_itp, col.L, col.d, col.gas; ng=true)
     @test tM_T ≈ tM_t
     @test tM_T ≈ tM_t_ng
 
@@ -363,23 +365,23 @@ end
     prog_F = GasChromatographySimulator.Program(time_steps, temp_steps, F_steps, pout_steps, col.L)
     F_T = GasChromatographySimulator.flow(T_test, prog_F.Fpin_itp(t), prog_F.pout_itp(t), col.L, col.a_d[1], col.gas; control="Flow") # only defined for non-gradient case
     F_t = GasChromatographySimulator.flow(t, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; control="Flow")
-    pin(t) = GasChromatographySimulator.inlet_pressure(t, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; ng=ng, vis=vis, control="Flow")
+    pin(t) = GasChromatographySimulator.inlet_pressure(t, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; ng=false, vis="Blumberg", control="Flow")
 
     @test F_T  ≈  F_t
     @test F_T ≈ GasChromatographySimulator.flow(T_test, pin(t), prog_F.pout_itp(t), col.L, col.a_d[1], col.gas; control="Pressure")
 
     tM_T = GasChromatographySimulator.holdup_time(T_test, prog_F.Fpin_itp(t), prog_F.pout_itp(t), col.L, col.a_d[1], col.gas; control="Flow") # only defined for non-gradient case
     tM_t = GasChromatographySimulator.holdup_time(t, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; control="Flow") # prog_F is without gradient -> should be the same
-    #@test tM_T ≈ tM_t # -> error (tM_t much to high)
+    @test tM_T ≈ tM_t
 
     tM_T = GasChromatographySimulator.holdup_time(T_test, prog_F.Fpin_itp(t), prog_F.pout_itp(t), col.L, col.a_d[1], col.gas; control="Flow") # only defined for non-gradient case
     tM_t = GasChromatographySimulator.holdup_time(t, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; control="Flow", ng=true)
     @test tM_T ≈ tM_t
     
 
-    F_T = GasChromatographySimulator.flow(T_test, prog_ng.pin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
-    F_t = GasChromatographySimulator.flow(t, prog_ng.T_itp, prog_ng.pin_itp, prog_ng.pout_itp, col.L, col.d, col.gas)
-    F_t_ng = GasChromatographySimulator.flow(t, prog_ng.T_itp, prog_ng.pin_itp, prog_ng.pout_itp, col.L, col.d, col.gas, ng=true)
+    F_T = GasChromatographySimulator.flow(T_test, prog_ng.Fpin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
+    F_t = GasChromatographySimulator.flow(t, prog_ng.T_itp, prog_ng.Fpin_itp, prog_ng.pout_itp, col.L, col.d, col.gas)
+    F_t_ng = GasChromatographySimulator.flow(t, prog_ng.T_itp, prog_ng.Fpin_itp, prog_ng.pout_itp, col.L, col.d, col.gas, ng=true)
     @test F_T  ≈  F_t
     @test F_T  ≈  F_t_ng
 
