@@ -44,19 +44,19 @@ struct Column{Fd<:Function, Fdf<:Function}
 end
 
 """
-    Program(time_steps, temp_steps, pin_steps, pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
+    Program(time_steps, temp_steps, Fpin_steps, pout_steps, gf, a_gf, T_itp, Fpin_itp, pout_itp)
 
-Structure to describe the temperature and pressure program of a GC Column. The function `gf` describes an optional thermal gradient.
+Structure to describe the temperature and flow/pressure program of a GC Column. The function `gf` describes an optional thermal gradient.
 
 # Arguments
 * `time_steps`: Time steps in s (seconds). 
 * `temp_steps`: Temperature steps in °C (degree celsius).
-* `pin_steps`: Inlet pressure steps in Pa(a) (pascal, absolute).
+* `Fpin_steps`: Flow steps in m³/s resp. inlet pressure steps in Pa(a) (pascal, absolute).
 * `pout_steps`: Outlet pressure steps in Pa(a) (pascal, absolute).
 * `gf`: Gradient function `gf(x, a_gf)`, describes the thermal gradient.
 * `a_gf`: Parameters of the gradient function.
 * `T_itp`: Interpolated (linear) temperature `T(x,t)`, constructed from `time_steps`, `temp_steps` and `gf`.
-* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`, constructed from `time_steps` and `pin_steps`.
+* `Fpin_itp`: Interpolated (linear) flow/inlet pressure `Fpin(t)`, constructed from `time_steps` and `Fpin_steps`.
 * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`, constructed from `time_steps` and `pout_steps`.  
 
 Note: The length of the arrays `time_steps`, `temp_steps`, `pin_steps` and `a_gf`
@@ -65,15 +65,15 @@ have to be the same.
 struct Program{Fgf<:Function}
     time_steps::Array{<:Real, 1}            # vector time steps for the temperature program
     temp_steps::Array{<:Real, 1}            # vector temperature steps for the temperature program 
-    pin_steps::Array{<:Real, 1}             # vector inlet pressure steps for the pressure program
+    Fpin_steps::Array{<:Real, 1}            # vector flow resp. inlet pressure steps for the pressure program
     pout_steps::Array{<:Real, 1}            # vector outlet pressure steps for the pressure program
     gf::Fgf                                 # function of x of the gradient form
     a_gf::Array{<:Real}                     # parameters of the gradient function gf(x)
   	T_itp::Interpolations.Extrapolation     # interpolation function of T(x,t)
-    pin_itp::Interpolations.Extrapolation   # interpolation function of pin(t)
+    Fpin_itp::Interpolations.Extrapolation  # interpolation function of Fpin(t)
     pout_itp::Interpolations.Extrapolation	# interpolation function of pout(t)
     # add inner constructor to check the lengths of the Arrays and of the result of gf
-    Program(ts, Ts, pis, pos, gf, agf, T, pin, po) = (length(ts)!=length(Ts) || length(ts)!=length(gf(0.0)) || length(ts)!=length(pis) || length(ts)!=length(pos)) || length(ts)!=size(agf)[1] ? error("Mismatch between length(time_steps) = $(length(ts)), length(temp_steps) = $(length(Ts)), length(pin_steps) = $(length(pis)), length(pout_steps) = $(length(pos)), length(gf(0.0)) = $(length(gf(0.0))) and size(a_gf)[1] = $(size(agf)[1]).") : new{typeof(gf)}(ts, Ts, pis, pos, gf, agf, T, pin, po)
+    Program(ts, Ts, Fpis, pos, gf, agf, T, Fpin, po) = (length(ts)!=length(Ts) || length(ts)!=length(gf(0.0)) || length(ts)!=length(Fpis) || length(ts)!=length(pos)) || length(ts)!=size(agf)[1] ? error("Mismatch between length(time_steps) = $(length(ts)), length(temp_steps) = $(length(Ts)), length(Fpin_steps) = $(length(Fpis)), length(pout_steps) = $(length(pos)), length(gf(0.0)) = $(length(gf(0.0))) and size(a_gf)[1] = $(size(agf)[1]).") : new{typeof(gf)}(ts, Ts, Fpis, pos, gf, agf, T, Fpin, po)
 end
 
 """
@@ -122,6 +122,7 @@ Structure describing some general options for the simulation.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`) or with a gradient (`ng = false`). This distinction is made because of partly manuall differentiation (problem of automatic differentiation with integrals, e.g. in the `flow_restriction()` function. -> **TODO**: test package Quadrature.jl as alternative to QuadGK.jl for integration)
 * `vis`: Used model of viscosity. `HP` is a second-order polynomial taken from the HP flow calculator. `Blumberg` is an emperical formula according to the book
     `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH) 
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 **TODO**: add option for the retention model ('ABC', 'K-centric')
 
@@ -135,7 +136,8 @@ struct Options
 	odesys::Bool  		# calculate the two ODEs (migration and peak-width) separately (false) or 
                         # combined as a system of ODEs (true)                        
     ng::Bool            # non-gradient calculation, ignores a defined spatial change of d, df or T
-    vis::String         # viscosity model `HP` or `Blumberg`
+    vis::String         # viscosity model 'HP' or 'Blumberg'
+    control::String     # control of the 'Flow' or of the inlet 'Pressure' during the program
 end
 
 """
@@ -190,14 +192,14 @@ function Column(L, d, df, sp, gas)
 end
 
 """
-    Program(time_steps, temp_steps, pin_steps, pout_steps, a_gf, Tcontrol, L)
+    Program(time_steps, temp_steps, Fpin_steps, pout_steps, a_gf, Tcontrol, L)
 
 Construct the structure `Program` with given values. 
 
 # Arguments
 * `time_steps`: Time steps in s (seconds). 
 * `temp_steps`: Temperature steps in °C (degree celsius).
-* `pin_steps`: Inlet pressure steps in Pa(a) (pascal, absolute).
+* `Fpin_steps`: Flow steps in m³/s resp. inlet pressure steps in Pa(a).
 * `pout_steps`: Outlet pressure steps in Pa(a) (pascal, absolute).
 * `a_gf`: Parameters of the gradient function.
 * `Tcontrol`: Option defining at which point of the column the temperature
@@ -221,26 +223,26 @@ julia> Program([0.0, 60.0, 300.0, 120.0],
         10.0)
 ```
 """
-function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, a_gf::Array{<:Real, 2}, Tcontrol, L)
+function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, Fpin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, a_gf::Array{<:Real, 2}, Tcontrol, L)
     # function to construct the Program structure
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
     gf(x) = gradient(x, a_gf; Tcontrol=Tcontrol)
     T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
-    pin_itp = pressure_interpolation(time_steps, pin_steps)
-    pout_itp = pressure_interpolation(time_steps, pout_steps)
-    prog = Program(time_steps, temp_steps, pin_steps, pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
+    Fpin_itp = steps_interpolation(time_steps, Fpin_steps)
+    pout_itp = steps_interpolation(time_steps, pout_steps)
+    prog = Program(time_steps, temp_steps, Fpin_steps, pout_steps, gf, a_gf, T_itp, Fpin_itp, pout_itp)
     return prog
 end
 
 """
-    Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, Tcontrol, L) 
+    Program(time_steps, temp_steps, Fpin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, Tcontrol, L) 
 
 Construct the structure `Program` with given values. 
 
 # Arguments
 * `time_steps`: Time steps in s (seconds). 
 * `temp_steps`: Temperature steps in °C (degree celsius).
-* `pin_steps`: Inlet pressure steps in Pa(a) (pascal, absolute).
+* `Fpin_steps`: Flow steps in m³/s resp. inlet pressure steps in Pa(a).
 * `pout_steps`: Outlet pressure steps in Pa(a) (pascal, absolute).
 * `ΔT_steps`: Parameters of the gradient function. Temperature difference in °C.
 * `x₀_steps`: Parameters of the gradient function. Spatial offset of the gradient in m.
@@ -250,7 +252,7 @@ Construct the structure `Program` with given values.
 program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
 * `L`: Length of the capillary measured in m (meter).
 
-The length of the arrays `time_steps`, `temp_steps`, `pin_steps`, `pout_steps`, `ΔT_steps`, `x₀_steps`, `L₀_steps` and `α_steps`
+The length of the arrays `time_steps`, `temp_steps`, `Fpin_steps`, `pout_steps`, `ΔT_steps`, `x₀_steps`, `L₀_steps` and `α_steps`
 have to be the same.
 
 The arguments `Tcontrol` and `L` are used to construct the thermal gradient
@@ -270,20 +272,20 @@ julia> Program([0.0, 60.0, 300.0, 120.0],
         10.0)
 ```
 """
-function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, ΔT_steps::Array{<:Real, 1}, x₀_steps::Array{<:Real, 1}, L₀_steps::Array{<:Real, 1}, α_steps::Array{<:Real, 1}, Tcontrol, L)
+function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, Fpin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, ΔT_steps::Array{<:Real, 1}, x₀_steps::Array{<:Real, 1}, L₀_steps::Array{<:Real, 1}, α_steps::Array{<:Real, 1}, Tcontrol, L)
     # function to construct the Program structure
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
     a_gf = [ΔT_steps x₀_steps L₀_steps α_steps]
     gf(x) = gradient(x, a_gf; Tcontrol=Tcontrol)
     T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
-    pin_itp = pressure_interpolation(time_steps, pin_steps)
-    pout_itp = pressure_interpolation(time_steps, pout_steps)
-    prog = Program(time_steps, temp_steps, pin_steps, pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
+    Fpin_itp = steps_interpolation(time_steps, Fpin_steps)
+    pout_itp = steps_interpolation(time_steps, pout_steps)
+    prog = Program(time_steps, temp_steps, Fpin_steps, pout_steps, gf, a_gf, T_itp, Fpin_itp, pout_itp)
     return prog
 end
 
 """
-Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, L)
+Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, Fpin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, L)
 
 Construct the structure `Program` with given values for the case
 without a thermal gradient. 
@@ -291,11 +293,11 @@ without a thermal gradient.
 # Arguments
 * `time_steps::Array{<:Real, 1}`: Time steps in s (seconds). 
 * `temp_steps::Array{<:Real, 1}`: Temperature steps in °C (degree celsius).
-* `pin_steps::Array{<:Real, 1}`: Inlet pressure steps in Pa(a) (pascal, absolute).
+* `Fpin_steps::Array{<:Real, 1}`: Flow steps in m³/s resp. inlet pressure steps in Pa(a).
 * `pout_steps::Array{<:Real, 1}`: Outlet pressure steps in Pa(a) (pascal, absolute).
 * `L`: Length of the capillary measured in m (meter).
 
-The length of the arrays `time_steps`, `temp_steps`, `pin_steps` and `pout_steps`
+The length of the arrays `time_steps`, `temp_steps`, `Fpin_steps` and `pout_steps`
 have to be the same.
 
 The argument `L` is used to construct the temperature interpolation `T_itp(x,t)`.
@@ -309,21 +311,21 @@ julia> Program([0.0, 60.0, 300.0, 120.0],
         10.0)
 ```
 """
-function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, L)
+function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, Fpin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, L)
     # function to construct the Program structure
     # without a thermal gradient
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
     a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) L.*ones(length(time_steps)) zeros(length(time_steps))]
     gf(x) = gradient(x, a_gf)
     T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
-    pin_itp = pressure_interpolation(time_steps, pin_steps)
-    pout_itp = pressure_interpolation(time_steps, pout_steps)
-    prog = Program(time_steps, temp_steps, pin_steps, pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
+    Fpin_itp = steps_interpolation(time_steps, Fpin_steps)
+    pout_itp = steps_interpolation(time_steps, pout_steps)
+    prog = Program(time_steps, temp_steps, Fpin_steps, pout_steps, gf, a_gf, T_itp, Fpin_itp, pout_itp)
     return prog
 end
 
 """
-    Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg")
+    Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg", control="Pressure")
 
 Construct the structure `Options` with default values. 
 
@@ -345,6 +347,7 @@ Construct the structure `Options` with default values.
     package Quadrature.jl as alternative to QuadGK.jl for integration)
 * `vis`: Used model of viscosity. `HP` is a second-order polynomial taken from the HP flow calculator. `Blumberg` is an emperical formula according to the book
     `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH) 
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 For more informations about the arguments `alg`, `abstol` and `reltol` see
 the documentation of the DifferentialEquations.jl package.
@@ -358,13 +361,13 @@ julia> Options()
 julia> Options(abstol=1e-8, Tcontrol="outlet")
 ```
 """
-function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg")
-    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis)
+function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg", control="Pressure")
+    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis, control)
     return opt
 end
 
 """
-    Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg")
+    Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg", control="Pressure")
 
 Construct the structure `Options` with given values. 
 
@@ -379,8 +382,6 @@ Construct the structure `Options` with given values.
     program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
 * `odesys`: Combine the ODEs for migration and peak-width into a system of
     ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
-* `vis`: Used model of viscosity. `HP` is a second-order polynomial taken from the HP flow calculator. `Blumberg` is an emperical formula according to the book
-    `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH) 
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
     or with a gradient (`ng = false`). This distinction is made because of
     partly manuall differentiation (problem of automatic differentiation with
@@ -388,21 +389,22 @@ Construct the structure `Options` with given values.
     package Quadrature.jl as alternative to QuadGK.jl for integration)
 * `vis`: Used model of viscosity. `HP` is a second-order polynomial taken from the HP flow calculator. `Blumberg` is an emperical formula according to the book
     `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH) 
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 For more informations about the arguments `alg`, `abstol` and `reltol` see
 the documentation of the DifferentialEquations.jl package.
 
 # Examples
 ```julia
-julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true, "Blumberg")
+julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true)
 ```
 
 ```julia
-julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true, "HP"; ng=true)
+julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true; ng=true, vis="HP", control="Flow")
 ```
 """
-function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg")
-    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis)
+function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg", control="Pressure")
+    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis, control)
     return opt
 end
 
@@ -548,26 +550,23 @@ function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Arra
 end
 
 """
-    pressure_interpolation(time_steps, press_steps)
+    step_interpolation(time_steps, steps)
 
-Construct the pressure function depending on time `t`.  
+Construct a linear interpolated function depending on time `t` of the `steps`-values over `time_steps`.  
 
 # Arguments
 * `time_steps::Array{<:Real,1}`: Time steps in s (seconds). 
-* `press_steps::Array{<:Real,1}`: Pressure steps in Pa (Pascal).
-
-The pressure between the `time_steps` is linear interpolated between the
-corresponding values of `press_steps`  
+* `steps::Array{<:Real,1}`: steps, e.g. pressure or flow. 
 
 # Examples
 ```julia
-julia> pin_itp = pressure_interpolation([0.0, 60.0, 300.0, 120.0], 
+julia> pin_itp = steps_interpolation([0.0, 60.0, 300.0, 120.0], 
                                     [300000.0, 300000.0, 400000.0, 400000.0])
 ```
 """
-function pressure_interpolation(time_steps::Array{<:Real,1}, press_steps::Array{<:Real,1})
-    p_itp = LinearInterpolation((cumsum(time_steps), ), press_steps, extrapolation_bc=Flat())
-    return p_itp
+function steps_interpolation(time_steps::Array{<:Real,1}, steps::Array{<:Real,1})
+    s_itp = LinearInterpolation((cumsum(time_steps), ), steps, extrapolation_bc=Flat())
+    return s_itp
 end
 
 """
@@ -770,7 +769,7 @@ end
 
 #---Begin-Functions-of-the-physical-model---
 """
-    pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
+    pressure(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
 
 Calculate the pressure at position `x` at time `t`.
 
@@ -778,7 +777,7 @@ Calculate the pressure at position `x` at time `t`.
 * `x`: Position along the GC column, in m.
 * `t`: Time in s.
 * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
+* `Fpin_itp`: Interpolated (linear) flow `F(t)` resp. inlet pressure `pin(t)`.
 * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
 * `L`: Length of the capillary measured in m (meter).
 * `d`: Diameter of the GC column, in m. Can be a function of position `x`.
@@ -787,6 +786,7 @@ Calculate the pressure at position `x` at time `t`.
     eq. 2)
     or with a gradient (`ng = false`, eq. 1).
 * `vis`: used model for viscosity "Blumberg" or "HP"
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 ``p(x,t) =
 \\sqrt(p_{in}(t)^2-\\frac{κ(x,t)}{κ_L(t)}\\left(p_{in}^2-p_{out}^2\\right))``
@@ -801,11 +801,25 @@ time `t`.
 
 See also: [`flow_restriction`](@ref)
 """
-function pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
+function pressure(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
     if ng==true
-        pp = sqrt(pin_itp(t)^2 - x/L*(pin_itp(t)^2-pout_itp(t)^2))
+        if control == "Pressure"
+            pin_itp = Fpin_itp
+            pp = sqrt(pin_itp(t)^2 - x/L*(pin_itp(t)^2-pout_itp(t)^2))
+        elseif control == "Flow"
+            F_itp = Fpin_itp
+            pp = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(x, t, T_itp, gas, vis=vis)* T_itp(x,t)/d(x)^4 * F_itp(t) * (L - x))
+        end
     else
-        pp = sqrt(pin_itp(t)^2 - flow_restriction(x, t, T_itp, d, gas, vis=vis)/flow_restriction(L, t, T_itp, d, gas, vis=vis)*(pin_itp(t)^2-pout_itp(t)^2))
+        if control == "Pressure"
+            pin_itp = Fpin_itp
+            pp = sqrt(pin_itp(t)^2 - flow_restriction(x, t, T_itp, d, gas, vis=vis)/flow_restriction(L, t, T_itp, d, gas, vis=vis)*(pin_itp(t)^2-pout_itp(t)^2))
+        elseif control == "Flow"
+            F_itp = Fpin_itp
+            κL = flow_restriction(L, t, T_itp, d, gas, vis=vis)
+            κx = flow_restriction(x, t, T_itp, d, gas, vis=vis)
+            pp = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * F_itp(t) * κL * (κL - κx))
+        end
     end
     return pp
 end
@@ -837,7 +851,7 @@ See also: [`viscosity`](@ref)
 """
 function flow_restriction(x, t, T_itp, d, gas; ng=false, vis="Blumberg")
     if ng==true
-        κ = x*viscosity(x, t, T_itp, gas)*T_itp(x, t)*d(x)^-4
+        κ = x*viscosity(x, t, T_itp, gas, vis=vis)*T_itp(x, t)*d(x)^-4
     else
         κ = quadgk(y -> viscosity(y, t, T_itp, gas, vis=vis)*T_itp(y, t)*d(y)^-4, 0, x)[1]
     end
@@ -986,30 +1000,57 @@ function viscosity(T::Float64, gas::String; vis="Blumberg")
 end
 
 """
-    holdup_time(T, pin, pout, L, d, gas; vis="Blumberg")
+    inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
+
+Calculate the inlet pressure for a given column, temperature, flow and outlet pressure
+"""
+function inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
+    if control == "Pressure"
+        pin = Fpin_itp(t)
+    elseif control == "Flow"
+        F_itp = Fpin_itp
+        if ng == true 
+            pin = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(0.0, t, T_itp, gas; vis="Blumberg") * T_itp(0.0, t) * L / d(0.0)^4 * F_itp(t))
+        else
+            κL = flow_restriction(L, t, T_itp, d, gas, vis=vis)
+            pin = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * κL * F_itp(t))
+        end
+    end
+    return pin
+end
+
+"""
+    holdup_time(T, Fpin, pout, L, d, gas; vis="Blumberg", control="Pressure")
 
 Calculate the hold-up time in s without a gradient.
 
 # Arguments
 * `T`: Temperature in K.
-* `pin`: Inlet pressure in Pa(a).
+* `Fpin`: Flow in m³/s resp. inlet pressure in Pa(a).
 * `pout`: Outlet pressure in Pa(g).
 * `L`: Length of the capillary measured in m (meter).
 * `d`: Diameter of the GC column, in m.
 * `gas`: Name of the mobile phase gas.
 * `vis`: used model for viscosity "Blumberg" or "HP".
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 ``t_M = \\frac{128}{3}\\frac{L^2}{d^2}η\\frac{p_{in}^3-p_{out}^3}{(p_{in}^2-p_{out}^2)^2}``
 """
-function holdup_time(T::Float64, pin::Float64, pout::Float64, L::Float64, d::Float64, gas::String; vis="Blumberg")
+function holdup_time(T::Float64, Fpin::Float64, pout::Float64, L::Float64, d::Float64, gas::String; vis="Blumberg", control="Pressure")
     # hold-up time at temperature T (non-gradient)
 	η = viscosity(T, gas; vis=vis)
+    if control == "Pressure"
+        pin = Fpin
+    elseif control == "Flow"
+        F = Fpin
+        pin = sqrt(pout^2 + 256/π * pn/Tn * viscosity(T, gas; vis="Blumberg") * T * L / d^4 * F)
+    end
 	tM = 128/3*L^2/d^2*η*(pin^3-pout^3)/(pin^2-pout^2)^2
 	return tM
 end
 
 """
-    holdup_time(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
+    holdup_time(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
 
 Calculate the hold-up time in s at time `t` with a gradient.
 
@@ -1025,6 +1066,7 @@ Calculate the hold-up time in s at time `t` with a gradient.
     eq. 2)
     or with a gradient (`ng = false`, eq. 1).
 * `vis`: used model for viscosity "Blumberg" or "HP".
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 ``t_M(t) = 64\\frac{κ_L(t)}{p_{in}(t)^2-p_{out}(t)^2} \\int_0^L
 d(y)^2\\frac{p(y,t)}{T(y,t)}dy`` Eq. 1
@@ -1033,32 +1075,46 @@ d(y)^2\\frac{p(y,t)}{T(y,t)}dy`` Eq. 1
 \\frac{128}{3}\\frac{L^2}{d^2}η(t)\\frac{p_{in}(t)^3-p_{out}(t)^3}{(p_{in}(t)^2-p_{out}(t)^2)^2}``
 Eq. 2
 """
-function holdup_time(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
+function holdup_time(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
     # hold-up time at time t in a temperature program with potential thermal gradient
-    if ng==true
-        η = GasChromatographySimulator.viscosity(L, t, T_itp, gas; vis=vis)
-        tM = 128/3*L^2/d(L)^2*η*(pin_itp(t)^3-pout_itp(t)^3)/(pin_itp(t)^2-pout_itp(t)^2)^2
-    else
-        κL = flow_restriction(L, t, T_itp, d, gas; ng=false, vis=vis)
-        integral = quadgk(y -> d(y)^2*pressure(y, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis=vis)/T_itp(y, t), 0, L)[1]
-        tM = 64*κL/(pin_itp(t)^2-pout_itp(t)^2)*integral
+    if control == "Pressure"
+        #pin(t) = Fpin_itp(t)
+        if ng==true
+            η = GasChromatographySimulator.viscosity(L, t, T_itp, gas; vis=vis)
+            tM = 128/3*L^2/d(L)^2*η*(Fpin_itp(t)^3-pout_itp(t)^3)/(Fpin_itp(t)^2-pout_itp(t)^2)^2
+        else
+            κL = flow_restriction(L, t, T_itp, d, gas; ng=false, vis=vis)
+            integral = quadgk(y -> d(y)^2*pressure(y, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis=vis, control="Pressure")/T_itp(y, t), 0, L)[1]
+            tM = 64*κL/(Fpin_itp(t)^2-pout_itp(t)^2)*integral
+        end
+    elseif control == "Flow"
+        if ng==true
+            pin = GasChromatographySimulator.inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=true, vis=vis, control="Flow")
+            η = GasChromatographySimulator.viscosity(L, t, T_itp, gas; vis=vis)
+            tM = 128/3*L^2/d(L)^2*η*(pin^3-pout_itp(t)^3)/(pin^2-pout_itp(t)^2)^2
+        else
+            integral = quadgk(y -> d(y)^2*pressure(y, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis=vis, control="Flow")/T_itp(y, t), 0, L)[1]
+            tM = π/4 * Tn/pn * integral/Fpin_itp(t)
+        end
     end
+    
     return tM
 end
 
 """
-    flow(T, pin, pout, L, d, gas; vis="Blumberg")
+    flow(T, Fpin, pout, L, d, gas; vis="Blumberg", control="Pressure")
 
 Calculate the normalized flow through the GC column in m³/s without a gradient.
 
 # Arguments
 * `T`: Temperature in K.
-* `pin`: Inlet pressure in Pa(a).
+* `Fpin`: Flow in m³/s resp. inlet pressure in Pa(a).
 * `pout`: Outlet pressure in Pa(g).
 * `L`: Length of the capillary measured in m (meter).
 * `d`: Diameter of the GC column, in m.
 * `gas`: Name of the mobile phase gas.
 * `vis`: used model for viscosity "Blumberg" or "HP".
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 ``F =
 \\frac{π}{256}\\frac{T_n}{p_n}\\frac{d^4}{L}\\frac{p_{in}^2-p_{out}^2}{η T}``
@@ -1067,22 +1123,27 @@ with ``T_n`` the normalized temperature (``T_n=(25 + 273.15)``K), ``p_n``
 the normalized pressure (``p_n = 101300`` Pa(a)) and ``η`` the viscosity
 the mobile phase gas at temperature ``T``.
 """
-function flow(T::Float64, pin::Float64, pout::Float64, L::Float64, d::Float64, gas::String; vis="Blumberg")
+function flow(T::Float64, Fpin::Float64, pout::Float64, L::Float64, d::Float64, gas::String; vis="Blumberg", control="Pressure")
 	# normalized Flow at temperature T (non-gradient)
-	η = viscosity(T, gas; vis=vis)
-	F = π/256 * Tn/pn * d^4/L * (pin^2-pout^2)/(η*T)
+    if control == "Pressure"
+        pin = Fpin
+	    η = viscosity(T, gas; vis=vis)
+	    F = π/256 * Tn/pn * d^4/L * (pin^2-pout^2)/(η*T)
+    elseif control == "Flow"
+        F = Fpin
+    end
 	return F
 end
 
 """
-    flow(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
+    flow(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
 
 Calculate the normalized flow through the GC column in m³/s at time `t`.
 
 # Arguments
 * `t`: Time in s.
 * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
+* `Fpin_itp`: Interpolated (linear) Flow F(t) resp. inlet pressure `pin(t)`.
 * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
 * `L`: Length of the capillary measured in m (meter).
 * `d`: Diameter of the GC column, in m.
@@ -1091,6 +1152,7 @@ Calculate the normalized flow through the GC column in m³/s at time `t`.
     eq. 2)
     or with a gradient (`ng = false`, eq. 1).
 * `vis`: used model for viscosity "Blumberg" or "HP".
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 ``F(t) =
 \\frac{π}{256}\\frac{T_n}{p_n}\\frac{p_{in}(t)^2-p_{out}(t)^2}{κ_L(t)}``
@@ -1106,22 +1168,27 @@ the normalized pressure (``p_n = 101300`` Pa(a)), ``κ_L`` the flow
 restriction of the column and ``η`` the viscosity
 the mobile phase gas at temperature ``T``.
 """
-function flow(t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
+function flow(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
 	# normalized Flow at time t in a temperature program with potential thermal
 	# gradient
     # TODO: test for gradient in d(x)
-    if ng==true
-	    η = GasChromatographySimulator.viscosity(L, t, T_itp, gas, vis=vis)
-	    F = π/256 * Tn/pn * d(L)^4/L * (pin_itp(t)^2-pout_itp(t)^2)/(η*T_itp(L,t))
-    else
-        κL = flow_restriction(L, t, T_itp, d, gas; ng=false, vis=vis)
-        F = π/256 * Tn/pn * (pin_itp(t)^2-pout_itp(t)^2)/κL
+    if control == "Pressure"
+        pin_itp = Fpin_itp
+        if ng==true
+            η = GasChromatographySimulator.viscosity(L, t, T_itp, gas, vis=vis)
+            F = π/256 * Tn/pn * d(L)^4/L * (pin_itp(t)^2-pout_itp(t)^2)/(η*T_itp(L,t))
+        else
+            κL = flow_restriction(L, t, T_itp, d, gas; ng=false, vis=vis)
+            F = π/256 * Tn/pn * (pin_itp(t)^2-pout_itp(t)^2)/κL
+        end
+    elseif control == "Flow"
+        F = Fpin_itp(t)
     end
 	return F
 end
 
 """
-    mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
+    mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
 
 Calculate the residency (the inverse velocity) of the mobile phase at
 position `x` at time `t`.
@@ -1130,7 +1197,7 @@ position `x` at time `t`.
 * `x`: Position along the GC column, in m.
 * `t`: Time in s.
 * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
+* `Fpin_itp`: Interpolated (linear) Flow F(t) resp. inlet pressure `pin(t)`.
 * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
 * `L`: Length of the capillary measured in m (meter).
 * `d`: Diameter of the GC column, in m.
@@ -1138,6 +1205,7 @@ position `x` at time `t`.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
 or with a gradient (`ng = false`).
 * `vis`: used model for viscosity "Blumberg" or "HP".
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 ``r_M(x,t) = 64 \\frac{d^2 κ_L}{T(x,t)}\\frac{p(x,t)}{p_{in}^2-p_{out}^2}``
 
@@ -1147,15 +1215,22 @@ restriction of the column and ``p(x,t)`` the local pressure.
 
 See also: [`pressure`](@ref), [`flow_restriction`](@ref)
 """
-function mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg")
-    pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis)
-    κL = flow_restriction(L, t, T_itp, d, gas; ng=ng, vis=vis)
-    rM = 64*(pp*(d(x))^2)/T_itp(x, t)*κL/(pin_itp(t)^2-pout_itp(t)^2)
+function mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
+    if control == "Pressure"
+        pin_itp = Fpin_itp
+        pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
+        κL = flow_restriction(L, t, T_itp, d, gas; ng=ng, vis=vis)
+        rM = 64*(pp*(d(x))^2)/T_itp(x, t)*κL/(pin_itp(t)^2-pout_itp(t)^2)
+    elseif control == "Flow"
+        F_itp = Fpin_itp
+        pp = pressure(x, t, T_itp, F_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
+        rM = π/4 * Tn/pn * d(x)^2/F_itp(t) * pp/T_itp(x,t)
+    end
     return rM
 end
 
 """
-    residency(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp,  φ₀; ng=false, vis="Blumberg")
+    residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp,  φ₀; ng=false, vis="Blumberg", control="Pressure")
 
 Calculate the residency (the inverse velocity) of the solute at
 position `x` at time `t`.
@@ -1164,7 +1239,7 @@ position `x` at time `t`.
 * `x`: Position along the GC column, in m.
 * `t`: Time in s.
 * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
+* `Fpin_itp`: Interpolated (linear) Flow F(t) resp. inlet pressure `pin(t)`.
 * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
 * `L`: Length of the capillary measured in m (meter).
 * `d`: Diameter of the GC column, in m.
@@ -1179,6 +1254,7 @@ thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
 or with a gradient (`ng = false`).
 * `vis`: used model for viscosity "Blumberg" or "HP".
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 ``r(x,t) = r_M(x,t) \\left(1+k(x,t)\\right)``
 
@@ -1187,8 +1263,8 @@ factor of the solute on the stationary phase.
 
 See also: [`mobile_phase_residency`](@ref), [`retention_factor`](@ref)
 """
-function residency(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=false, vis="Blumberg")
-    r = mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis)*(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀))
+function residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=false, vis="Blumberg", control="Pressure")
+    r = mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)*(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀))
     return r
 end
 
@@ -1234,7 +1310,7 @@ function retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀)
 end
 
 """
-    plate_height(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Dag; ng=false, vis="Blumberg")
+    plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Dag; ng=false, vis="Blumberg", control="Pressure")
 
 Calculate the plate height of the solute at position `x` at time `t`
 according to the Golay equation.
@@ -1243,7 +1319,7 @@ according to the Golay equation.
 * `x`: Position along the GC column, in m.
 * `t`: Time in s.
 * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
+* `Fpin_itp`: Interpolated (linear) Flow F(t) resp. inlet pressure `pin(t)`.
 * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
 * `L`: Length of the capillary measured in m (meter).
 * `d`: Diameter of the GC column, in m.
@@ -1259,6 +1335,7 @@ thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
 or with a gradient (`ng = false`).
 * `vis`: used model for viscosity "Blumberg" or "HP".
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 ``H(x,t) = 2 \\frac{D_M}{u_M} + \\frac{d^2}{96}\\left(6 μ^2-16 μ +11
 \\right) \\frac{u_M}{D_M} + \\frac{2}{3} d_f^2 μ(1-μ) \\frac{u_M}{D_S}``
@@ -1283,11 +1360,11 @@ with ``D_M`` the diffusion coefficient of the solute in the mobile phase,
 
 See also: [`diffusion_mobile`](@ref), [`mobile_phase_residency`](@ref), [`retention_factor`](@ref)
 """
-function plate_height(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Dag; ng=false, vis="Blumberg")
+function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Dag; ng=false, vis="Blumberg", control="Pressure")
     id = d(x)# - 2.0*df(x)
-    uM = 1/mobile_phase_residency(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis)
+    uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
     μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀))
-    DM = diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=ng, vis=vis)
+    DM = diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Dag; ng=ng, vis=vis, control=control)
     DS = DM/10000
     H1 = 2*DM/uM
     H2 = id^2/96*(6*μ^2-16*μ+11)*uM/DM
@@ -1297,7 +1374,7 @@ function plate_height(x, t, T_itp, pin_itp, pout_itp, L, d, df, gas, Tchar, θch
 end
 
 """
-    diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=false, vis="Blumberg")
+    diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Dag; ng=false, vis="Blumberg", control="Pressure")
 
 Calculate the diffusion coefficient of the solute in the mobile phase at
 position `x` at time `t`.
@@ -1306,7 +1383,7 @@ position `x` at time `t`.
 * `x`: Position along the GC column, in m.
 * `t`: Time in s.
 * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-* `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
+* `Fpin_itp`: Interpolated (linear) Flow F(t) resp. inlet pressure `pin(t)`.
 * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
 * `L`: Length of the capillary measured in m (meter).
 * `d`: Diameter of the GC column, in m.
@@ -1315,11 +1392,12 @@ position `x` at time `t`.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
 or with a gradient (`ng = false`).
 * `vis`: used model for viscosity "Blumberg" or "HP".
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 ``D_M(x,t) = D_{ag} \\frac{T(x,t)^{1.75}}{p(x,t)}``
 """
-function diffusion_mobile(x, t, T_itp, pin_itp, pout_itp, L, d, gas, Dag; ng=false, vis="Blumberg")
-    DM = T_itp(x, t)^1.75/pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis)*Dag
+function diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Dag; ng=false, vis="Blumberg", control="Pressure")
+    DM = T_itp(x, t)^1.75/pressure(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)*Dag
     return DM
 end
 #---End-Functions-of-the-physical-model---
@@ -1410,7 +1488,7 @@ Note: The result is the solution structure from
 DifferentialEquations.jl.
 """
 function solving_migration(col::Column, prog::Program, sub::Substance, opt::Options)
-	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis)
+	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control)
     t₀ = sub.t₀
     zspan = (0.0,col.L)
     prob_tz = ODEProblem(f_tz, t₀, zspan)
@@ -1483,7 +1561,7 @@ function odesystem_r!(dt, t, p, z)
 	prog = p[2]
 	sub = p[3]
 	opt = p[4]
-    dt[1] = residency(z, t[1], prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis)
+    dt[1] = residency(z, t[1], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control)
     dt[2] = peakode(z, t[1], t[2], col, prog, sub, opt)
 end
 
@@ -1504,8 +1582,8 @@ See also: [`solving_odesystem_r`](@ref), [`odesystem_r!`](@ref)
 function peakode(z, t, τ², col, prog, sub, opt)
 	# alternative function
     if opt.ng==true
-        r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis)
-        H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; ng=true, vis=opt.vis)
+        r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis, control=opt.control)
+        H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; ng=true, vis=opt.vis, control=opt.control)
         ∂r∂t_ng(z,t) = ForwardDiff.gradient(r_ng, [z, t])[2]
         return H_ng(z,t)*r_ng([z,t])^2 + 2*τ²*∂r∂t_ng(z,t)
     else
@@ -1514,7 +1592,11 @@ function peakode(z, t, τ², col, prog, sub, opt)
 		η(z,t) = GasChromatographySimulator.viscosity(z, t, prog.T_itp, col.gas; vis=opt.vis)
 		c(zt) = η(zt[1], zt[2])*T(zt[1], zt[2])
 		∂c∂t(z,t) = ForwardDiff.gradient(c, [z,t])[2]
-		pi2(t) = prog.pin_itp(t)^2
+        #if opt.control == "Pressure"
+		#    pi2(t) = prog.Fpin_itp(t)^2
+        #elseif opt.control == "Flow"
+            pi2(t) = inlet_pressure(t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.gas; vis=opt.vis, control=opt.control)^2
+        #end
 		po2(t) = prog.pout_itp(t)^2
 		∂pi2∂t(t) = ForwardDiff.derivative(pi2, t)
 		∂po2∂t(t) = ForwardDiff.derivative(po2, t)
@@ -1524,9 +1606,9 @@ function peakode(z, t, τ², col, prog, sub, opt)
         ∂κL∂t(t) = ∂κ∂t(col.L,t)
 		e(z,t) = κ(z,t)/κL(t)
 		∂e∂t(z,t) = (∂κ∂t(z,t)*κL(t)-κ(z,t)*∂κL∂t(t))/κL(t)^2
-		p(z,t) = pressure(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.gas; vis=opt.vis)
+		p(z,t) = pressure(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.gas; vis=opt.vis, control=opt.control)
 		∂p∂t(z,t) = 1/(2*p(z,t))*(∂pi2∂t(t)-(∂e∂t(z,t)*(pi2(t)-po2(t))+e(z,t)*(∂pi2∂t(t)-∂po2∂t(t))))
-		rM(z,t) = mobile_phase_residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.gas; vis=opt.vis)
+		rM(z,t) = mobile_phase_residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.gas; vis=opt.vis, control=opt.control)
 		a(z,t) = κL(t)*p(z,t)
 		∂a∂t(z,t) = ∂κL∂t(t)*p(z,t)+κL(t)*∂p∂t(z,t)
 		b(zt) = T(zt[1],zt[2])*(pi2(zt[2])-po2(zt[2]))
@@ -1536,8 +1618,8 @@ function peakode(z, t, τ², col, prog, sub, opt)
 		k(zt) = retention_factor(zt[1], zt[2], prog.T_itp, col.d, col.df, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀)
         ∂k∂t(z,t) = ForwardDiff.gradient(k, [z, t])[2]
 		
-		r(z,t) = residency(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; vis=opt.vis)
-        H(z,t) = plate_height(z, t, prog.T_itp, prog.pin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; vis=opt.vis)
+		r(z,t) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; vis=opt.vis, control=opt.control)
+        H(z,t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; vis=opt.vis, control=opt.control)
         ∂r∂t(z,t) = ∂rM∂t(z,t)*(1+k([z,t])) + rM(z,t)*∂k∂t(z,t)
         # AutoDiff problems with the intgral in flow_restriction κ and κL makes 
         # it nessecary to partly calculate the derivative manually
@@ -1591,7 +1673,7 @@ function peaklist(sol, par)
         if sol[i].t[end]==par.col.L
             tR[i] = sol[i].u[end][1]
             TR[i] = par.prog.T_itp(par.col.L, tR[i]) - 273.15 
-            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis)
+            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis, control=par.opt.control)
             τR[i] = sqrt(sol[i].u[end][2])
             σR[i] = τR[i]*uR[i]
             kR[i] = retention_factor(par.col.L, tR[i], par.prog.T_itp, par.col.d, par.col.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
@@ -1652,7 +1734,7 @@ function peaklist(sol, peak, par)
         if sol[i].t[end]==par.col.L
             tR[i] = sol[i].u[end]
             TR[i] = par.prog.T_itp(par.col.L, tR[i]) - 273.15 
-            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis)
+            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis, control=par.opt.control)
             τR[i] = sqrt(peak[i].u[end])
             σR[i] = τR[i]*uR[i]
             kR[i] = retention_factor(par.col.L, tR[i], par.prog.T_itp, par.col.d, par.col.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
