@@ -100,7 +100,7 @@ function plot_flow(par)
 	t = 0.0:sum(par.prog.time_steps)/1000.0:sum(par.prog.time_steps)
 	F = Array{Float64}(undef, length(t))
 	for i=1:length(t)
-		F[i] = flow(t[i], par.prog.T_itp, par.prog.pin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.gas; vis=par.opt.vis)
+		F[i] = flow(t[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.gas; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control)
 	end
 	p_flow = plot(t, F.*60e6, xlabel="time in s", ylabel="column flow in mL/min", legend=false)
 	return p_flow
@@ -111,13 +111,13 @@ end
 
 Plot the inlet and outlet pressure over time of the program `prog::GasChromatographySimulator.Program`.
 """
-function plot_pressure(prog)
-	t = 0.0:sum(prog.time_steps)/1000.0:sum(prog.time_steps)
+function plot_pressure(par)
+	t = 0.0:sum(par.prog.time_steps)/1000.0:sum(par.prog.time_steps)
 	pin = Array{Float64}(undef, length(t))
 	pout = Array{Float64}(undef, length(t))
 	for i=1:length(t)
-		pin[i] = prog.pin_itp(t[i])
-		pout[i] = prog.pout_itp(t[i])
+		pin[i] = inlet_pressure(t[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.gas; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control)
+		pout[i] = par.prog.pout_itp(t[i])
 	end
 	p_press = plot(t, pin, xlabel="time in s", ylabel="pressure in Pa", label="inlet", legend=:right)
 	plot!(p_press, t, pout, label="outlet")
@@ -241,7 +241,7 @@ function velocity(df_sol, i, par)
 	x = df_sol.z[i]
 	t = df_sol.t[i]
 	T_itp = par.prog.T_itp
-	pin_itp = par.prog.pin_itp
+	pin_itp = par.prog.Fpin_itp
 	pout_itp = par.prog.pout_itp
 	L = par.col.L
 	d = par.col.d
