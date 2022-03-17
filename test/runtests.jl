@@ -17,6 +17,47 @@ L₀_steps = L.*ones(length(time_steps))
 db_path = string(@__DIR__, "/data")
 db = "Database_test.csv"
 
+TP = (40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0)
+FpinP = (400000.0, 10.0, 5000.0, 500000.0, 20.0)
+poutP = (0.0, 100.0)
+ΔTP = (0.0, 5.0, 10.0, 60.0, 10.0, 5.0, 80.0, 0.0, -10.0, 0.0, 10.0)
+x₀P = (0.0, 100.0)
+L₀P = (L, 100.0)
+αP = (0.0, 10.0, -0.5, -5.0, 15.0, 1.0, 5.0, 10.0)
+
+ts1, Ts = GasChromatographySimulator.conventional_program((40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0))
+ts2, ps = GasChromatographySimulator.conventional_program((400000.0, 10.0, 5000.0, 500000.0, 20.0))
+
+a = GasChromatographySimulator.common_time_steps(Float64[], ts2)
+b = GasChromatographySimulator.common_time_steps(a, ts1)
+
+time_unit="min"
+ts = Array{Array{Float64,1}}(undef, 7)
+    ts[1], Ts = GasChromatographySimulator.conventional_program(TP; time_unit=time_unit)
+    ts[2], Fps = GasChromatographySimulator.conventional_program(FpinP; time_unit=time_unit)
+    ts[3], pouts = GasChromatographySimulator.conventional_program(poutP; time_unit=time_unit)
+    ts[4], ΔTs = GasChromatographySimulator.conventional_program(ΔTP; time_unit=time_unit)
+    ts[5], x₀s = GasChromatographySimulator.conventional_program(x₀P; time_unit=time_unit)
+    ts[6], L₀s = GasChromatographySimulator.conventional_program(L₀P; time_unit=time_unit)
+    ts[7], αs = GasChromatographySimulator.conventional_program(αP; time_unit=time_unit)
+
+    time_steps = Float64[]
+    for i=1:7
+        time_steps = GasChromatographySimulator.common_time_steps(time_steps, ts[i])
+    end
+
+    temp_steps = GasChromatographySimulator.new_value_steps(Ts, ts[1], time_steps)
+    Fpin_steps = GasChromatographySimulator.new_value_steps(Fps, ts[2], time_steps)
+    pout_steps = GasChromatographySimulator.new_value_steps(pouts, ts[3], time_steps)
+    ΔT_steps = GasChromatographySimulator.new_value_steps(ΔTs, ts[4], time_steps)
+    x₀_steps = GasChromatographySimulator.new_value_steps(x₀s, ts[5], time_steps)
+    L₀_steps = GasChromatographySimulator.new_value_steps(L₀s, ts[6], time_steps)
+    α_steps = GasChromatographySimulator.new_value_steps(αs, ts[7], time_steps)
+using Plots
+plot(cumsum(time_steps), temp_steps)
+plot!(cumsum(ts[1]), Ts)
+prog_conv_grad = GasChromatographySimulator.Program(TP, FpinP, poutP, ΔTP, x₀P, L₀P, αP, "inlet", L; time_unit="min")
+
 @testset "gradient function check" begin
     # Gradient function for d
     a_d = [d, 0.0, 2*L, 0.0]
@@ -62,6 +103,30 @@ end
     @test prog_c.T_itp != prog_c_ng.T_itp
     @test prog.Fpin_itp == prog_c.Fpin_itp
     @test prog.pout_itp == prog_c.pout_itp
+
+    # conventional program
+    ts1, Ts = GasChromatographySimulator.conventional_program((40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0))
+    ts2, ps = GasChromatographySimulator.conventional_program((400000.0, 10.0, 5000.0, 500000.0, 20.0))
+    ts3, Fs = GasChromatographySimulator.conventional_program((1/(6e7), 60.0)) 
+    @test ts1 == [0.0, 60.0, 2880.0, 120.0, 120.0, 120.0]
+    @test Fs == 1/(6e7).*ones(2)
+
+    cts12 = GasChromatographySimulator.common_time_steps(ts1, ts2)
+    cts21 = GasChromatographySimulator.common_time_steps(ts2, ts1)
+    @test cts12 == cts21
+
+    cts123 = GasChromatographySimulator.common_time_steps(cts12, ts3)
+    cts13 = GasChromatographySimulator.common_time_steps(ts1, ts3)
+    new_Fs = GasChromatographySimulator.new_value_steps(Fs, ts3, cts13)
+    new_Ts = GasChromatographySimulator.new_value_steps(Ts, ts1, cts123)
+    @test new_Fs == 1/(6e7).*ones(length(cts13))
+    @test new_Ts == [40.0, 40.0, 85.0, 140.0, 280.0, 280.0, 280.0, 320.0, 320.0, 320.0]
+
+    prog_conv = GasChromatographySimulator.Program((40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0), (400000.0, 10.0, 5000.0, 500000.0, 20.0), L; pout="vacuum", time_unit="min")
+    prog_conv_s_atm = GasChromatographySimulator.Program((40.0, 1.0*60.0, 5.0/60.0, 280.0, 2.0*60.0, 20.0/60.0, 320.0, 2.0*60.0), (400000.0, 10.0*60.0, 5000.0/60.0, 500000.0, 20.0*60.0), L; pout="atmosphere", time_unit="s")
+    @test prog_conv.temp_steps == [40.0, 40.0, 85.0, 140.0, 280.0, 280.0, 280.0, 320.0, 320.0]
+    @test prog_conv.time_steps == prog_conv_s_atm.time_steps
+    @test prog_conv.pout_steps == prog_conv_s_atm.pout_steps .- 101300
 
     # Substance from the load-function-> 1st test
     db_path = string(@__DIR__, "/data")
