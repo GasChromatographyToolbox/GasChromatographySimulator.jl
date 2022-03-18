@@ -207,6 +207,25 @@ GasChromatographySimulator.compare_peaklist
 GasChromatographySimulator.compare_measurement_simulation
 ```
 
+```@docs
+GasChromatographySimulator.temperature_program(CP; time_unit="min")
+```
+
+```@docs
+GasChromatographySimulator.temperature_program(time_steps, value_steps; time_unit="min")
+```
+
+```@docs
+GasChromatographySimulator.common_time_steps
+```
+
+```@docs
+GasChromatographySimulator.new_value_steps
+```
+
+```@docs
+GasChromatographySimulator.
+```
 
 ```@index
 ```

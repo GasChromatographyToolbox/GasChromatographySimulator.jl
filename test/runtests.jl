@@ -63,6 +63,50 @@ end
     @test prog.Fpin_itp == prog_c.Fpin_itp
     @test prog.pout_itp == prog_c.pout_itp
 
+    # conventional program
+    TP0 = [40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0]
+    pP0 = [400000.0, 10.0, 5000.0, 500000.0, 20.0]
+    FP0 = [1/(6e7), 60.0]
+    ts1, Ts = GasChromatographySimulator.conventional_program(TP0)
+    ts2, ps = GasChromatographySimulator.conventional_program(pP0)
+    ts3, Fs = GasChromatographySimulator.conventional_program(FP0) 
+    @test ts1 == [0.0, 60.0, 2880.0, 120.0, 120.0, 120.0]
+    @test Fs == 1/(6e7).*ones(2)
+
+    TP = GasChromatographySimulator.temperature_program(ts1, Ts; time_unit="min")
+    FP = GasChromatographySimulator.temperature_program(ts3, Fs; time_unit="s")
+    @test TP == TP0
+    @test FP./[1, 60] == FP0
+
+    cts12 = GasChromatographySimulator.common_time_steps(ts1, ts2)
+    cts21 = GasChromatographySimulator.common_time_steps(ts2, ts1)
+    @test cts12 == cts21
+
+    cts123 = GasChromatographySimulator.common_time_steps(cts12, ts3)
+    cts13 = GasChromatographySimulator.common_time_steps(ts1, ts3)
+    new_Fs = GasChromatographySimulator.new_value_steps(Fs, ts3, cts13)
+    new_Ts = GasChromatographySimulator.new_value_steps(Ts, ts1, cts123)
+    @test new_Fs == 1/(6e7).*ones(length(cts13))
+    @test new_Ts == [40.0, 40.0, 85.0, 185.0, 280.0, 280.0, 280.0, 320.0, 320.0, 320.0]
+
+    prog_conv = GasChromatographySimulator.Program((40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0), (400000.0, 10.0, 5000.0, 500000.0, 20.0), L; pout="vacuum", time_unit="min")
+    prog_conv_s_atm = GasChromatographySimulator.Program((40.0, 1.0*60.0, 5.0/60.0, 280.0, 2.0*60.0, 20.0/60.0, 320.0, 2.0*60.0), (400000.0, 10.0*60.0, 5000.0/60.0, 500000.0, 20.0*60.0), L; pout="atmosphere", time_unit="s")
+    @test prog_conv.temp_steps == [40.0, 40.0, 85.0, 185.0, 280.0, 280.0, 280.0, 320.0, 320.0]
+    @test prog_conv.time_steps == prog_conv_s_atm.time_steps
+    @test prog_conv.pout_steps == prog_conv_s_atm.pout_steps .- 101300
+
+    TP = (40.0, 1.0, 5.0, 200.0, 0.0, 10.0, 280.0, 2.0, 20.0, 320.0, 2.0)
+    FpinP = (400000.0, 10.0, 5000.0, 500000.0, 20.0)
+    poutP = (0.0, 100.0)
+    ΔTP = (0.0, 5.0, 10.0, 60.0, 10.0, 5.0, 80.0, 0.0, -10.0, 0.0, 10.0)
+    x₀P = (0.0, 100.0)
+    L₀P = (L, 100.0)
+    αP = (0.0, 10.0, -0.5, -5.0, 15.0, 1.0, 5.0, 10.0)
+
+    prog_conv_grad = GasChromatographySimulator.Program(TP, FpinP, poutP, ΔTP, x₀P, L₀P, αP, "inlet", L; time_unit="min")
+    @test prog_conv_grad.time_steps == [0.0, 60.0, 240.0, 300.0, 60.0, 540.0, 60.0, 240.0, 300.0, 180.0, 120.0, 360.0, 120.0, 120.0, 120.0, 180.0, 300.0, 2700.0]
+
+    
     # Substance from the load-function-> 1st test
     db_path = string(@__DIR__, "/data")
     db = "Database_test.csv"
