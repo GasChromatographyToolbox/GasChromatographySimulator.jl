@@ -814,8 +814,8 @@ end
 
 Translate the conventional program notation into a vector of time steps and value steps (temperature, pressure, flow) used in GasChromatographySimulator.Program
 
-The conventional temperature program is defined as a tupel of the following form (for a temperature program):
-`CP = (T₁, t₁, r₁, T₂, t₂, r₂, T₃, t₃, ...)` corresponding to the notation:
+The conventional temperature program is defined as an array of the following form (for a temperature program):
+`CP = [T₁, t₁, r₁, T₂, t₂, r₂, T₃, t₃, ...]` corresponding to the notation:
 `T₁(t₁) - r₁ - T₂(t₂) - r₂ - T₃(t₃) - ...` which can be read as:
 Starting temperature `T₁` is holded for time `t₁`. After the holding time the temperature increases linearly with the heating rate `r₁`, until temperature `T₂` is reached. This temperature is held for the time `t₂` after which the temperature increases linearly by the heating rate `r₂` until temperature `T₃` is reached, which is hold for the time `t₃`, and so on. 
 
@@ -852,9 +852,74 @@ function conventional_program(CP; time_unit="min")
 end
 
 """
+    temperature_program(time_steps, value_steps; time_unit="min")
+
+Translate the vector of time steps and value steps (temperature, pressure, flow) into a conventional program notation.
+
+The conventional temperature program is defined as an array of the following form (for a temperature program):
+`CP = [T₁, t₁, r₁, T₂, t₂, r₂, T₃, t₃, ...]` corresponding to the notation:
+`T₁(t₁) - r₁ - T₂(t₂) - r₂ - T₃(t₃) - ...` which can be read as:
+Starting temperature `T₁` is holded for time `t₁`. After the holding time the temperature increases linearly with the heating rate `r₁`, until temperature `T₂` is reached. This temperature is held for the time `t₂` after which the temperature increases linearly by the heating rate `r₂` until temperature `T₃` is reached, which is hold for the time `t₃`, and so on. 
+
+The option `time_unit` determines the unit of time in the program `CP`. For `time_unit = "min"` (default) the times are measured in minutes and the heating rates in °C/min. For `time_unit = "s"` the times are measured in seconds and the heating rate in °C/s. 
+"""
+function temperature_program(time_steps, value_steps; time_unit="min")
+    if time_unit == "min"
+        c = 60.0
+    elseif time_unit == "s"
+        c = 1.0
+    end
+    # identify temperature pairs (the same value of temperature at neigboring elements)
+    index_pair = Int[]
+    for i=1:(length(value_steps)-1)
+        if value_steps[i] == value_steps[i+1]
+            push!(index_pair, i)
+        end
+    end
+    # identify single temperatures
+    index_single = Int[]
+    for i=1:length(value_steps)
+        if (i in index_pair) == false && (i in index_pair.+1) == false
+            push!(index_single, i)
+        end
+    end
+    values = value_steps[sort([index_pair; index_single])]
+    # every (1+(i-1)*3)th element of VP is a value element of `values`
+    
+    thold = Array{Float64}(undef, length(values))
+    a = sort([index_pair.+1; index_single])
+    for i=1:length(values)
+        if a[i] in index_single # holding time is zero for single entrys
+            thold[i] = 0.0
+        else # holding times are for paired temperatures the time_steps[index_pair.+1]
+            thold[i] = time_steps[a[i]] / c
+        end
+    end 
+    # every (2+(i-1)*3)th element of VP is a holding time
+
+    rate = Array{Float64}(undef, length(values)-1)
+    theat = time_steps[sort([index_pair; index_single])[2:end]]
+    for i=1:(length(values)-1)
+        rate[i] = (values[i+1] - values[i])/theat[i] * c
+    end
+
+    VP = Array{Float64}(undef, 2 + (length(values)-1)*3)
+    for i=1:length(values)
+        VP[1+(i-1)*3] = values[i]
+    end
+    for i=1:length(thold)
+        VP[2+(i-1)*3] = thold[i]
+    end
+    for i=1:length(rate)
+        VP[3+(i-1)*3] = rate[i]
+    end
+    return VP
+end
+
+"""
     common_time_steps(time_steps_1, time_steps_2)
 
-    Estimate a new set of time steps, which represents the combination of `time_steps_1` and `time_steps_2`.
+Estimate a new set of time steps, which represents the combination of `time_steps_1` and `time_steps_2`.
 """
 function common_time_steps(time_steps_1, time_steps_2)
 	# constructs the new timesteps common for all moduls
@@ -872,7 +937,7 @@ end
 """
     new_value_steps(value_steps, time_steps, new_time_steps)
 
-    Estimate the new value steps at the `new_time_steps` from the original set of `value_steps` over `time_steps`. The new values at new time steps are calculated from a linear change of the value between the original time steps.
+Estimate the new value steps at the `new_time_steps` from the original set of `value_steps` over `time_steps`. The new values at new time steps are calculated from a linear change of the value between the original time steps.
 """ 
 function new_value_steps(value_steps, time_steps, new_time_steps)
     new_values = Array{Float64}(undef, length(new_time_steps))
@@ -893,14 +958,18 @@ function new_value_steps(value_steps, time_steps, new_time_steps)
         if isnothing(i1) || isnothing(i2)
             new_values[index_calc[i]] = value_steps[end]
         else
+            if time_steps[i2] == 0.0
+                i2 = i2 + 1
+            end
             v1 = value_steps[i1]
             v2 = value_steps[i2]
-            t = cumsum(time_steps)[i2] - cumsum(time_steps)[i1]
-            rate = (v2 - v1)/t
-            if t == 0.0
-                new_values[index_calc[i]] = v1
+            t1 = cumsum(time_steps)[i1]
+            t2 = cumsum(time_steps)[i2]
+            rate = (v2 - v1)/(t2 - t1)
+            if t1 == t2
+                new_values[index_calc[i]] = v2
             else
-                new_values[index_calc[i]] = v1 + rate * new_time_steps[index_calc[i]]
+                new_values[index_calc[i]] = v1 + rate * (cumsum(new_time_steps)[index_calc[i]] - t1)
             end
         end
     end
