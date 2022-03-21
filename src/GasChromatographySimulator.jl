@@ -307,7 +307,7 @@ The arguments `Tcontrol` and `L` are used to construct the thermal gradient
 function `gf(x)` and the temperature interpolation `T_itp(x,t)`.
 
 """
-function Program(TP, FpinP, poutP, ΔTP, x₀P, L₀P, αP, Tcontrol, L; time_unit="min")
+function Program(TP::Array{<:Real, 1}, FpinP::Array{<:Real, 1}, poutP::Array{<:Real, 1}, ΔTP::Array{<:Real, 1}, x₀P::Array{<:Real, 1}, L₀P::Array{<:Real, 1}, αP::Array{<:Real, 1}, Tcontrol::String, L::Float64; time_unit="min")
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)
     ts = Array{Array{Float64,1}}(undef, 7)
     ts[1], Ts = GasChromatographySimulator.conventional_program(TP; time_unit=time_unit)
