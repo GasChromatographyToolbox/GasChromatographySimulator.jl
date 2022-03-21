@@ -25,14 +25,14 @@ db = "Database_test.csv"
 
     # Gradient function for T with all parameters equal zero
     a_gf = zeros(2,3)
-    gf_fun(x) = GasChromatographySimulator.gradient(x, a_gf)
-    @test gf_fun(0.0) == zeros(size(a_gf)[1])
+    gf_fun1(x) = GasChromatographySimulator.gradient(x, a_gf)
+    @test gf_fun1(0.0) == zeros(size(a_gf)[1])
 
     # Gradient function with changing α
     αs = [-5.0, 0.0, 0.0, 5.0]
     a_gf = [ΔT_steps x₀_steps L₀_steps αs]
-    gf_fun(x) = GasChromatographySimulator.gradient(x, a_gf)
-    @test gf_fun(L) == -ΔT_steps
+    gf_fun2(x) = GasChromatographySimulator.gradient(x, a_gf)
+    @test gf_fun2(L) == -ΔT_steps
 end
 
 @testset "parameters check" begin
@@ -89,19 +89,19 @@ end
     @test new_Fs == 1/(6e7).*ones(length(cts13))
     @test new_Ts == [40.0, 40.0, 85.0, 185.0, 280.0, 280.0, 280.0, 320.0, 320.0, 320.0]
 
-    prog_conv = GasChromatographySimulator.Program((40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0), (400000.0, 10.0, 5000.0, 500000.0, 20.0), L; pout="vacuum", time_unit="min")
-    prog_conv_s_atm = GasChromatographySimulator.Program((40.0, 1.0*60.0, 5.0/60.0, 280.0, 2.0*60.0, 20.0/60.0, 320.0, 2.0*60.0), (400000.0, 10.0*60.0, 5000.0/60.0, 500000.0, 20.0*60.0), L; pout="atmosphere", time_unit="s")
+    prog_conv = GasChromatographySimulator.Program([40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0], [400000.0, 10.0, 5000.0, 500000.0, 20.0], L; pout="vacuum", time_unit="min")
+    prog_conv_s_atm = GasChromatographySimulator.Program([40.0, 1.0*60.0, 5.0/60.0, 280.0, 2.0*60.0, 20.0/60.0, 320.0, 2.0*60.0], [400000.0, 10.0*60.0, 5000.0/60.0, 500000.0, 20.0*60.0], L; pout="atmosphere", time_unit="s")
     @test prog_conv.temp_steps == [40.0, 40.0, 85.0, 185.0, 280.0, 280.0, 280.0, 320.0, 320.0]
     @test prog_conv.time_steps == prog_conv_s_atm.time_steps
     @test prog_conv.pout_steps == prog_conv_s_atm.pout_steps .- 101300
 
-    TP = (40.0, 1.0, 5.0, 200.0, 0.0, 10.0, 280.0, 2.0, 20.0, 320.0, 2.0)
-    FpinP = (400000.0, 10.0, 5000.0, 500000.0, 20.0)
-    poutP = (0.0, 100.0)
-    ΔTP = (0.0, 5.0, 10.0, 60.0, 10.0, 5.0, 80.0, 0.0, -10.0, 0.0, 10.0)
-    x₀P = (0.0, 100.0)
-    L₀P = (L, 100.0)
-    αP = (0.0, 10.0, -0.5, -5.0, 15.0, 1.0, 5.0, 10.0)
+    TP = [40.0, 1.0, 5.0, 200.0, 0.0, 10.0, 280.0, 2.0, 20.0, 320.0, 2.0]
+    FpinP = [400000.0, 10.0, 5000.0, 500000.0, 20.0]
+    poutP = [0.0, 100.0]
+    ΔTP = [0.0, 5.0, 10.0, 60.0, 10.0, 5.0, 80.0, 0.0, -10.0, 0.0, 10.0]
+    x₀P = [0.0, 100.0]
+    L₀P = [L, 100.0]
+    αP = [0.0, 10.0, -0.5, -5.0, 15.0, 1.0, 5.0, 10.0]
 
     prog_conv_grad = GasChromatographySimulator.Program(TP, FpinP, poutP, ΔTP, x₀P, L₀P, αP, "inlet", L; time_unit="min")
     @test prog_conv_grad.time_steps == [0.0, 60.0, 240.0, 300.0, 60.0, 540.0, 60.0, 240.0, 300.0, 180.0, 120.0, 360.0, 120.0, 120.0, 120.0, 180.0, 300.0, 2700.0]
