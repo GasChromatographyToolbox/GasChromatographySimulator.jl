@@ -16,17 +16,17 @@ end
 
 # ╔═╡ 115b320f-be42-4116-a40a-9cf1b55d39b5
 begin
-    import Pkg
-    Pkg.activate(mktempdir())
-    Pkg.add([
-        Pkg.PackageSpec(name="Plots", version="1"),
-        Pkg.PackageSpec(name="PlutoUI", version="0.7"),
-		Pkg.PackageSpec(name="UrlDownload", version="1"),
-	Pkg.PackageSpec(path="/Users/janleppert/Documents/GitHub/GasChromatographySimulator", rev="13-add-const-flow-resp-programmed-flow-mode")
-    ])
+    #import Pkg
+    #Pkg.activate(mktempdir())
+    #Pkg.add([
+    #    Pkg.PackageSpec(name="Plots", version="1"),
+    #    Pkg.PackageSpec(name="PlutoUI", version="0.7"),
+	#	Pkg.PackageSpec(name="UrlDownload", version="1"),
+	#Pkg.PackageSpec(path="/Users/janleppert/Documents/GitHub/GasChromatographySimulator", rev="13-add-const-flow-resp-programmed-flow-mode")
+    #])
     using Plots, PlutoUI, UrlDownload, GasChromatographySimulator
 	md"""
-	Packages, simulation\_example.jl, v0.1.0
+	Packages, simulation\_test.jl, v0.1.1
 	"""
 end
 
