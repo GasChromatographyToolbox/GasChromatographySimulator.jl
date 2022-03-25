@@ -1,5 +1,7 @@
 # Functions 
 
+## Structures and Constructors
+
 ```@docs
 GasChromatographySimulator.Column
 ```
@@ -32,29 +34,8 @@ GasChromatographySimulator.Options
 GasChromatographySimulator.Parameters
 ```
 
-## Helper
-
-```@docs
-GasChromatographySimulator.temperature_interpolation
-```
-
-```@docs
-GasChromatographySimulator.pressure_interpolation
-```
-
-```@docs
-GasChromatographySimulator.load_solute_database
-```
-
-```@docs
-GasChromatographySimulator.all_solutes
-```
-
-```@docs
-GasChromatographySimulator.diffusivity
-```
-
 ## Physical Model
+
 ```@docs
 GasChromatographySimulator.pressure
 ```
@@ -96,6 +77,7 @@ GasChromatographySimulator.diffusion_mobile
 ```
 
 ## Solving
+
 ```@docs
 GasChromatographySimulator.simulate
 ```
@@ -129,6 +111,7 @@ GasChromatographySimulator.peakode
 ```
 
 ## Results
+
 ```@docs
 GasChromatographySimulator.peaklist(sol, par)
 
@@ -142,6 +125,8 @@ GasChromatographySimulator.sol_extraction(sol, par)
 ```@docs
 GasChromatographySimulator.sol_extraction(sol, peak, par)
 ```
+
+## Plot functions
 
 ```@docs
 GasChromatographySimulator.plot_chromatogram
@@ -193,7 +178,27 @@ GasChromatographySimulator.UI_Options
 GasChromatographySimulator.setting_prog
 ```
 
-## Misc
+## Helper functions
+
+```@docs
+GasChromatographySimulator.temperature_interpolation
+```
+
+```@docs
+GasChromatographySimulator.steps_interpolation
+```
+
+```@docs
+GasChromatographySimulator.load_solute_database
+```
+
+```@docs
+GasChromatographySimulator.all_solutes
+```
+
+```@docs
+GasChromatographySimulator.diffusivity
+```
 
 ```@docs
 GasChromatographySimulator.common
@@ -208,7 +213,7 @@ GasChromatographySimulator.compare_measurement_simulation
 ```
 
 ```@docs
-GasChromatographySimulator.temperature_program(CP; time_unit="min")
+GasChromatographySimulator.conventional_program(CP; time_unit="min")
 ```
 
 ```@docs
@@ -221,10 +226,6 @@ GasChromatographySimulator.common_time_steps
 
 ```@docs
 GasChromatographySimulator.new_value_steps
-```
-
-```@docs
-GasChromatographySimulator.
 ```
 
 ```@index
