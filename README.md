@@ -6,16 +6,16 @@
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://JanLeppert.github.io/GasChromatographySimulator.jl/dev)
 
 A package for the simulation of gas chromatography (GC) with additional velocity gradients produced by:
-- thermal gradients
-- film thickness gradient
-- column diameter gradient
+- non-uniform temperature ``T(x)``
+- non-uniform film thickness ``d_f(x)``
+- non-uniform column diameter ``d(x)``
 
 ## Installation
 
-To install the (unregistered) package type:
+To install the package type:
 
 ```julia
-julia> ] add https://github.com/JanLeppert/GasChromatographySimulator.jl
+julia> ] add GasChromatographySimulator
 ```
 
 To use the package type:

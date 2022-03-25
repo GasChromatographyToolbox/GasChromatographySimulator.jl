@@ -4,6 +4,24 @@ In the following section the general usage and setup of the simulation is explai
 
 A GC-system for the simulation is defined by four sets of parameters:
 
+## Option parameters
+
+A fourth set of parameters, [`GasChromatographySimulator.Options`](@ref), holds additional options used in the simulation with the following arguments:
+- `alg`: The algorithm used for the ODE solver. The algorithms `OwrenZen3()`, `OwrenZen4()` and `OwrenZen5()` are recommended.
+- `abstol`: The absolute tolerance for the ODE solver. Recommended value 1e-6 to 1e-8.
+- `reltol`: The relative tolerance for the ODE solver. Recommended value 1e-3 to 1e-5. 
+- `Tcontrol`: Option defining at which point of the column the temperature program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
+- `odesys`: Combine the ODEs for migration and peak-width into a system of ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
+- `ng`: Option to calculate the simulation without a gradient (`ng = true`) or with a gradient (`ng = false`). 
+- `vis`: Used model of viscosity. `HP` is a model taken from the HP flow calculator with a linear temperature dependency of the viscosity. `Blumberg` is an emperical formula according to the book [`[7]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References)
+- `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
+
+The default options can be initialized by calling:
+```@example ex
+using GasChromatographySimulator # hide
+opt = GasChromatographySimulator.Options()
+```
+
 ## GC Column parameters
 
 A GC column is defined by the dimensions of the column, length `L`, diameter `d` and film thickness of the stationary phase `df`, all measured in meters, the name of the stationary phase and the name of the mobile phase (with the allowed values "He", "H2" and "N2").
@@ -15,14 +33,13 @@ These values are collected in the type structure [`GasChromatographySimulator.Co
 The following method constructs the Column structure `col` with a constant diameter and film thickness:
 
 ```@example ex
-using GasChromatographySimulator # hide
 col = GasChromatographySimulator.Column(10.0, 0.25e-3, 0.25e-6, "SPB50", "He")
 nothing # hide
 ```
 
 ## Program parameters
 
-The program for a GC separation is defined by a temperature program ``T(t)`` and a pressure program. Typically the inlet pressure is controlled over time ``p_{in}(t)`` and the outlet pressure is constant, but here the outlet pressure can also be a function of time ``p_{out}(t)``. In addition a thermal gradient can be applied, where the temperature of the GC column changes depending on position ``x`` on the column.
+The program for a GC separation is defined by a temperature program ``T(t)`` and a pressure program. Typically (option `control = "Pressure"`) the inlet pressure is controlled over time ``p_{in}(t)`` and the outlet pressure is constant, but here the outlet pressure can also be a function of time ``p_{out}(t)``. It is also possible to control the flow ``F(t)`` through the column (option `control = Flow`) instead of the inlet pressure. In this case the values of the flow (in m³/s) replace the values of the inlet pressure in the following definitions. In addition a thermal gradient can be applied, where the temperature of the GC column changes depending on position ``x`` on the column.
 
 The program parameters are collected in the type structure [`GasChromatographySimulator.Program`](@ref).
 
@@ -41,13 +58,34 @@ prog = GasChromatographySimulator.Program(  [0.0, 60.0, 600.0, 120.0],
 nothing # hide
 ```
 
-The first array `time_steps` defines the time steps (in s), the second array `temp_steps` defines the temperatures (in °C) at these time steps, the third and fourth array (`pin_steps` and `pout_steps`) define the inlet and outlet pressures (both in Pa(absolute)) at the time steps. The values of temperature and pressures change linearly between the values defined at the time steps. The following picture shows the resulting temperature and pressure program:
+The first array `time_steps` defines the time steps (in s), the second array `temp_steps` defines the temperatures (in °C) at these time steps, the third and fourth array (`pin_steps` and `pout_steps`; resp. `F_steps` and `pout_steps` if the option `control = "Flow"`) define the inlet and outlet pressures (both in Pa(absolute)) at the time steps. The values of temperature and pressures change linearly between the values defined at the time steps. The following picture shows the resulting temperature and pressure program:
 
 ![Program without thermal gradient](./assets/prog_nograd.svg)
 
 The first time step is always zero (t₁ = 0.0 s) and the following time steps define the time that passes until the next step. In the example the second time step is t₂ = 60 seconds long and in this time the temperature stays constant at 40°C. With the next time step (t₃ = 600 s) the temperature changes from T₂ = 40°C linearly to T₃ = 300°C. In the last time step (t₄ = 120 s) the temperature is again kept constant at 300°C. The pressure program is defined in the same way. The inlet pressure changes similarly at the time steps, while the outlet pressure is constant.
 
-The four arrays for time steps, temperatures and the two pressures must have the same number of elements, otherwise the construction of the Program structure gives an error message. Complex programs with several different heating ramps and temperature plateaus, as well as programed pressures, e.g. pressure pulses, can be realized by adding the temperature/pressure values at additional time steps. 
+The four arrays for time steps, temperatures and the two pressures (or flow and outlet pressure) must have the same number of elements, otherwise the construction of the Program structure gives an error message. Complex programs with several different heating ramps and temperature plateaus, as well as programed pressures, e.g. pressure pulses, can be realized by adding the temperature/pressure values at additional time steps. 
+
+#### Conventional program notation
+
+In the control software of most commercial gas chromatographs the program is defined by temperature levels ``T_i``, holding times ``t_i`` of the temperature levels and heating ramps ``r_i`` between the temperature levels. These programs can be written for a program with ``n`` temperature levels and ``n-1`` heating ramps as:
+
+``T_1(t_1) - r_1 - T_2(t_2) - r_2 - T_3(t_3) - ... - r_{n-1} - T_n(t_n)``
+
+With the function [`GasChromatographySimulator.conventional_program`](@ref) such a conventional program notation can be translated into the program notation used in this simulation. Hereby is `CP` a vector of the form `[T₁, t₁, r₁, T₂, t₂, r₂, T₃, t₃, ...]`.
+
+```@example ex
+CP = [40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0]
+ts, Ts = GasChromatographySimulator.conventional_program(CP)
+```
+
+With the function [`GasChromatographySimulator.temperature_program(time_steps, value_steps; time_unit="min")`](@ref) the used program with time steps and temperature steps can be translated into the conventional program notation.
+
+```@example ex
+TP = GasChromatographySimulator.temperature_program(ts, Ts; time_unit="min")
+```
+
+These functions can also be used for the notation of other programs, e.g. programs of the inlet pressure.
 
 ### Thermal gradient
 
@@ -68,7 +106,7 @@ prog_g = GasChromatographySimulator.Program([0.0, 60.0, 150.0, 150.0, 120.0],
 nothing # hide
 ```
 
-Similar to the setup before, the arrays `time_steps`, `temp_steps`, `pin_steps` and `pout_steps` are used. Added are the the array `a_gf`, containing the parameters for the temperature function `gf(x)` and the option `Tcontrol` (with options "inlet" and "outlet"), which defines at which position of the column the temperature program is defined (`Tcontrol = "inlet"` ... temperature program defined at `x=0`; `Tcontrol="outlet"` ... temperature program defined at `x=L`). The following picture shows the resulting temperature program at the column inlet and outlet:
+Similar to the setup before, the arrays `time_steps`, `temp_steps`, `pin_steps` (resp. `F_steps`, if option `control = "Flow"`) and `pout_steps` are used. Added are the the array `a_gf`, containing the parameters for the temperature function `gf(x)` and the option `Tcontrol` (with options "inlet" and "outlet"), which defines at which position of the column the temperature program is defined (`Tcontrol = "inlet"` ... temperature program defined at `x=0`; `Tcontrol="outlet"` ... temperature program defined at `x=L`). The following picture shows the resulting temperature program at the column inlet and outlet:
 
 ![Program with thermal gradient](./assets/prog_grad.svg)
 
@@ -100,7 +138,7 @@ From the parameters `time_steps`, `temp_steps`, `a_gf` and gradient function `gf
 
 ## Substance parameters
 
-A third set of parameters, [`GasChromatographySimulator.Substance`](@ref), is used to store the informations about the substances which are separated in the simulated GC-run. The stored information are the name, the CAS-number, three thermodynamic parameters (`Tchar` `θchar` `ΔCp`, see also [`6`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References)), the dimensionless film thickness (df/d) of the Column for which the thermodynamic parameters were estimated, the diffusivity (calculated from the molecular formula, number of rings in the molecule and mol mass), the injection time and initial peak width. For several substances an array of the type [`GasChromatographySimulator.Substance`](@ref) is used.
+A third set of parameters, [`GasChromatographySimulator.Substance`](@ref), is used to store the informations about the substances which are separated in the simulated GC-run. The stored information are the name, the CAS-number, three thermodynamic parameters (`Tchar` `θchar` `ΔCp`, see also [`[6]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References)), the dimensionless film thickness (df/d) of the Column for which the thermodynamic parameters were estimated, the diffusivity (calculated from the molecular formula, number of rings in the molecule and mol mass), the injection time and initial peak width. For several substances an array of the type [`GasChromatographySimulator.Substance`](@ref) is used.
 
 With the function [`GasChromatographySimulator.load_solute_database`](@ref) the data for selected substances and a selected stationary phase is loaded from an external database (a .csv-file).
 
@@ -117,16 +155,7 @@ sub = GasChromatographySimulator.load_solute_database("../../data", "Database_te
                                                         τ₀)
 ```
 
-An example database [`Database_test.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/Database_test.csv) with thermodynamic data from [Blumberg2017a] can be found in the folder `/data` of this github project, see also [`Database`](#Database).
-
-## Option parameters
-
-A fourth set of parameters, [`GasChromatographySimulator.Options`](@ref), holds additional options used in the simulation. For details see the docstring.
-
-The default options can be initialized by calling:
-```@example ex
-opt = GasChromatographySimulator.Options()
-```
+An example database [`Database_test.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/Database_test.csv) with thermodynamic data from [`[6]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References) can be found in the folder `/data` of this github project, see also [`Database`](#Database).
 
 ## Combining the parameters
 
@@ -149,7 +178,7 @@ The second ODE describes the development of the temporal peak variance ``\tau^2(
 
 ``\frac{dτ^2}{dx} = H(x, t(x)) r(x, t(x)) + 2 τ^2(x, t(x)) \frac{∂r}{∂t}(x,t(x))``
 
-Hereby is ``r(x,t)`` the inverse velocity of the substance (``1/u(x,t)``, also called residency) and ``H(x,t)`` is the local plate height. For more information about the physical model see the [`docstrings of the physical model`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/functions/#Physical-Model) and the references [`7`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References) and [`8`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References).
+Hereby is ``r(x,t)`` the inverse velocity of the substance (``1/u(x,t)``, also called residency) and ``H(x,t)`` is the local plate height. For more information about the physical model see the [`docstrings of the physical model`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/functions/#Physical-Model) and the references [`[7]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References) and [`[8]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References).
 
 With the argument `odesys` of [`GasChromatographySimulator.Options`](@ref) the two differential equations can be solved as a system of ODEs (`odesys = true`) or separately, using the solution of the first ODE to solve the second ODE (`odesys = false`).   
 
@@ -211,6 +240,14 @@ savefig(p_τ²x, "plot_tau2x.png"); nothing # hide
 
 ![](plot_tau2x.png)
 
+The function [`GasChromatographySimulator.local_plots`](@ref) can be used to plot different quantities, e.g. position `x`, time `t`, peak width `τ`, (spatial) band width `σ`, velocity of the substance `u` or the temperature at the position of the substance `T`.
+
+```@example ex
+p_σ_t = GasChromatographySimulator.local_plots("t", "σ", sol, par_g)
+savefig(p_σ_t, "plot_sigma_t.png"); nothing # hide
+```
+
+![](plot_sigma_t.png)
 
 ## Notes
 

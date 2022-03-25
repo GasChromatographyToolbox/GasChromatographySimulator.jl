@@ -810,7 +810,7 @@ function all_solutes(sp, db)
 end
 
 """
-    temperature_program(CP; time_unit="min")
+    conventional_program(CP; time_unit="min")
 
 Translate the conventional program notation into a vector of time steps and value steps (temperature, pressure, flow) used in GasChromatographySimulator.Program
 
