@@ -39,7 +39,7 @@ nothing # hide
 
 ## Program parameters
 
-The program for a GC separation is defined by a temperature program ``T(t)`` and a pressure program. Typically the inlet pressure is controlled over time ``p_{in}(t)`` and the outlet pressure is constant, but here the outlet pressure can also be a function of time ``p_{out}(t)``. In addition a thermal gradient can be applied, where the temperature of the GC column changes depending on position ``x`` on the column.
+The program for a GC separation is defined by a temperature program ``T(t)`` and a pressure program. Typically (option `control = "Pressure"`) the inlet pressure is controlled over time ``p_{in}(t)`` and the outlet pressure is constant, but here the outlet pressure can also be a function of time ``p_{out}(t)``. It is also possible to control the flow ``F(t)`` through the column (option `control = Flow`) instead of the inlet pressure. In this case the values of the flow (in m³/s) replace the values of the inlet pressure in the following definitions. In addition a thermal gradient can be applied, where the temperature of the GC column changes depending on position ``x`` on the column.
 
 The program parameters are collected in the type structure [`GasChromatographySimulator.Program`](@ref).
 
@@ -58,13 +58,13 @@ prog = GasChromatographySimulator.Program(  [0.0, 60.0, 600.0, 120.0],
 nothing # hide
 ```
 
-The first array `time_steps` defines the time steps (in s), the second array `temp_steps` defines the temperatures (in °C) at these time steps, the third and fourth array (`pin_steps` and `pout_steps`) define the inlet and outlet pressures (both in Pa(absolute)) at the time steps. The values of temperature and pressures change linearly between the values defined at the time steps. The following picture shows the resulting temperature and pressure program:
+The first array `time_steps` defines the time steps (in s), the second array `temp_steps` defines the temperatures (in °C) at these time steps, the third and fourth array (`pin_steps` and `pout_steps`; resp. `F_steps` and `pout_steps` if the option `control = "Flow"`) define the inlet and outlet pressures (both in Pa(absolute)) at the time steps. The values of temperature and pressures change linearly between the values defined at the time steps. The following picture shows the resulting temperature and pressure program:
 
 ![Program without thermal gradient](./assets/prog_nograd.svg)
 
 The first time step is always zero (t₁ = 0.0 s) and the following time steps define the time that passes until the next step. In the example the second time step is t₂ = 60 seconds long and in this time the temperature stays constant at 40°C. With the next time step (t₃ = 600 s) the temperature changes from T₂ = 40°C linearly to T₃ = 300°C. In the last time step (t₄ = 120 s) the temperature is again kept constant at 300°C. The pressure program is defined in the same way. The inlet pressure changes similarly at the time steps, while the outlet pressure is constant.
 
-The four arrays for time steps, temperatures and the two pressures must have the same number of elements, otherwise the construction of the Program structure gives an error message. Complex programs with several different heating ramps and temperature plateaus, as well as programed pressures, e.g. pressure pulses, can be realized by adding the temperature/pressure values at additional time steps. 
+The four arrays for time steps, temperatures and the two pressures (or flow and outlet pressure) must have the same number of elements, otherwise the construction of the Program structure gives an error message. Complex programs with several different heating ramps and temperature plateaus, as well as programed pressures, e.g. pressure pulses, can be realized by adding the temperature/pressure values at additional time steps. 
 
 #### Conventional program notation
 
@@ -106,7 +106,7 @@ prog_g = GasChromatographySimulator.Program([0.0, 60.0, 150.0, 150.0, 120.0],
 nothing # hide
 ```
 
-Similar to the setup before, the arrays `time_steps`, `temp_steps`, `pin_steps` and `pout_steps` are used. Added are the the array `a_gf`, containing the parameters for the temperature function `gf(x)` and the option `Tcontrol` (with options "inlet" and "outlet"), which defines at which position of the column the temperature program is defined (`Tcontrol = "inlet"` ... temperature program defined at `x=0`; `Tcontrol="outlet"` ... temperature program defined at `x=L`). The following picture shows the resulting temperature program at the column inlet and outlet:
+Similar to the setup before, the arrays `time_steps`, `temp_steps`, `pin_steps` (resp. `F_steps`, if option `control = "Flow"`) and `pout_steps` are used. Added are the the array `a_gf`, containing the parameters for the temperature function `gf(x)` and the option `Tcontrol` (with options "inlet" and "outlet"), which defines at which position of the column the temperature program is defined (`Tcontrol = "inlet"` ... temperature program defined at `x=0`; `Tcontrol="outlet"` ... temperature program defined at `x=L`). The following picture shows the resulting temperature program at the column inlet and outlet:
 
 ![Program with thermal gradient](./assets/prog_grad.svg)
 
