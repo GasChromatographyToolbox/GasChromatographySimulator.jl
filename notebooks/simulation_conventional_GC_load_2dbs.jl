@@ -38,14 +38,13 @@ end
 
 # ╔═╡ c9246396-3c01-4a36-bc9c-4ed72fd9e325
 md"""
-# Gas Chromatography Simulator
-$(Resource("https://raw.githubusercontent.com/JanLeppert/GasChromatographySimulator.jl/main/docs/src/assets/logo.svg"))
+# $(Resource("https://raw.githubusercontent.com/JanLeppert/GasChromatographySimulator.jl/main/docs/src/assets/logo_b.svg"))
 A Simulation of a conventional Gas Chromatography (GC) System (without a thermal gradient) with the posibility to load two different databases and also load of measured retention times  for comparision.
 """
 
 # ╔═╡ 8b3011fd-f3df-4ab0-b611-b943d5f3d470
 md"""
-## Settings
+# Settings
 """
 
 # ╔═╡ 84b0de13-2653-4e68-abf4-d98830809844
@@ -332,7 +331,7 @@ begin
 	l = @layout([a{0.65w} [b; c]])
 	p_TpF = plot(plot_T, plot_p, plot_F, layout=l, size=(620,300))
 	md"""
-	## Plot of the program
+	# Plot of the program
 	
 	$(embed_display(p_TpF))
 	"""
@@ -349,7 +348,7 @@ begin
 		peaklist_2, solution_2 = GasChromatographySimulator.simulate(par_2)
 	end
 	md"""
-	## Simulation
+	# Simulation
 	"""
 end
 

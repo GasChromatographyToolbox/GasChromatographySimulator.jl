@@ -38,8 +38,7 @@ end
 
 # ╔═╡ c9246396-3c01-4a36-bc9c-4ed72fd9e325
 md"""
-# Gas Chromatography Simulator
-$(Resource("https://raw.githubusercontent.com/JanLeppert/GasChromatographySimulator.jl/main/docs/src/assets/logo.svg"))
+# $(Resource("https://raw.githubusercontent.com/JanLeppert/GasChromatographySimulator.jl/main/docs/src/assets/logo_b.svg"))
 An example Simulation of a Gas Chromatography (GC) System with a thermal gradient.
 
 Test of an arbitrary definitions of gradient functions.
@@ -47,7 +46,7 @@ Test of an arbitrary definitions of gradient functions.
 
 # ╔═╡ 8b3011fd-f3df-4ab0-b611-b943d5f3d470
 md"""
-## Settings
+# Settings
 """
 
 # ╔═╡ d5332694-7a14-4adc-98e5-1e27deae01ec
@@ -98,7 +97,7 @@ md"""
 
 # ╔═╡ 323a769f-55f9-41dd-b8f1-db7928996a52
 md"""
-## Plot of the program
+# Plot of the program
 
 select temperature plot: $(@bind Tplot Select(["T(x,t)", "T(x)", "T(t)"]; default="T(x)"))
 """
@@ -213,7 +212,7 @@ end
 begin	
 	peaklist, solution = GasChromatographySimulator.simulate(par)
 	md"""
-	## Simulation
+	# Simulation
 	"""
 end
 

@@ -38,14 +38,13 @@ end
 
 # ╔═╡ c9246396-3c01-4a36-bc9c-4ed72fd9e325
 md"""
-# Gas Chromatography Simulator
-$(Resource("https://raw.githubusercontent.com/JanLeppert/GasChromatographySimulator.jl/main/docs/src/assets/logo.svg"))
+# $(Resource("https://raw.githubusercontent.com/JanLeppert/GasChromatographySimulator.jl/main/docs/src/assets/logo_b.svg"))
 An example Simulation of a Gas Chromatography (GC) System with a thermal gradient.
 """
 
 # ╔═╡ 8b3011fd-f3df-4ab0-b611-b943d5f3d470
 md"""
-## Settings
+# Settings
 """
 
 # ╔═╡ 7fdd3112-c8df-431c-a514-f386423bca17
@@ -79,7 +78,7 @@ end
 
 # ╔═╡ 323a769f-55f9-41dd-b8f1-db7928996a52
 md"""
-## Plot of the program
+# Plot of the program
 
 select temperature plot: $(@bind Tplot Select(["T(x,t)", "T(x)", "T(t)"]; default="T(t)"))
 """
@@ -219,7 +218,7 @@ end
 begin	
 	peaklist, solution = GasChromatographySimulator.simulate(par)
 	md"""
-	## Simulation
+	# Simulation
 	"""
 end
 
@@ -1871,7 +1870,7 @@ version = "0.9.1+5"
 # ╔═╡ Cell order:
 # ╟─115b320f-be42-4116-a40a-9cf1b55d39b5
 # ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
-# ╠═c9246396-3c01-4a36-bc9c-4ed72fd9e325
+# ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
 # ╟─7fdd3112-c8df-431c-a514-f386423bca17
 # ╟─77a34d59-bc6e-4c5a-ad51-f69903449cb0
