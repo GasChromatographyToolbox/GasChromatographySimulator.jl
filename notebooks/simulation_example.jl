@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.18.1
+# v0.19.4
 
 using Markdown
 using InteractiveUtils
@@ -227,6 +227,15 @@ md"""
 ### Peaklist
 $(embed_display(peaklist))
 """
+
+# ╔═╡ 9af71df9-c89a-4c7d-8268-b926eae053a1
+peaklist.τR
+
+# ╔═╡ 629b46e6-0c46-4372-a22a-f3749f6f2a04
+par
+
+# ╔═╡ 39b76cb9-464a-4aa2-bd5c-a807e2e067d0
+GasChromatographySimulator.holdup_time(0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.gas; control=par.opt.control)
 
 # ╔═╡ a2287fe8-5aa2-4259-bf7c-f715cc866243
 begin
@@ -1280,9 +1289,9 @@ version = "1.7.2"
 
 [[deps.Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
-git-tree-sha1 = "ad368663a5e20dbb8d6dc2fddeefe4dae0781ae8"
+git-tree-sha1 = "c6c0f690d0cc7caddb74cef7aa847b824a16b256"
 uuid = "ea2cea3b-5b76-57ae-a6ef-0a8af62496e1"
-version = "5.15.3+0"
+version = "5.15.3+1"
 
 [[deps.QuadGK]]
 deps = ["DataStructures", "LinearAlgebra"]
@@ -1868,7 +1877,7 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╟─115b320f-be42-4116-a40a-9cf1b55d39b5
+# ╠═115b320f-be42-4116-a40a-9cf1b55d39b5
 # ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
@@ -1881,8 +1890,11 @@ version = "0.9.1+5"
 # ╟─7a00bb54-553f-47f5-b5db-b40d226f4183
 # ╟─323a769f-55f9-41dd-b8f1-db7928996a52
 # ╟─fdb39284-201b-432f-bff6-986ddbc49a7d
-# ╟─49faa7ea-0f22-45ca-9ab5-338d0db25564
+# ╠═49faa7ea-0f22-45ca-9ab5-338d0db25564
+# ╠═629b46e6-0c46-4372-a22a-f3749f6f2a04
+# ╠═39b76cb9-464a-4aa2-bd5c-a807e2e067d0
 # ╟─14db2d66-eea6-43b1-9caf-2039709d1ddb
+# ╠═9af71df9-c89a-4c7d-8268-b926eae053a1
 # ╟─a2287fe8-5aa2-4259-bf7c-f715cc866243
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
 # ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
