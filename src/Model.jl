@@ -532,11 +532,15 @@ function retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀)
     # given to the function separatly seems to be the fastest
     # version
     # for now only the ideal thermodynamic model
-    T = T_itp(x, t)
-    φ = df(x)/d(x)
-    C = ΔCp/R
-    lnk₀ = (C + Tchar/θchar) * (Tchar/T - 1) + C*log(T/Tchar)
-    k = φ/φ₀*exp(lnk₀)
+    if Tchar == 0.0 && θchar == 0.0 && ΔCp == 0.0 # non-retained solute
+        k = 0.0
+    else
+        T = T_itp(x, t)
+        φ = df(x)/d(x)
+        C = ΔCp/R
+        lnk₀ = (C + Tchar/θchar) * (Tchar/T - 1) + C*log(T/Tchar)
+        k = φ/φ₀*exp(lnk₀)
+    end
     return k
 end
 
@@ -681,7 +685,7 @@ function diffusivity(M, Cn, Hn, On, Nn, Rn, gas)
         error("Unknown selection of gas. Choose one of these: He, H2, N2 or Ar.")
     end
     Va = 15.9*Cn + 2.31*Hn + 6.11*On + 4.54*Nn - 18.3*Rn
-    Dag = pn*sqrt(1/M+1/Mg)/(Vg^(1/3)+Va^(1/3))^2*1e-7 # m²/s
+    Dag = pn*sqrt(1/M+1/Mg)/(Vg^(1/3)+Va^(1/3))^2*1e-7 # pn m²/s ('Dag at normal pressure')
     return Dag
 end
 #---End-Functions-of-the-physical-model---
