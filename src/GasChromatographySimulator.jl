@@ -10,7 +10,7 @@ using ForwardDiff
 using Plots
 using HypertextLiteral
 using PlutoUI
-using ChemicalIdentifiers
+@reexport using ChemicalIdentifiers
 
 # some constants
 Tst = 273.15            # K
@@ -679,7 +679,7 @@ end
 Look up the substance name from the `data` dataframe with ChemicalIdentifiers.jl to find the `CAS`-number, the `formula`, the molecular weight `MW` and the `smiles`-identifier. If the name is not found in the database of ChemicalIdentifiers.jl a list with alternative names (`shortnames.csv`) is used. If there are still no matches, `missing` is used.
 """
 function CAS_identification(Name::Array{String})
-	shortnames = DataFrame(CSV.File("/Users/janleppert/Documents/GitHub/GasChromatographySimulator/data/shortnames.csv"))
+	shortnames = DataFrame(CSV.File(string(pwd(),"/data/shortnames.csv")))
 	CAS = Array{Union{Missing,AbstractString}}(missing, length(Name))
 	for i=1:length(Name)
 		if Name[i] in shortnames.shortname
