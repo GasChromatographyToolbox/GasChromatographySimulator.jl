@@ -688,4 +688,158 @@ function diffusivity(M, Cn, Hn, On, Nn, Rn, gas)
     Dag = pn*sqrt(1/M+1/Mg)/(Vg^(1/3)+Va^(1/3))^2*1e-7 # pn m²/s ('Dag at normal pressure')
     return Dag
 end
+
+"""
+    diffusivity(CAS, gas)
+
+Calculate the diffusivity `Dag` of solute `a` in gas `g` using the
+emperical Fuller-Schettler-Giddings model [1], using the CAS number to look the formula of the solute up in ChemicalIdentifiers.jl.
+
+[1] Fuller, Edward N.; Ensley, Keith; Giddings, J. Calvin, Diffusion of
+Halogenated Hydrocarbons in Helium. The Effect of Structure on Collision
+Cross Sections, The Journal of Physical Chemistry, Volume 73, Issue 11,
+1969, 3679–3685
+
+# Arguments
+* `CAS`: CAS number of the solute.
+* `gas`: The name of the mobile phase. Allowed values: He, H2 or N2.
+"""
+function diffusivity(CAS, gas)
+    if gas=="H2"
+        Vg = 6.12
+        Mg = 2.02
+    elseif gas=="He"
+        Vg = 2.67
+        Mg = 4
+    elseif gas=="N2"
+        Vg = 18.5
+        Mg = 28.01
+    elseif gas=="Ar"
+        Vg = 16.2
+        Mg = 39.95
+    else
+        error("Unknown selection of gas. Choose one of these: He, H2, N2 or Ar.")
+    end
+    # is CAS realy a CAS number (could also be pubchem ID)
+    regexCAS = r"\b[1-9]{1}[0-9]{1,5}-\d{2}-\d\b"
+    if split(CAS, ' ')[1] == "PubChem" # CAS is a pubchemid
+        solute = search_chemical(split(CAS, ' ')[end])
+    else #typeof(match(regexCAS, CAS)) == RegexMatch # CAS is a CAS number
+        solute = search_chemical(Tuple(parse.(Int, split(CAS, '-'))))
+    end
+    formula = formula_to_dict(solute.formula)
+    Rn = ring_number(solute.smiles)
+    Va = molecular_diffusion_volume(formula, Rn) # in cm³
+    Dag = pn*sqrt(1/solute.MW+1/Mg)/(Vg^(1/3)+Va^(1/3))^2*1e-7 # pn m²/s ('Dag at normal pressure')
+    return Dag
+end
+
+"""
+	formula_to_dict(formula)
+
+Translate the formula string of a chemical substance into a dictionary, where the elements contained in the substance are the keys and the number of atoms are the values.
+
+# Example 
+```
+julia> formula_to_dict("C14H20O")
+Dict{String, Int64}("C" => 14, "H" => 20, "O" => 1)
+```
+"""
+function formula_to_dict(formula)
+	if ismissing(formula)
+		formula_dict = missing
+	else
+		split_formula = eachmatch(r"[A-Z][a-z]*\d*", formula)
+		elements = Array{Tuple{String, Int64}}(undef, length(collect(split_formula)))
+		for i=1:length(collect(split_formula))
+			formula_parts = collect(split_formula)[i].match
+			element_string = match(r"[A-Za-z]+", formula_parts).match
+			element_digit = match(r"[0-9]+", formula_parts)
+			if isnothing(element_digit)
+				elements[i] = (element_string, 1)
+			else
+				elements[i] = (element_string, parse(Int64, element_digit.match))
+			end
+		end
+		formula_dict = Dict(elements)
+	end
+	return formula_dict
+end
+
+"""
+	ring_number(smiles)
+
+Extract the number of rings of a substance defined by its SMILES. The highest digit contained in the SMILES is returned as the number of rings. Only single digit ring numbers are recognized.
+"""
+function ring_number(smiles)
+	if ismissing(smiles)
+		rn = missing
+	else
+		allmatch = eachmatch(r"[0-9]", smiles)
+		if isempty(allmatch)
+			rn = 0
+		else
+			rn = maximum(parse.(Int64, [ match.match for match in allmatch]))
+			# additional check, all integers from 1 to rn should be in allmatch, e.g. for rn=4 the integers 1, 2, 3, 4 should be in allmatch
+		end
+	end
+	return rn
+end
+
+"""
+    molecular_diffusion_volume(formula, Rn)
+
+Calculate the molecular diffusion volume from the formula and number of rings of the solute as the sum of the atomic diffusion volumes according to [1].
+    
+[1] Fuller, Edward N.; Ensley, Keith; Giddings, J. Calvin, Diffusion of
+Halogenated Hydrocarbons in Helium. The Effect of Structure on Collision
+Cross Sections, The Journal of Physical Chemistry, Volume 73, Issue 11,
+1969, 3679–3685
+
+# Arguments
+* `formula`: formula of the solute as a dictionary.
+* `Rn`: number of rings of the solute.
+"""
+function molecular_diffusion_volume(formula, Rn) 
+    C = formula["C"]
+    H = formula["H"]
+    if haskey(formula, "O")
+        O = formula["O"]
+    else
+        O = 0
+    end
+    if haskey(formula, "N")
+        N = formula["N"]
+    else
+        N = 0
+    end
+    if haskey(formula, "S")
+        S = formula["S"]
+    else
+        S = 0
+    end
+    if haskey(formula, "F")
+        F = formula["F"]
+    else
+        F = 0
+    end
+    if haskey(formula, "Cl")
+        Cl = formula["Cl"]
+    else
+        Cl = 0
+    end
+    if haskey(formula, "Br")
+        Br = formula["Br"]
+    else
+        Br = 0
+    end
+    if haskey(formula, "I")
+        I = formula["I"]
+    else
+        I = 0
+    end
+    Va = C*15.9 + H*2.31 + O*6.11 + N*4.54 + S*22.9 + F*14.7 + Cl*21.0 + Br*21.9 + I*29.8 - Rn*18.3
+    return Va
+end
+
 #---End-Functions-of-the-physical-model---

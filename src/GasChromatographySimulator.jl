@@ -10,12 +10,19 @@ using ForwardDiff
 using Plots
 using HypertextLiteral
 using PlutoUI
+using ChemicalIdentifiers
 
 # some constants
 Tst = 273.15            # K
 R = 8.31446261815324    # J mol⁻¹ K⁻¹
 Tn = 25.0 + Tst         # K
 pn = 101300             # Pa
+
+# add a custom database for ChemicalIdentifiers 
+#custom_database_url = "https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/custom_database_CI.tsv"
+filepath = "/Users/janleppert/Documents/GitHub/ThermodynamicData/data/add_CI_db.tsv"
+ChemicalIdentifiers.load_data!(:custom,file = filepath)
+ChemicalIdentifiers.load_db!(:custom)
 
 # ---Begin-Structures---
 """
@@ -666,6 +673,27 @@ function steps_interpolation(time_steps::Array{<:Real,1}, steps::Array{<:Real,1}
 end
 
 """
+	CAS_identification(data::DataFrame)
+
+Look up the substance name from the `data` dataframe with ChemicalIdentifiers.jl to find the `CAS`-number, the `formula`, the molecular weight `MW` and the `smiles`-identifier. If the name is not found in the database of ChemicalIdentifiers.jl a list with alternative names (`shortnames.csv`) is used. If there are still no matches, `missing` is used.
+"""
+function CAS_identification(Name::Array{String})
+	shortnames = DataFrame(CSV.File("/Users/janleppert/Documents/GitHub/GasChromatographySimulator/data/shortnames.csv"))
+	CAS = Array{Union{Missing,AbstractString}}(missing, length(Name))
+	for i=1:length(Name)
+		if Name[i] in shortnames.shortname
+			j = findfirst(Name[i].==shortnames.shortname)
+			ci = search_chemical(string(shortnames.name[j]))
+		else
+			ci = search_chemical(Name[i])
+		end
+		CAS[i] = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
+	end
+	id = DataFrame(Name=Name, CAS=CAS)
+	return id
+end
+
+"""
     load_solute_database(db, sp, gas, solutes, t₀, τ₀)
 
 Load the data of `solutes` for the stationary phase `sp` and the mobile
@@ -685,69 +713,89 @@ julia> sub = load_solute_database(db, "DB5", "He", ["C10", "C11"], [0.0, 0.0], [
 ```
 """
 function load_solute_database(db::DataFrame, sp::String, gas::String, solutes::Array{<:AbstractString,1}, t₀::Array{Float64,1}, τ₀::Array{Float64,1})
-	# load the information about a solute from a data base and collecting these informations in the 
-    # structure SubstanceGC2
-    # 
-	# db ... Dataframe of the database
-	# sp ... Name of the stationary phase
-	# gas ... Name of the used mobile phase gas
-	# solutes ... Names of the solutes for which the informations should be used
-    # τ₀ ... initial values of the peak width for the solutes
-    # t₀ ... initial values of the time for the solutes
-	#
-	# at the moment only the new database config is supported (new data is appended in new rows)
-	# also, if for a solute no data is available in the database no error is given!!!
-	if size(db)[2]>14
-		# old database config (additional stationary phases are appended in new columns, only one row for a solute)
+	# compare names to CAS, using ChemicalIdentifiers.jl and a synonym list (different names of the same solute for different stationary phases) 
+    id = CAS_identification(solutes)
+    if sp == "" # no stationary phase is selected, like for transferlines
+        Name = id.Name
+        CAS = id.CAS
+        # use placeholder values
+        Tchar = ones(length(Name))
+        θchar = ones(length(Name))
+        ΔCp = ones(length(Name))
+        φ₀ = ones(length(Name))
+        Annotation = fill("no sp", length(Name))
+        t₀_ = t₀
+        τ₀_ = τ₀ 
+    elseif size(db)[2]>14
         error("Data format not supported. Use the appended database structure.")
+	elseif isa(findfirst(unique(db.Phase).==sp), Nothing) && sp!=""
+		error("Unknown selction of stationary phase. Choose one of these: $phases_db")	
 	else
-		# new database config (simpler, additional stationary phases are appended in new rows, multiple entrys for a solute)
-		# 1. Filter the stationary phase
-		phases_db = unique(db.Phase)
-		if isa(findfirst(phases_db.==sp), Nothing) && sp!=""
-			error("Unknown selction of stationary phase. Choose one of these: $phases_db")
-		elseif sp=="" # no stationary phase is selected, like for transferlines
-			db_filtered = db[!,1:8] # use only the data of the first 8 columns
-			# 2. Filter the solutes, not using multiple entrys
-			db_filtered_1=unique(db_filtered[in(solutes).(db_filtered.Name),:])
-			# use placeholder values
-			Tchar = ones(length(solutes))
-			θchar = ones(length(solutes))
-			ΔCp = ones(length(solutes))
-			φ₀ = ones(length(solutes))
-			Annotation = fill("no sp", length(solutes))
-		else
-			db_filtered = filter([:Phase] => x -> x==sp, db)
-			# 2. Filter the solutes
-			db_filtered_1=db_filtered[in(solutes).(db_filtered.Name),:]
-			# values
-			Tchar = db_filtered_1.Tchar.+Tst
-			θchar = db_filtered_1.thetachar
-			ΔCp = db_filtered_1.DeltaCp
-			φ₀ = db_filtered_1.phi0
-			Annotation = db_filtered_1.Annotation
-		end
-        sub = Array{Substance}(undef, length(solutes))
-        for i=1:length(solutes)
-			Dag = diffusivity(db_filtered_1.Molmass[i], 
-											db_filtered_1.Cnumber[i], 
-											db_filtered_1.Hnumber[i], 
-											db_filtered_1.Onumber[i], 
-											db_filtered_1.Nnumber[i], 
-											db_filtered_1.Ringnumber[i], 
-											gas)
-			sub[i] = Substance(db_filtered_1.Name[i],
-										db_filtered_1.CAS[i],
-										Tchar[i], 
-										θchar[i], 
-										ΔCp[i], 
-										φ₀[i],
-										Annotation[i],
-										Dag, 
-										t₀[i],
-										τ₀[i])
-		end
+        # old database config (simpler, additional stationary phases are appended in new rows, multiple entrys for a solute)
+        # 1. Filter the stationary phase
+        db_filtered = filter([:Phase] => x -> x==sp, db)
+        # 2. Filter the solutes
+        db_filtered_1=db_filtered[in(id.CAS).(db_filtered.CAS),:]
+        # values
+        Name = db_filtered_1.Name
+        CAS = db_filtered_1.CAS
+        Tchar = db_filtered_1.Tchar.+Tst
+        θchar = db_filtered_1.thetachar
+        ΔCp = db_filtered_1.DeltaCp
+        φ₀ = db_filtered_1.phi0
+        if "Cnumber" in names(db)
+			Annotation = db_filtered_1.Annotation 
+            #Dag = Array{Substance}(undef, length(Name))
+            #for i=1:length(Name)
+            #    Dag[i] = diffusivity(db_filtered_1.Molmass[i], 
+            #                                    db_filtered_1.Cnumber[i], 
+            #                                    db_filtered_1.Hnumber[i], 
+            #                                    db_filtered_1.Onumber[i], 
+            #                                    db_filtered_1.Nnumber[i], 
+            #                                    db_filtered_1.Ringnumber[i], 
+            #                                    gas)
+            #end
+        else # newer database version without information about the solute structure
+            nCat = length(names(db))-8
+            if nCat < 1
+                Annotation = string.(db_filtered_1.Source)
+            else
+                Annotation = string.(db_filtered_1.Source)
+                for i=1:nCat
+                    for j=1:length(Annotation)
+                        if typeof(db_filtered_1[j,8+i]) != Missing
+                            Annotation[j] = string(Annotation[j], ", ", db_filtered_1[j,8+i])
+                        end
+                    end
+                end
+            end
+            #Dag = Array{Substance}(undef, length(Name))
+            #for i=1:length(Name)
+            #    Dag[i] = diffusivity(CAS[i], gas)
+            #end
+        end
+        # correct assignment of the t₀ and τ₀ values to the correct values from the input
+        indices = Array{Int}(undef, length(Name))
+        for i=1:length(Name)
+            indices[i] = findfirst(db_filtered_1.CAS[i].==id.CAS)
+        end
+        t₀_ = t₀[indices]
+        τ₀_ = τ₀[indices]  
 	end
+    sub = Array{Substance}(undef, length(Name))
+    for i=1:length(Name)
+        Dag = diffusivity(CAS[i], gas)
+        sub[i] = Substance(Name[i],
+                            CAS[i],
+                            Tchar[i], 
+                            θchar[i], 
+                            ΔCp[i], 
+                            φ₀[i],
+                            Annotation[i],
+                            Dag, 
+                            t₀_[i],
+                            τ₀_[i])
+    end
 	return sub
 end
 
