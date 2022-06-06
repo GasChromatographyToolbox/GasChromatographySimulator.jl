@@ -1,0 +1,152 @@
+shortname,name
+C1,methane
+C2,ethane
+C3,propane
+C4,n-butane
+C5,n-pentane
+C6,n-hexane
+C7,n-heptane
+C8,n-octane
+C9,n-nonane
+C10,n-decane
+C10g,n-decane
+C11,n-undecane
+C11g,n-undecane
+C12,n-dodecane
+C13,n-tridecane
+C14,n-tetradecane
+C15,n-pentadecane
+C16,n-hexadecane
+C17,n-heptadecane
+C18,n-octadecane
+C19,n-nonadecane
+C20,n-icosane
+C21,n-henicosane
+C22,n-docosane
+C23,n-tricosane
+C24,n-tetracosane
+C24*,n-tetracosane
+C25,n-pentacosane
+C25*,n-pentacosane
+C26,n-hexacosane
+C26*,n-hexacosane
+C27,n-heptacosane
+C27*,n-heptacosane
+C28,n-octacosane
+C28*,n-octacosane
+C29,n-nonacosane
+C29*,n-nonacosane
+C30,n-triacontane
+C30*,n-triacontane
+C31,n-hentriacontane
+C32,n-dotriacontane
+C33,n-tritriacontane
+C34,n-tetratriacontane
+C35,n-pentatriacontane
+C36,n-hexatriacontane
+C37,n-heptatriacontane
+C38,n-octatriacontane
+C39,n-nonatriacontane
+C40,n-tetracontane
+C41,n-hentetracontane
+C42,n-dotetracontane
+C43,n-tritetracontane
+C44,n-tetratetracontane
+C45,n-pentatetracontane
+C46,n-hexatetracontane
+C47,n-heptatetracontane
+C48,n-octatetracontane
+C49,n-nonatetracontane
+C50,n-pentacontane
+C51,n-henpentacontane
+C52,n-dopentacontane
+C53,n-tripentacontane
+C54,n-tetrapentacontane
+C55,n-pentapentacontane
+C56,n-hexapentacontane
+C57,n-heptapentacontane
+C58,n-octapentacontane
+C59,n-nonapentacontane
+C60,n-hexacontane
+C61,n-henhexacontane
+C62,n-dohexacontane
+C63,n-trihexacontane
+C64,n-tetrahexacontane
+C65,n-pentahexacontane
+C66,n-hexahexacontane
+C67,n-heptahexacontane
+C68,n-octahexacontane
+C69,n-nonahexacontane
+C70,n-heptacontane
+C71,n-henheptacontane
+C72,n-doheptacontane
+C73,n-triheptacontane
+C74,n-tetraheptacontane
+C75,n-pentaheptacontane
+C76,n-hexaheptacontane
+C77,n-heptaheptacontane
+C78,n-octaheptacontane
+C79,n-nonaheptacontane
+C80,n-octacontane
+C10 FAME, Methyl decanoate
+C10 acid methyl ester, Methyl decanoate
+C11 FAME, Methyl undecanoate
+C11 acid methyl ester, Methyl undecanoate
+C12 FAME, Methyl laurate
+C12 acid methyl ester, Methyl laurate
+Tert-butylpyridine, "2,6-ditert-butylpyridine"
+Nicotine, 3-(1-methylpyrrolidin-2-yl)pyridine
+Citral A, "3,7-dimethylocta-2,6-dienal"
+Geranial, "3,7-dimethylocta-2,6-dienal"
+Isomethyl-alpha-Ionon, "3-methyl-4-(2,6,6-trimethylcyclohex-2-en-1-yl)but-3-en-2-one"
+Isoeugenol, 2-methoxy-4-prop-1-enyl-phenol
+Benzylsalicylate, benzyl salicylate
+Benzylcinnamate, benzyl cinnamate
+Farnesol A, 4602-84-0
+Farnesol B, 4602-84-0
+Anisalkohol, 4-methoxybenzyl alcohol
+Cinnamylalkohol A, "cinnamyl alcohol"
+Cinnamylalkohol B, "cinnamyl alcohol"
+alpha-Pinen, alpha-pinene
+Methyl-2-Octyonate, methyl 2-octynoate
+Methylsalicylat, methyl salicylate
+Isobornylacetat, bornyl acetate
+E-beta-Damascone, damascenone
+Amylsalicylate, amyl salicylate
+Isoeugenylacetat, 1-acetoxy-2-methoxy-4-(1-propenyl)benzene
+Hexadecanolaceton, 1-hexadecanol
+Ebanol A, ebanol
+Ebanol B, ebanol
+Santalol A, 115-71-9
+Santalol B, 115-71-9
+Santalol C, 77-42-9
+Santalol D, 77-42-9
+Amylcinnamylaldehyd, amylcinnamaldehyde
+Methyl myristoleate, methyl tetradec-9-enoate
+Methyl palmitoleate, methyl cis-9-hexadecenoate
+trans-9-Elaidic acid methyl ester, 1937-62-8
+cis-9-Oleic acid methyl ester, methyl oleate
+Methyl gamma linolenate, "methyl octadeca-6,9,12-trienoate"
+Methyl cis-11-eicosenoate, methyl trans-11-eicosenoate
+Methyl alpha linolenate, 301-00-8
+"cis-5,8,11,14-Eicosatetraenoic acid methyl ester", "5,8,11,14-eicosatetraenoic acid"
+Methyl nervonate, methyl cis-15-tetracosenoate
+2-Pentadecanone Std, 2-Pentadecanone
+2378-TCDD, tetradioxin
+12378-PCDD, "1,2,3,7,8-pentachlorodibenzo-p-dioxin"
+123478-HxCDD, "1,2,3,4,7,8-hexachlorodibenzodioxin"
+123678-HxCDD, "1,2,3,6,7,8-hexachlorodibenzo-p-dioxin"
+123789-HxCDD, "1,2,3,7,8,9-hexachlorodibenzo-p-dioxin"
+1234678-HPCDD, heptachlorodibenzo-p-dioxin
+2378-TCDF, "2,3,7,8-tetrachlorodibenzofuran"
+12378-PCDF, "1,2,3,7,8-pentachlorodibenzofuran"
+23478-PCDF, "2,3,4,7,8-pentachlorodibenzofuran"
+123478-HxCDF, "1,2,3,4,7,8-hexachlorodibenzofuran"
+123678-HxCDF, "1,2,3,6,7,8-hexachlorodibenzofuran"
+234678-HxCDF, "2,3,4,6,7,8-hexachlorodibenzofuran"
+1234678-HpCDF, "1,2,3,4,6,7,8-heptachlorodibenzofuran"
+PCB 138, "2,2',3,4,4',5'-hexachlorobiphenyl"
+PCB 138 Std, "2,2',3,4,4',5'-hexachlorobiphenyl"
+Glyceryl trihexanoate, "trihexanoin"
+Glyceryl trimyristine, "trimyristin"
+Glyceryl tripalmitin, "tripalmitin"
