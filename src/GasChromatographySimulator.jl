@@ -19,10 +19,10 @@ Tn = 25.0 + Tst         # K
 pn = 101300             # Pa
 
 # add a custom database for ChemicalIdentifiers 
-#custom_database_url = "https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/add_CI_db.tsv"
-filepath = "/Users/janleppert/Documents/GitHub/GasChromatographySimulator/data/add_CI_db.tsv"
-#ChemicalIdentifiers.load_data!(:custom, url = custom_database_url)
-ChemicalIdentifiers.load_data!(:custom, file = filepath)
+#custom_database_url = "https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/custom_CI_db.tsv"
+#filepath = "/Users/janleppert/Documents/GitHub/GasChromatographySimulator/data/custom_CI_db.tsv"
+ChemicalIdentifiers.load_data!(:custom, url = custom_database_url)
+#ChemicalIdentifiers.load_data!(:custom, file = filepath)
 ChemicalIdentifiers.load_db!(:custom)
 
 # ---Begin-Structures---
