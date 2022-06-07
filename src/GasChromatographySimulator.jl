@@ -1274,6 +1274,8 @@ The peaklist DataFrame consists of the entrys:
 * `σR`: Band width of the solute at retention time (in m).
 * `uR`: Solute velocity at retention time (in m/s).
 * `kR`: Retention factor of the solute at retention time.
+* `Res`: Resolution (4τ) between neighboring peaks.
+* `Δs`: separation metric between neighboring peaks, assuming linear development of peak width `τR` between the peaks.
 
 # Examples
 
@@ -1293,6 +1295,7 @@ function peaklist(sol, par)
     τR = Array{Float64}(undef, n)
     kR = Array{Float64}(undef, n)
     Res = fill(NaN, n)
+    Δs = fill(NaN, n)
     Threads.@threads for i=1:n
         Name[i] = par.sub[i].name
         if sol[i].t[end]==par.col.L
@@ -1314,8 +1317,10 @@ function peaklist(sol, par)
     df = sort!(DataFrame(Name = Name, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, ), [:tR])
     Threads.@threads for i=1:n-1
         Res[i] = (df.tR[i+1] - df.tR[i])/(2*(df.τR[i+1] + df.τR[i]))
+        Δs[i] = (df.tR[i+1] - df.tR[i])/(df.τR[i+1] - df.τR[i]) * log(df.τR[i+1]/df.τR[i])
     end
-    df[!, :Res] = Res  
+    df[!, :Res] = Res
+    df[!, :Δs] = Δs  
     return df
 end
 
@@ -1335,6 +1340,8 @@ The peaklist DataFrame consists of the entrys:
 * `σR`: Band width of the solute at retention time (in m).
 * `uR`: Solute velocity at retention time (in m/s).
 * `kR`: Retention factor of the solute at retention time.
+* `Res`: Resolution (4τ) between neighboring peaks.
+* `Δs`: separation metric between neighboring peaks, assuming linear development of peak width `τR` between the peaks.
 
 # Examples
 
@@ -1352,8 +1359,8 @@ function peaklist(sol, peak, par)
     uR = Array{Float64}(undef, n)
     τR = Array{Float64}(undef, n)
     kR = Array{Float64}(undef, n)
-    # add resolution
     Res = fill(NaN, n)
+    Δs = fill(NaN, n)
     Threads.@threads for i=1:n
         Name[i] = par.sub[i].name
         if sol[i].t[end]==par.col.L
@@ -1375,8 +1382,10 @@ function peaklist(sol, peak, par)
     df = sort!(DataFrame(Name = Name, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, ), [:tR])
     Threads.@threads for i=1:n-1
         Res[i] = (df.tR[i+1] - df.tR[i])/(2*(df.τR[i+1] + df.τR[i]))
+        Δs[i] = (df.tR[i+1] - df.tR[i])/(df.τR[i+1] - df.τR[i]) * log(df.τR[i+1]/df.τR[i])
     end
-    df[!, :Res] = Res  
+    df[!, :Res] = Res 
+    df[!, :Δs] = Δs   
     return df
 end
 
