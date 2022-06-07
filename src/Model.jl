@@ -720,6 +720,7 @@ function diffusivity(CAS, gas)
     else
         error("Unknown selection of gas. Choose one of these: He, H2, N2 or Ar.")
     end
+    load_custom_CI_database(custom_database_filepath)
     # is CAS realy a CAS number (could also be pubchem ID)
     regexCAS = r"\b[1-9]{1}[0-9]{1,5}-\d{2}-\d\b"
     if split(CAS, ' ')[1] == "PubChem" # CAS is a pubchemid

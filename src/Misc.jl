@@ -77,3 +77,15 @@ function compare_measurement_simulation(meas, peaklist)
 	compare_df = DataFrame(Name=name, measured_tR=tRm, simulated_tR=tRs, ΔtR=tRm.-tRs, rel_tR=(tRm.-tRs)./tRm.*100.0)
 	return compare_df
 end
+
+"""
+	load_custom_CI_database(custom_database_filepath)
+
+Load a custom database for ChemicalIdentifiers.jl from the location `custom_database_filepath`, if the custom database is not already loaded.	
+"""
+function load_custom_CI_database(custom_database_filepath)
+	if !(:custom in keys(ChemicalIdentifiers.DATA_DB))
+		ChemicalIdentifiers.load_data!(:custom, file = custom_database_filepath)
+		ChemicalIdentifiers.load_db!(:custom)
+	end
+end
