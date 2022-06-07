@@ -13,17 +13,11 @@ using PlutoUI
 @reexport using ChemicalIdentifiers
 
 # some constants
-Tst = 273.15            # K
-R = 8.31446261815324    # J mol⁻¹ K⁻¹
-Tn = 25.0 + Tst         # K
-pn = 101300             # Pa
-
-# add a custom database for ChemicalIdentifiers 
-#custom_database_url = "https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/custom_CI_db.tsv"
-filepath = string(pkgdir(GasChromatographySimulator), "/data/custom_CI_db.tsv")
-#ChemicalIdentifiers.load_data!(:custom, url = custom_database_url)
-ChemicalIdentifiers.load_data!(:custom, file = filepath)
-ChemicalIdentifiers.load_db!(:custom)
+const Tst = 273.15            # K
+const R = 8.31446261815324    # J mol⁻¹ K⁻¹
+const Tn = 25.0 + Tst         # K
+const pn = 101300             # Pa
+const custom_database_filepath = string(pkgdir(GasChromatographySimulator), "/data/custom_CI_db.tsv")
 
 # ---Begin-Structures---
 """
@@ -679,6 +673,7 @@ end
 Look up the substance name from the `data` dataframe with ChemicalIdentifiers.jl to find the `CAS`-number, the `formula`, the molecular weight `MW` and the `smiles`-identifier. If the name is not found in the database of ChemicalIdentifiers.jl a list with alternative names (`shortnames.csv`) is used. If there are still no matches, `missing` is used.
 """
 function CAS_identification(Name::Array{String})
+    load_custom_CI_database(custom_database_filepath)
 	shortnames = DataFrame(CSV.File(string(pwd(),"/data/shortnames.csv")))
 	CAS = Array{Union{Missing,AbstractString}}(missing, length(Name))
 	for i=1:length(Name)
