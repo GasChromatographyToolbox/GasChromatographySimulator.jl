@@ -30,4 +30,4 @@ Overview_functions_and_tests.xlsx
 .vscode
 
 # ChemicalIdentifier.jl custom database (?)
-*.arrow
+#*.arrow
