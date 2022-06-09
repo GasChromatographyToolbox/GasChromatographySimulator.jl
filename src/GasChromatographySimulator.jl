@@ -18,6 +18,7 @@ const R = 8.31446261815324    # J mol⁻¹ K⁻¹
 const Tn = 25.0 + Tst         # K
 const pn = 101300             # Pa
 const custom_database_filepath = string(pkgdir(GasChromatographySimulator), "/data/custom_CI_db.tsv")
+const shortnames_filepath = string(pkgdir(GasChromatographySimulator), "/data/shortnames.csv")
 
 # ---Begin-Structures---
 """
@@ -674,7 +675,7 @@ Look up the substance name from the `data` dataframe with ChemicalIdentifiers.jl
 """
 function CAS_identification(Name::Array{String})
     load_custom_CI_database(custom_database_filepath)
-	shortnames = DataFrame(CSV.File(string(pwd(),"/data/shortnames.csv")))
+	shortnames = DataFrame(CSV.File(shortnames_filepath))
 	CAS = Array{Union{Missing,AbstractString}}(missing, length(Name))
 	for i=1:length(Name)
 		if Name[i] in shortnames.shortname
