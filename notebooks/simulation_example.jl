@@ -228,9 +228,6 @@ md"""
 $(embed_display(peaklist))
 """
 
-# ╔═╡ 9af71df9-c89a-4c7d-8268-b926eae053a1
-peaklist.τR
-
 # ╔═╡ 629b46e6-0c46-4372-a22a-f3749f6f2a04
 par
 
@@ -266,7 +263,7 @@ PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 UrlDownload = "856ac37a-3032-4c1c-9122-f86d88358c8b"
 
 [compat]
-GasChromatographySimulator = "~0.3.4"
+GasChromatographySimulator = "~0.3.5"
 HypertextLiteral = "~0.9.4"
 Plots = "~1.29.1"
 PlutoUI = "~0.7.39"
@@ -574,9 +571,9 @@ version = "0.4.0"
 
 [[deps.DiffEqBase]]
 deps = ["ArrayInterfaceCore", "ChainRulesCore", "DataStructures", "Distributions", "DocStringExtensions", "FastBroadcast", "ForwardDiff", "FunctionWrappers", "LinearAlgebra", "Logging", "MuladdMacro", "NonlinearSolve", "Parameters", "Printf", "RecursiveArrayTools", "Reexport", "Requires", "SciMLBase", "Setfield", "SparseArrays", "StaticArrays", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "a5eabf37d87afe35919cc1f4683565956014efc9"
+git-tree-sha1 = "1c94897dfd3738ebb625fe582334733097485cbb"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "6.89.1"
+version = "6.89.2"
 
 [[deps.DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "ForwardDiff", "LinearAlgebra", "NLsolve", "Parameters", "RecipesBase", "RecursiveArrayTools", "SciMLBase", "StaticArrays"]
@@ -683,9 +680,9 @@ version = "4.4.0+0"
 
 [[deps.FastBroadcast]]
 deps = ["ArrayInterface", "ArrayInterfaceCore", "LinearAlgebra", "Polyester", "Static", "StrideArraysCore"]
-git-tree-sha1 = "93aa96bea2c641c5c68c9bb4f062400d517f426a"
+git-tree-sha1 = "81765322b2960b7c92f9280b00956cb8d645d3f7"
 uuid = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
-version = "0.1.19"
+version = "0.2.0"
 
 [[deps.FastClosures]]
 git-tree-sha1 = "acebe244d53ee1b461970f8910c235b259e772ef"
@@ -780,10 +777,10 @@ uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
 version = "0.64.4+0"
 
 [[deps.GasChromatographySimulator]]
-deps = ["CSV", "ChemicalIdentifiers", "DataFrames", "DifferentialEquations", "ForwardDiff", "HypertextLiteral", "Interpolations", "Plots", "PlutoUI", "QuadGK", "Reexport"]
-git-tree-sha1 = "3b2b422ac6e39057bc296d01eef2c1f878ce7a22"
+deps = ["CSV", "ChemicalIdentifiers", "DataFrames", "DifferentialEquations", "ForwardDiff", "HypertextLiteral", "Interpolations", "Plots", "PlutoUI", "QuadGK", "Reexport", "UrlDownload"]
+git-tree-sha1 = "6c75eeb5751cc81acd251520c3a05d409cda742d"
 uuid = "dd82b6e2-56ef-419d-b271-0be268cb65f5"
-version = "0.3.4"
+version = "0.3.5"
 
 [[deps.GenericSchur]]
 deps = ["LinearAlgebra", "Printf"]
@@ -1991,7 +1988,7 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╠═115b320f-be42-4116-a40a-9cf1b55d39b5
+# ╟─115b320f-be42-4116-a40a-9cf1b55d39b5
 # ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
@@ -2007,7 +2004,6 @@ version = "0.9.1+5"
 # ╠═49faa7ea-0f22-45ca-9ab5-338d0db25564
 # ╠═629b46e6-0c46-4372-a22a-f3749f6f2a04
 # ╟─14db2d66-eea6-43b1-9caf-2039709d1ddb
-# ╠═9af71df9-c89a-4c7d-8268-b926eae053a1
 # ╟─a2287fe8-5aa2-4259-bf7c-f715cc866243
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
 # ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523

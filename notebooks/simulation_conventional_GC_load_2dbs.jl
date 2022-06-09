@@ -503,7 +503,7 @@ PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 UrlDownload = "856ac37a-3032-4c1c-9122-f86d88358c8b"
 
 [compat]
-GasChromatographySimulator = "~0.3.4"
+GasChromatographySimulator = "~0.3.5"
 HypertextLiteral = "~0.9.4"
 Plots = "~1.29.1"
 PlutoUI = "~0.7.39"
@@ -1017,10 +1017,10 @@ uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
 version = "0.64.4+0"
 
 [[deps.GasChromatographySimulator]]
-deps = ["CSV", "ChemicalIdentifiers", "DataFrames", "DifferentialEquations", "ForwardDiff", "HypertextLiteral", "Interpolations", "Plots", "PlutoUI", "QuadGK", "Reexport"]
-git-tree-sha1 = "3b2b422ac6e39057bc296d01eef2c1f878ce7a22"
+deps = ["CSV", "ChemicalIdentifiers", "DataFrames", "DifferentialEquations", "ForwardDiff", "HypertextLiteral", "Interpolations", "Plots", "PlutoUI", "QuadGK", "Reexport", "UrlDownload"]
+git-tree-sha1 = "6c75eeb5751cc81acd251520c3a05d409cda742d"
 uuid = "dd82b6e2-56ef-419d-b271-0be268cb65f5"
-version = "0.3.4"
+version = "0.3.5"
 
 [[deps.GenericSchur]]
 deps = ["LinearAlgebra", "Printf"]
@@ -2228,7 +2228,7 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╠═115b320f-be42-4116-a40a-9cf1b55d39b5
+# ╟─115b320f-be42-4116-a40a-9cf1b55d39b5
 # ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
@@ -2236,10 +2236,10 @@ version = "0.9.1+5"
 # ╟─c7c5da86-57ad-4a35-bbaa-39871ee3205d
 # ╟─1b827021-05a6-4fc8-bdce-31302f4a5d0f
 # ╟─59e7dff6-7db0-4262-b4f5-ffe8f1a28542
-# ╠═8f807b8d-6434-44d5-8cea-51750e4ee846
+# ╟─8f807b8d-6434-44d5-8cea-51750e4ee846
 # ╟─e0669a58-d5ac-4d01-b079-05412b413dda
 # ╟─a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
-# ╠═87f5a9b0-541a-4062-97e9-c4727b48db35
+# ╟─87f5a9b0-541a-4062-97e9-c4727b48db35
 # ╟─7a00bb54-553f-47f5-b5db-b40d226f4183
 # ╟─603e0868-dda5-4063-872f-ce966b6fa8ad
 # ╟─5e17ec20-13a1-4f87-a99c-43029907ab9c

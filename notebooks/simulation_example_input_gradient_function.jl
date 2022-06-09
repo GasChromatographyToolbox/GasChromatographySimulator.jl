@@ -253,7 +253,7 @@ PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 UrlDownload = "856ac37a-3032-4c1c-9122-f86d88358c8b"
 
 [compat]
-GasChromatographySimulator = "~0.3.4"
+GasChromatographySimulator = "~0.3.5"
 Plots = "~1.29.1"
 PlutoUI = "~0.7.39"
 UrlDownload = "~1.0.0"
@@ -560,9 +560,9 @@ version = "0.4.0"
 
 [[deps.DiffEqBase]]
 deps = ["ArrayInterfaceCore", "ChainRulesCore", "DataStructures", "Distributions", "DocStringExtensions", "FastBroadcast", "ForwardDiff", "FunctionWrappers", "LinearAlgebra", "Logging", "MuladdMacro", "NonlinearSolve", "Parameters", "Printf", "RecursiveArrayTools", "Reexport", "Requires", "SciMLBase", "Setfield", "SparseArrays", "StaticArrays", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "a5eabf37d87afe35919cc1f4683565956014efc9"
+git-tree-sha1 = "1c94897dfd3738ebb625fe582334733097485cbb"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "6.89.1"
+version = "6.89.2"
 
 [[deps.DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "ForwardDiff", "LinearAlgebra", "NLsolve", "Parameters", "RecipesBase", "RecursiveArrayTools", "SciMLBase", "StaticArrays"]
@@ -669,9 +669,9 @@ version = "4.4.0+0"
 
 [[deps.FastBroadcast]]
 deps = ["ArrayInterface", "ArrayInterfaceCore", "LinearAlgebra", "Polyester", "Static", "StrideArraysCore"]
-git-tree-sha1 = "93aa96bea2c641c5c68c9bb4f062400d517f426a"
+git-tree-sha1 = "81765322b2960b7c92f9280b00956cb8d645d3f7"
 uuid = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
-version = "0.1.19"
+version = "0.2.0"
 
 [[deps.FastClosures]]
 git-tree-sha1 = "acebe244d53ee1b461970f8910c235b259e772ef"
@@ -766,10 +766,10 @@ uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
 version = "0.64.4+0"
 
 [[deps.GasChromatographySimulator]]
-deps = ["CSV", "ChemicalIdentifiers", "DataFrames", "DifferentialEquations", "ForwardDiff", "HypertextLiteral", "Interpolations", "Plots", "PlutoUI", "QuadGK", "Reexport"]
-git-tree-sha1 = "3b2b422ac6e39057bc296d01eef2c1f878ce7a22"
+deps = ["CSV", "ChemicalIdentifiers", "DataFrames", "DifferentialEquations", "ForwardDiff", "HypertextLiteral", "Interpolations", "Plots", "PlutoUI", "QuadGK", "Reexport", "UrlDownload"]
+git-tree-sha1 = "6c75eeb5751cc81acd251520c3a05d409cda742d"
 uuid = "dd82b6e2-56ef-419d-b271-0be268cb65f5"
-version = "0.3.4"
+version = "0.3.5"
 
 [[deps.GenericSchur]]
 deps = ["LinearAlgebra", "Printf"]
@@ -1977,13 +1977,13 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╠═7272450e-73b1-11ec-080d-1d1efd32e836
+# ╟─7272450e-73b1-11ec-080d-1d1efd32e836
 # ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
 # ╟─d5332694-7a14-4adc-98e5-1e27deae01ec
 # ╟─dde6172b-d4e7-45cc-8621-248987c51be6
-# ╠═273dcf96-6de4-4380-a00f-ed119bfa13b7
+# ╟─273dcf96-6de4-4380-a00f-ed119bfa13b7
 # ╟─e0669a58-d5ac-4d01-b079-05412b413dda
 # ╟─a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
 # ╟─49ac3705-9dbb-48e3-9db3-fc229edb9479
