@@ -545,7 +545,7 @@ function retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀)
 end
 
 """
-    plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Dag; ng=false, vis="Blumberg", control="Pressure")
+    plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure")
 
 Calculate the plate height of the solute at position `x` at time `t`
 according to the Golay equation.
@@ -566,7 +566,7 @@ according to the Golay equation.
 stationary phase, in J mol⁻¹ K⁻¹.
 * `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the
 thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
-* `Dag`: diffusivity of solute `a` in gas `g`.
+* `Cag`: diffusivity constant of solute `a` in gas `g`.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
 or with a gradient (`ng = false`).
 * `vis`: used model for viscosity "Blumberg" or "HP".
@@ -595,11 +595,11 @@ with ``D_M`` the diffusion coefficient of the solute in the mobile phase,
 
 See also: [`diffusion_mobile`](@ref), [`mobile_phase_residency`](@ref), [`retention_factor`](@ref)
 """
-function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Dag; ng=false, vis="Blumberg", control="Pressure")
+function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure")
     id = d(x)# - 2.0*df(x)
     uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
     μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀))
-    DM = diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Dag; ng=ng, vis=vis, control=control)
+    DM = diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=ng, vis=vis, control=control)
     DS = DM/10000
     H1 = 2*DM/uM
     H2 = id^2/96*(6*μ^2-16*μ+11)*uM/DM
@@ -609,7 +609,7 @@ function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θc
 end
 
 """
-    diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Dag; ng=false, vis="Blumberg", control="Pressure")
+    diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=false, vis="Blumberg", control="Pressure")
 
 Calculate the diffusion coefficient of the solute in the mobile phase at
 position `x` at time `t`.
@@ -623,23 +623,23 @@ position `x` at time `t`.
 * `L`: Length of the capillary measured in m (meter).
 * `d`: Diameter of the GC column, in m.
 * `gas`: Name of the mobile phase gas.
-* `Dag`: diffusivity of solute `a` in gas `g`.
+* `Cag`: diffusivity constant of solute `a` in gas `g`.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
 or with a gradient (`ng = false`).
 * `vis`: used model for viscosity "Blumberg" or "HP".
 * `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
-``D_M(x,t) = D_{ag} \\frac{T(x,t)^{1.75}}{p(x,t)}``
+``D_M(x,t) = C_{ag} \\frac{T(x,t)^{1.75}}{p(x,t)}``
 """
-function diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Dag; ng=false, vis="Blumberg", control="Pressure")
-    DM = T_itp(x, t)^1.75/pressure(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)*Dag
+function diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=false, vis="Blumberg", control="Pressure")
+    DM = T_itp(x, t)^1.75/pressure(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)*Cag
     return DM
 end
 
 """
     diffusivity(M, Cn, Hn, On, Nn, Rn, gas)
 
-Calculate the diffusivity `Dag` of solute `a` in gas `g` using the
+Calculate the diffusivity constant `Cag` of solute `a` in gas `g` using the
 emperical Fuller-Schettler-Giddings model [1].
 
 [1] Fuller, Edward N.; Ensley, Keith; Giddings, J. Calvin, Diffusion of
@@ -657,18 +657,6 @@ Cross Sections, The Journal of Physical Chemistry, Volume 73, Issue 11,
 * `gas`: The name of the mobile phase. Allowed values: He, H2 or N2.
 """
 function diffusivity(M, Cn, Hn, On, Nn, Rn, gas)
-    # calculates diffusitivity Dag of an analyte in a gas
-    # from the (simplified) molecular formula of the solute
-    # using the Fuller-Schettler-Giddings equation
-    # 
-    # M ... molar mass
-    # Cn ... number of carbons
-    # Hn ... number of hydrogens
-    # On ... number of oxygens
-    # Nn ... number of nitrogens
-    # Rn ... number of ring structures
-    # gas ... the used mobile phase gas
-    # **TODO**: add other atoms (P, Cl, Si, ...)
     if gas=="H2"
         Vg = 6.12
         Mg = 2.02
@@ -685,14 +673,14 @@ function diffusivity(M, Cn, Hn, On, Nn, Rn, gas)
         error("Unknown selection of gas. Choose one of these: He, H2, N2 or Ar.")
     end
     Va = 15.9*Cn + 2.31*Hn + 6.11*On + 4.54*Nn - 18.3*Rn
-    Dag = pn*sqrt(1/M+1/Mg)/(Vg^(1/3)+Va^(1/3))^2*1e-7 # pn m²/s ('Dag at normal pressure')
-    return Dag
+    Cag = pn*sqrt(1/M+1/Mg)/(Vg^(1/3)+Va^(1/3))^2*1e-7 # pn m²/s ('Cag at normal pressure')
+    return Cag
 end
 
 """
     diffusivity(CAS, gas)
 
-Calculate the diffusivity `Dag` of solute `a` in gas `g` using the
+Calculate the diffusivity constant `Cag` of solute `a` in gas `g` using the
 emperical Fuller-Schettler-Giddings model [1], using the CAS number to look the formula of the solute up in ChemicalIdentifiers.jl.
 
 [1] Fuller, Edward N.; Ensley, Keith; Giddings, J. Calvin, Diffusion of
@@ -731,8 +719,8 @@ function diffusivity(CAS, gas)
     formula = formula_to_dict(solute.formula)
     Rn = ring_number(solute.smiles)
     Va = molecular_diffusion_volume(formula, Rn) # in cm³
-    Dag = pn*sqrt(1/solute.MW+1/Mg)/(Vg^(1/3)+Va^(1/3))^2*1e-7 # pn m²/s ('Dag at normal pressure')
-    return Dag
+    Cag = pn*sqrt(1/solute.MW+1/Mg)/(Vg^(1/3)+Va^(1/3))^2*1e-7 # pn m²/s ('Cag at normal pressure')
+    return Cag
 end
 
 """

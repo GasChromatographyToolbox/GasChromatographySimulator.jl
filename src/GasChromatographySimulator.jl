@@ -79,7 +79,7 @@ struct Program{Fgf<:Function}
 end
 
 """
-    Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Dag, t₀, τ₀)
+    Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀)
 
 Structure to describe the properties of a solute, which migrates through the GC Column. These datas are in most cases read from a database with the function `load_solute_database()`.
 
@@ -91,7 +91,7 @@ Structure to describe the properties of a solute, which migrates through the GC 
 * `ΔCp`: Change of the isobaric heat capacity moving from the mobile to the stationary phase (in J mol⁻¹ K⁻¹). One of the three distribution-centric thermodynamic parameters describing the retention of this solute on the given stationary phase.
 * `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
 * `ann`: Annotations. In most cases the source of the data is noted here.
-* `Dag`: The diffusitivity of the solute `a` in the mobile phase `g` (in...). It is calculated by the function `diffusitivity()`.
+* `Cag`: The diffusitivity constant of the solute `a` in the mobile phase `g` (in...). It is calculated by the function `diffusitivity()`.
 * `t₀`: Initial time of the solute (in s) at the start of the simulation.
 * `τ₀`: Initial peak width of the solute (in s) at the start of the simulation. 
 
@@ -105,7 +105,7 @@ struct Substance
     ΔCp                 # 3rd parameter
     φ₀                  # dimless film thickness for which Tchar, θchar and ΔCp were estimated
     ann::String         # annotations, e.g. the source of the data from which Tchar, θchar and ΔCp were estimated
-    Dag                 # diffusion coefficient of analyt in a gas, calculate from structure (or from measurements)
+    Cag                 # diffusitivity constant of analyt in a gas, calculate from structure (or from measurements)
     t₀                  # initial time in s  	
     τ₀                  # initial peak width in s   
 end
@@ -741,16 +741,6 @@ function load_solute_database(db::DataFrame, sp::String, gas::String, solutes::A
         φ₀ = db_filtered_1.phi0
         if "Cnumber" in names(db)
 			Annotation = db_filtered_1.Annotation 
-            #Dag = Array{Substance}(undef, length(Name))
-            #for i=1:length(Name)
-            #    Dag[i] = diffusivity(db_filtered_1.Molmass[i], 
-            #                                    db_filtered_1.Cnumber[i], 
-            #                                    db_filtered_1.Hnumber[i], 
-            #                                    db_filtered_1.Onumber[i], 
-            #                                    db_filtered_1.Nnumber[i], 
-            #                                    db_filtered_1.Ringnumber[i], 
-            #                                    gas)
-            #end
         else # newer database version without information about the solute structure
             nCat = length(names(db))-8
             if nCat < 1
@@ -765,10 +755,6 @@ function load_solute_database(db::DataFrame, sp::String, gas::String, solutes::A
                     end
                 end
             end
-            #Dag = Array{Substance}(undef, length(Name))
-            #for i=1:length(Name)
-            #    Dag[i] = diffusivity(CAS[i], gas)
-            #end
         end
         # correct assignment of the t₀ and τ₀ values to the correct values from the input
         indices = Array{Int}(undef, length(Name))
@@ -780,7 +766,7 @@ function load_solute_database(db::DataFrame, sp::String, gas::String, solutes::A
 	end
     sub = Array{Substance}(undef, length(Name))
     for i=1:length(Name)
-        Dag = diffusivity(CAS[i], gas)
+        Cag = diffusivity(CAS[i], gas)
         sub[i] = Substance(Name[i],
                             CAS[i],
                             Tchar[i], 
@@ -788,7 +774,7 @@ function load_solute_database(db::DataFrame, sp::String, gas::String, solutes::A
                             ΔCp[i], 
                             φ₀[i],
                             Annotation[i],
-                            Dag, 
+                            Cag, 
                             t₀_[i],
                             τ₀_[i])
     end
@@ -1203,7 +1189,7 @@ function peakode(z, t, τ², col, prog, sub, opt)
 	# alternative function
     if opt.ng==true
         r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis, control=opt.control)
-        H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; ng=true, vis=opt.vis, control=opt.control)
+        H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; ng=true, vis=opt.vis, control=opt.control)
         ∂r∂t_ng(z,t) = ForwardDiff.gradient(r_ng, [z, t])[2]
         return H_ng(z,t)*r_ng([z,t])^2 + 2*τ²*∂r∂t_ng(z,t)
     else
@@ -1239,7 +1225,7 @@ function peakode(z, t, τ², col, prog, sub, opt)
         ∂k∂t(z,t) = ForwardDiff.gradient(k, [z, t])[2]
 		
 		r(z,t) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; vis=opt.vis, control=opt.control)
-        H(z,t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Dag; vis=opt.vis, control=opt.control)
+        H(z,t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; vis=opt.vis, control=opt.control)
         ∂r∂t(z,t) = ∂rM∂t(z,t)*(1+k([z,t])) + rM(z,t)*∂k∂t(z,t)
         # AutoDiff problems with the intgral in flow_restriction κ and κL makes 
         # it nessecary to partly calculate the derivative manually
