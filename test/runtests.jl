@@ -122,13 +122,13 @@ end
     sub_0 = GasChromatographySimulator.load_solute_database(db_path, db, "", "H2", solutes, init_t, init_τ)
     @test sub_0[1].Tchar == 1.0
     @test sub_0[2].ann == "no sp"
-    @test round(sub_0[1].Dag; sigdigits=5) == 0.00011885
+    @test round(sub_0[1].Cag; sigdigits=5) == 0.00011885
     # N2
     sub_0 = GasChromatographySimulator.load_solute_database(db_path, db, "", "N2", solutes, init_t, init_τ)
-    @test round(sub_0[1].Dag; sigdigits=5) == 2.8398e-5
+    @test round(sub_0[1].Cag; sigdigits=5) == 2.8398e-5
     # Ar
     sub_0 = GasChromatographySimulator.load_solute_database(db_path, db, "", "Ar", solutes, init_t, init_τ)
-    @test round(sub_0[1].Dag; sigdigits=5) == 2.5268e-5
+    @test round(sub_0[1].Cag; sigdigits=5) == 2.5268e-5
     # test for error-cases of GasChromatographySimulator.load_solute_database
 
     # test for new database format
@@ -144,8 +144,8 @@ end
     @test par.prog.gf(0.0) == par.prog.gf(L) + par.prog.a_gf[:,1]
     @test par.prog.T_itp(0.0, 0.0) == temp_steps[1] + 273.15
     @test par.prog.T_itp(L, sum(time_steps)) == temp_steps[end] - ΔT_steps[end] + 273.15
-    @test par.sub[1].Dag == GasChromatographySimulator.diffusivity(par.sub[1].CAS, "He")
-    @test  isapprox(par.sub[2].Dag, GasChromatographySimulator.diffusivity(156.31, 11, 24, 0, 0, 0, "He"), atol=1e-6)
+    @test par.sub[1].Cag == GasChromatographySimulator.diffusivity(par.sub[1].CAS, "He")
+    @test  isapprox(par.sub[2].Cag, GasChromatographySimulator.diffusivity(156.31, 11, 24, 0, 0, 0, "He"), atol=1e-6)
 end
 
 @testset "solving check" begin
