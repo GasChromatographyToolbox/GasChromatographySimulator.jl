@@ -84,6 +84,17 @@ function flow_restriction(x, t, T_itp, d, gas; ng=false, vis="Blumberg")
     if ng==true
         κ = x*viscosity(x, t, T_itp, gas, vis=vis)*T_itp(x, t)*d(x)^-4
     else
+        f(y, p) = viscosity(y, t, T_itp, gas, vis=vis)*T_itp(y, t)*d(y)^-4
+        prob = IntegralProblem(f, 0.0, x)
+        κ = solve(prob, QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
+    end
+    return κ
+end
+
+function flow_restriction_quadgk(x, t, T_itp, d, gas; ng=false, vis="Blumberg")
+    if ng==true
+        κ = x*viscosity(x, t, T_itp, gas, vis=vis)*T_itp(x, t)*d(x)^-4
+    else
         κ = quadgk(y -> viscosity(y, t, T_itp, gas, vis=vis)*T_itp(y, t)*d(y)^-4, 0, x)[1]
     end
     return κ
@@ -315,6 +326,36 @@ function holdup_time(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blu
             tM = 128/3*L^2/d(L)^2*η*(Fpin_itp(t)^3-pout_itp(t)^3)/(Fpin_itp(t)^2-pout_itp(t)^2)^2
         else
             κL = flow_restriction(L, t, T_itp, d, gas; ng=false, vis=vis)
+            f_p(y, p) = d(y)^2*pressure(y, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis=vis, control="Pressure")/T_itp(y, t)
+            prob_p = IntegralProblem(f_p, 0.0, L)
+            integral = solve(prob_p, QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
+            tM = 64*κL/(Fpin_itp(t)^2-pout_itp(t)^2)*integral
+        end
+    elseif control == "Flow"
+        if ng==true
+            pin = GasChromatographySimulator.inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=true, vis=vis, control="Flow")
+            η = GasChromatographySimulator.viscosity(L, t, T_itp, gas; vis=vis)
+            tM = 128/3*L^2/d(L)^2*η*(pin^3-pout_itp(t)^3)/(pin^2-pout_itp(t)^2)^2
+        else
+            f_F(y, p) = d(y)^2*pressure(y, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis=vis, control="Flow")/T_itp(y, t)
+            prob_F = IntegralProblem(f_F, 0.0, L)
+            integral = solve(prob_F, QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
+            tM = π/4 * Tn/pn * integral/Fpin_itp(t)
+        end
+    end
+    
+    return tM
+end
+
+function holdup_time_quadgk(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
+    # hold-up time at time t in a temperature program with potential thermal gradient
+    if control == "Pressure"
+        #pin(t) = Fpin_itp(t)
+        if ng==true
+            η = GasChromatographySimulator.viscosity(L, t, T_itp, gas; vis=vis)
+            tM = 128/3*L^2/d(L)^2*η*(Fpin_itp(t)^3-pout_itp(t)^3)/(Fpin_itp(t)^2-pout_itp(t)^2)^2
+        else
+            κL = flow_restriction_quadgk(L, t, T_itp, d, gas; ng=false, vis=vis)
             integral = quadgk(y -> d(y)^2*pressure(y, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis=vis, control="Pressure")/T_itp(y, t), 0, L)[1]
             tM = 64*κL/(Fpin_itp(t)^2-pout_itp(t)^2)*integral
         end

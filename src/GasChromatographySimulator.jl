@@ -3,6 +3,7 @@ module GasChromatographySimulator
 using Reexport
 @reexport using Interpolations
 using QuadGK
+using Integrals
 @reexport using DifferentialEquations
 using ForwardDiff
 @reexport using DataFrames
@@ -1033,6 +1034,18 @@ function simulate(par)
 	end
 end
 
+function simulate_quadgk(par)
+    if par.opt.odesys==true
+        sol = solve_system_multithreads_quadgk(par)
+    	pl = GasChromatographySimulator.peaklist(sol, par)
+        return pl, sol
+	else
+		sol, peak = solve_multithreads(par)
+    	pl = GasChromatographySimulator.peaklist(sol, peak, par)
+        return pl, sol, peak
+	end
+end
+
 """
     solve_system_multithreads(par::Parameters)
 
@@ -1056,6 +1069,16 @@ function solve_system_multithreads(par)
 	end
 	return sol
 end
+
+function solve_system_multithreads_quadgk(par)
+	n = length(par.sub)
+	sol = Array{Any}(undef, n)
+	Threads.@threads for i=1:n
+		sol[i] = solving_odesystem_r_quadgk(par.col, par.prog, par.sub[i], par.opt)
+	end
+	return sol
+end
+
 
 """
     solve_multithreads(par::Parameters)
@@ -1148,6 +1171,20 @@ function solving_odesystem_r(col::Column, prog::Program, sub::Substance, opt::Op
     return solution
 end
 
+function solving_odesystem_r_quadgk(col::Column, prog::Program, sub::Substance, opt::Options)
+    t₀ = [sub.t₀; sub.τ₀^2]
+    zspan = (0.0,col.L)
+	p = [col, prog, sub, opt]
+    prob = ODEProblem(odesystem_r_quadgk!, t₀, zspan, p)
+
+    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
+
+    if solution.t[end]<col.L
+        solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol, dt=col.L/1000000)
+    end
+    return solution
+end
+
 """
     odesystem_r!(dt, t, p, z)
 
@@ -1172,6 +1209,17 @@ function odesystem_r!(dt, t, p, z)
     dt[2] = peakode(z, t[1], t[2], col, prog, sub, opt)
 end
 
+function odesystem_r_quadgk!(dt, t, p, z)
+    # t[1] ... t time
+    # t[2] ... τ² band variance
+	col = p[1]
+	prog = p[2]
+	sub = p[3]
+	opt = p[4]
+    dt[1] = residency(z, t[1], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control)
+    dt[2] = peakode_quadgk(z, t[1], t[2], col, prog, sub, opt)
+end
+
 """
     peakode(z, t, τ², col, prog, sub, opt)
 
@@ -1187,6 +1235,62 @@ ForwardDiff.jl
 See also: [`solving_odesystem_r`](@ref), [`odesystem_r!`](@ref)
 """
 function peakode(z, t, τ², col, prog, sub, opt)
+	# alternative function
+    if opt.ng==true
+        r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis, control=opt.control)
+        H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; ng=true, vis=opt.vis, control=opt.control)
+        ∂r∂t_ng(z,t) = ForwardDiff.gradient(r_ng, [z, t])[2]
+        return H_ng(z,t)*r_ng([z,t])^2 + 2*τ²*∂r∂t_ng(z,t)
+    else
+		#=d(z) = col.d(z)
+		T(z,t) = prog.T_itp(z, t)
+		η(z,t) = GasChromatographySimulator.viscosity(z, t, prog.T_itp, col.gas; vis=opt.vis)
+		c(zt) = η(zt[1], zt[2])*T(zt[1], zt[2])
+		∂c∂t(z,t) = ForwardDiff.gradient(c, [z,t])[2]
+        #if opt.control == "Pressure"
+		#    pi2(t) = prog.Fpin_itp(t)^2
+        #elseif opt.control == "Flow"
+            pi2(t) = inlet_pressure(t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.gas; vis=opt.vis, control=opt.control)^2
+        #end
+		po2(t) = prog.pout_itp(t)^2
+		∂pi2∂t(t) = ForwardDiff.derivative(pi2, t)
+		∂po2∂t(t) = ForwardDiff.derivative(po2, t)
+        κ(z,t) = flow_restriction(z, t, prog.T_itp, col.d, col.gas; vis=opt.vis)
+		κL(t) = κ(col.L,t)
+		∂κ∂t(z,t) = quadgk(y -> d(y)^-4*∂c∂t(y,t), 0.0, z)[1]
+        ∂κL∂t(t) = ∂κ∂t(col.L,t)
+		e(z,t) = κ(z,t)/κL(t)
+		∂e∂t(z,t) = (∂κ∂t(z,t)*κL(t)-κ(z,t)*∂κL∂t(t))/κL(t)^2
+		p(z,t) = pressure(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.gas; vis=opt.vis, control=opt.control)
+		∂p∂t(z,t) = 1/(2*p(z,t))*(∂pi2∂t(t)-(∂e∂t(z,t)*(pi2(t)-po2(t))+e(z,t)*(∂pi2∂t(t)-∂po2∂t(t))))
+		rM(z,t) = mobile_phase_residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.gas; vis=opt.vis, control=opt.control)
+		a(z,t) = κL(t)*p(z,t)
+		∂a∂t(z,t) = ∂κL∂t(t)*p(z,t)+κL(t)*∂p∂t(z,t)
+		b(zt) = T(zt[1],zt[2])*(pi2(zt[2])-po2(zt[2]))
+		∂b∂t(z,t) = ForwardDiff.gradient(b, [z,t])[2]
+		∂rM∂t(z,t) = 64*d(z)^2*((∂a∂t(z,t)*b([z,t])-a(z,t)*∂b∂t(z,t))/b([z,t])^2)
+		
+		k(zt) = retention_factor(zt[1], zt[2], prog.T_itp, col.d, col.df, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀)
+        ∂k∂t(z,t) = ForwardDiff.gradient(k, [z, t])[2]
+		
+		r(z,t) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; vis=opt.vis, control=opt.control)
+        H(z,t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; vis=opt.vis, control=opt.control)
+        ∂r∂t(z,t) = ∂rM∂t(z,t)*(1+k([z,t])) + rM(z,t)*∂k∂t(z,t)
+        # AutoDiff problems with the intgral in flow_restriction κ and κL makes 
+        # it nessecary to partly calculate the derivative manually
+        # package Quadrature.jl makes it possible to differentiate for parameters
+        # inside the integral, but not for the differentiation for upper or lower bound 
+        # of the integral (issue #56)
+        # if this can be solved, it should be straigthforward with AutoDiff=#
+        r(z, t) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; vis=opt.vis, control=opt.control)
+        rz(t) = r(z, t)
+        H(z, t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; vis=opt.vis, control=opt.control)
+        ∂rz∂t(t) = ForwardDiff.derivative(rz, t)
+        return H(z,t)*r(z,t)^2 + 2*τ²*∂rz∂t(t)
+    end
+end
+
+function peakode_quadgk(z, t, τ², col, prog, sub, opt)
 	# alternative function
     if opt.ng==true
         r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis, control=opt.control)
