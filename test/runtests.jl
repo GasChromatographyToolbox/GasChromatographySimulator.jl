@@ -402,8 +402,8 @@ end
     tM_T = GasChromatographySimulator.holdup_time(T_test, prog_ng.Fpin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
     tM_t = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.Fpin_itp, prog_ng.pout_itp, col.L, col.d, col.gas)
     tM_t_ng = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.Fpin_itp, prog_ng.pout_itp, col.L, col.d, col.gas; ng=true)
-    @test tM_T ≈ tM_t
-    @test tM_T ≈ tM_t_ng
+    @test isapprox(tM_T, tM_t, atol=1e-3) 
+    @test isapprox(tM_T, tM_t_ng, atol=1e-3)
 
     F_T = GasChromatographySimulator.flow(T_test, prog_ng.Fpin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
     F_t = GasChromatographySimulator.flow(t, prog_ng.T_itp, prog_ng.Fpin_itp, prog_ng.pout_itp, col.L, col.d, col.gas)
@@ -423,11 +423,11 @@ end
 
     tM_T = GasChromatographySimulator.holdup_time(T_test, prog_F.Fpin_itp(t), prog_F.pout_itp(t), col.L, col.a_d[1], col.gas; control="Flow") # only defined for non-gradient case
     tM_t = GasChromatographySimulator.holdup_time(t, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; control="Flow") # prog_F is without gradient -> should be the same
-    @test tM_T ≈ tM_t
+    @test isapprox(tM_T, tM_t, atol=1e-3)
 
     tM_T = GasChromatographySimulator.holdup_time(T_test, prog_F.Fpin_itp(t), prog_F.pout_itp(t), col.L, col.a_d[1], col.gas; control="Flow") # only defined for non-gradient case
     tM_t = GasChromatographySimulator.holdup_time(t, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; control="Flow", ng=true)
-    @test tM_T ≈ tM_t
+    @test isapprox(tM_T, tM_t, atol=1e-3)
     
 
     F_T = GasChromatographySimulator.flow(T_test, prog_ng.Fpin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
