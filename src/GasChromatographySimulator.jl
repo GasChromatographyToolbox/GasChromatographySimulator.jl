@@ -1051,16 +1051,6 @@ function solve_system_multithreads(par)
 	return sol
 end
 
-function solve_system_multithreads_quadgk(par)
-	n = length(par.sub)
-	sol = Array{Any}(undef, n)
-	Threads.@threads for i=1:n
-		sol[i] = solving_odesystem_r_quadgk(par.col, par.prog, par.sub[i], par.opt)
-	end
-	return sol
-end
-
-
 """
     solve_multithreads(par::Parameters)
 
