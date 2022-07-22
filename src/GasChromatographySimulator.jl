@@ -29,21 +29,22 @@ Structure describing the GC Column.
 # Arguments
 
 * `L`: Length of the capillary measured in m (meter)
-* `d`: A function `d(x, a_d)` of `x`, the position along the capillary, describing the diameter in m (meter).
+* `d`: A function `d(x, a_d)` of `x`, the position along the capillary, describing the diameter in m (meter). Or a number for a constant value.
 * `a_d`: Parameters of the diameter function. 
-* `d_f`: A function `d_f(x, a_df)` of `x`, describing the film thickness in m (meter).
+* `d_f`: A function `d_f(x, a_df)` of `x`, describing the film thickness in m (meter). Or a number for a constant value.
+* `a_df`: Parameters of the film thickness function. 
 * `sp`: The name of the stationary phase.
 * `gas`: The name of the mobile phase. Allowed values: He, H2 or N2.
 """
-struct Column{Fd<:Function, Fdf<:Function}
+struct Column
     L                       # column length in m
-    d::Fd                   # column internal diameter in m as function of x
+    d                       # column internal diameter in m as function of x or a number
     a_d::Array{Float64,1}   # parameters of the diameters function d(x)
-    df::Fdf                 # column film thickness in m as function of x
+    df                      # column film thickness in m as function of x or a number
     a_df::Array{Float64}    # parameters of the film thickness function df(x)
     sp::String              # stationary phase of the column
     gas::String             # gas of the mobile phase ["He", "H2", "N2"]
-    Column(L, d, a_d, df, a_df, sp, gas) = (gas!="He" && gas!="H2" && gas!="N2") ? error("Wrong selection for 'gas'. Choose 'He', 'H2' or 'N2'.") : new{typeof(d), typeof(df)}(L, d, a_d, df, a_df, sp, gas)
+    Column(L, d, a_d, df, a_df, sp, gas) = (gas!="He" && gas!="H2" && gas!="N2") ? error("Wrong selection for 'gas'. Choose 'He', 'H2' or 'N2'.") : new(L, d, a_d, df, a_df, sp, gas)
 end
 
 """
@@ -188,9 +189,9 @@ julia> Column(10.0, 0.1e-3, 0.1e-6, "DB5", "He")
 function Column(L, d, df, sp, gas)
     # function to construct the Column structure
     # for the case of constant diameter and constant film thickness
-    d_func(x) = gradient(x, [d])
-    df_func(x) = gradient(x, [df])
-    col = Column(L, d_func, [d], df_func, [df], sp, gas)
+    #d_func(x) = gradient(x, [d])
+    #df_func(x) = gradient(x, [df])
+    col = Column(L, d, [d], df, [df], sp, gas)
     return col
 end
 
