@@ -47,7 +47,7 @@ end
     df_fun(x) = GasChromatographySimulator.gradient(x, a_df)
     col = GasChromatographySimulator.Column(L, d_fun, a_d, df_fun, a_df, sp, gas)
     col_c = GasChromatographySimulator.constructor_System(L, a_d[1], a_df[1], sp, gas)
-    @test col.d(col.L) == col_c.d(col_c.L)
+    @test col.d(col.L) == col_c.d
 
     # Program 
     a_gf = [ΔT_steps x₀_steps L₀_steps α_steps]
@@ -158,11 +158,11 @@ end
     # - the Column
     # - the Substances
     # - temperature and pressure program
-    a_d = [d]
-    a_df = [df]
-    d_fun(x) = GasChromatographySimulator.gradient(x, a_d)
-    df_fun(x) = GasChromatographySimulator.gradient(x, a_df)
-    col = GasChromatographySimulator.Column(L, d_fun, a_d, df_fun, a_df, sp, gas)
+    #a_d = [d]
+    #a_df = [df]
+    #d_fun(x) = GasChromatographySimulator.gradient(x, a_d)
+    #df_fun(x) = GasChromatographySimulator.gradient(x, a_df)
+    col = GasChromatographySimulator.Column(L, d, df, sp, gas)
 
     
     solutes = ["C10", "C11"]
