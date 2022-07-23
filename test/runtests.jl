@@ -46,7 +46,7 @@ end
     d_fun(x) = GasChromatographySimulator.gradient(x, a_d)
     df_fun(x) = GasChromatographySimulator.gradient(x, a_df)
     col = GasChromatographySimulator.Column(L, d_fun, a_d, df_fun, a_df, sp, gas)
-    col_c = GasChromatographySimulator.constructor_System(L, a_d[1], a_df[1], sp, gas)
+    col_c = GasChromatographySimulator.constructor_System(L, d, df, sp, gas)
     @test col.d(col.L) == col_c.d
 
     # Program 
@@ -417,7 +417,7 @@ end
     F_T = GasChromatographySimulator.flow(T_test, prog_F.Fpin_itp(t), prog_F.pout_itp(t), col.L, col.a_d[1], col.gas; control="Flow") # only defined for non-gradient case
     F_t = GasChromatographySimulator.flow(t, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; control="Flow")
     pin(t) = GasChromatographySimulator.inlet_pressure(t, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; ng=false, vis="Blumberg", control="Flow")
-
+   
     @test F_T  ≈  F_t
     @test F_T ≈ GasChromatographySimulator.flow(T_test, pin(t), prog_F.pout_itp(t), col.L, col.a_d[1], col.gas; control="Pressure")
 

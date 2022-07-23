@@ -240,20 +240,9 @@ GC-system defined by `par`.
 function velocity(df_sol, i, par)
 	x = df_sol.z[i]
 	t = df_sol.t[i]
-	T_itp = par.prog.T_itp
-	pin_itp = par.prog.Fpin_itp
-	pout_itp = par.prog.pout_itp
-	L = par.col.L
-	d = par.col.d
-	df = par.col.df
-	gas = par.col.gas
-	ΔCp = par.sub[i].ΔCp
-	Tchar = par.sub[i].Tchar
-	θchar = par.sub[i].θchar
-	φ₀ = par.sub[i].φ₀
 	u = Array{Float64}(undef, length(x))
 	for j=1:length(x)
-		u[j] = 1/GasChromatographySimulator.residency(x[j], t[j], T_itp, pin_itp, pout_itp, L, d, df, gas, ΔCp, Tchar, θchar, φ₀; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control)
+		u[j] = 1/GasChromatographySimulator.residency(x[j], t[j], par.col, par.prog, par.sub[i], par.opt)
 	end
 	return u
 end

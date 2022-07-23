@@ -59,6 +59,11 @@ function pressure(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blu
     return pp
 end
 
+function pressure(x, t, par::Parameters)
+    pp = pressure(x, t, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.gas; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control)
+    return pp
+end
+
 """
     flow_restriction(x, t, T_itp, d, gas; ng=false, vis="Blumberg")
 
@@ -103,6 +108,11 @@ function flow_restriction(x, t, T_itp, d::Float64, gas; ng=false, vis="Blumberg"
         prob = IntegralProblem(f, 0.0, x)
         κ = solve(prob, QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
     end
+    return κ
+end
+
+function flow_restriction(x, t, par::Parameters)
+    κ = flow_restriction(x, t, par.prog.T_itp, par.col.d, par.col.gas; ng=par.opt.ng, vis=par.opt.vis)
     return κ
 end
 
@@ -176,6 +186,11 @@ function viscosity(x, t, T_itp, gas; vis="Blumberg")
     else
         error("Unknown selection for the viscosity model. Choose one of these options: 'Blumberg' or 'HP'.")
     end
+    return η
+end
+
+function viscosity(x, t, par::Parameters)
+    η = viscosity(x, t, par.prog.T_itp, par.col.gas; vis=par.opt.vis)
     return η
 end
 
@@ -279,6 +294,11 @@ function inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d::Float64, gas; ng=fal
             pin = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * κL * F_itp(t))
         end
     end
+    return pin
+end
+
+function inlet_pressure(t, par::Parameters)
+    pin = inlet_pressure(t, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.gas; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control)
     return pin
 end
 
@@ -397,6 +417,12 @@ function holdup_time(t, T_itp, Fpin_itp, pout_itp, L, d::Float64, gas; ng=false,
     
     return tM
 end
+
+function holdup_time(t, par::Parameters)
+    tM = holdup_time(t, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.gas; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control)
+    return tM
+end
+
 """
     flow(T, Fpin, pout, L, d, gas; vis="Blumberg", control="Pressure")
 
@@ -502,6 +528,11 @@ function flow(t, T_itp, Fpin_itp, pout_itp, L, d::Float64, gas; ng=false, vis="B
 	return F
 end
 
+function flow(t, par::Parameters)
+    F = flow(t, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.gas; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control)
+    return F
+end
+
 """
     mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
 
@@ -558,6 +589,11 @@ function mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d::Float64, 
     return rM
 end
 
+function mobile_phase_residency(x, t, par::Parameters)
+    rM = mobile_phase_residency(x, t, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.gas; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control)
+    return rM
+end
+
 """
     residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp,  φ₀; ng=false, vis="Blumberg", control="Pressure")
 
@@ -594,6 +630,11 @@ See also: [`mobile_phase_residency`](@ref), [`retention_factor`](@ref)
 """
 function residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=false, vis="Blumberg", control="Pressure")
     r = mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)*(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀))
+    return r
+end
+
+function residency(x, t, col::Column, prog::Program, sub::Substance, opt::Options)
+    r = residency(x, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control)
     return r
 end
 
@@ -690,6 +731,11 @@ function retention_factor(x, t, T_itp, d::Float64, df, Tchar, θchar, ΔCp, φ�
         lnk₀ = (C + Tchar/θchar) * (Tchar/T - 1) + C*log(T/Tchar)
         k = φ/φ₀*exp(lnk₀)
     end
+    return k
+end
+
+function retention_factor(x, t, col::Column, prog::Program, sub::Substance)
+    k = retention_factor(x, t, prog.T_itp, col.d, col.df, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀)
     return k
 end
 
@@ -796,6 +842,11 @@ function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d::Float64, df, gas, T
     return H
 end
 
+function plate_height(x, t, col::Column, prog::Program, sub::Substance, opt::Options)
+    H = plate_height(x, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; ng=opt.ng, vis=opt.vis, control=opt.control)
+    return H
+end
+
 """
     diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=false, vis="Blumberg", control="Pressure")
 
@@ -821,6 +872,11 @@ or with a gradient (`ng = false`).
 """
 function diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=false, vis="Blumberg", control="Pressure")
     DM = T_itp(x, t)^1.75/pressure(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)*Cag
+    return DM
+end
+
+function diffusion_mobile(x, t, col::Column, prog::Program, sub::Substance, opt::Options)
+    DM = diffusion_mobile(x, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.gas, sub.Cag; ng=opt.ng, vis=opt.vis, control=opt.control)
     return DM
 end
 
