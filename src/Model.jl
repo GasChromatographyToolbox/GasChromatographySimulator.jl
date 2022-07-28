@@ -100,7 +100,7 @@ function flow_restriction(x, t, T_itp, d, gas; ng=false, vis="Blumberg")
     return κ
 end
 
-function flow_restriction(x, t, T_itp, d::Float64, gas; ng=false, vis="Blumberg")
+function flow_restriction(x, t, T_itp, d::Number, gas; ng=false, vis="Blumberg")
     if ng==true
         κ = x*viscosity(x, t, T_itp, gas, vis=vis)*T_itp(x, t)*d^-4
     else
@@ -282,7 +282,7 @@ function inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="
     return pin
 end
 
-function inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d::Float64, gas; ng=false, vis="Blumberg", control="Pressure")
+function inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d::Number, gas; ng=false, vis="Blumberg", control="Pressure")
     if control == "Pressure"
         pin = Fpin_itp(t)
     elseif control == "Flow"
@@ -388,7 +388,7 @@ function holdup_time(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blu
     return tM
 end
 
-function holdup_time(t, T_itp, Fpin_itp, pout_itp, L, d::Float64, gas; ng=false, vis="Blumberg", control="Pressure")
+function holdup_time(t, T_itp, Fpin_itp, pout_itp, L, d::Number, gas; ng=false, vis="Blumberg", control="Pressure")
     # hold-up time at time t in a temperature program with potential thermal gradient
     if control == "Pressure"
         #pin(t) = Fpin_itp(t)
@@ -509,7 +509,7 @@ function flow(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg",
 	return F
 end
 
-function flow(t, T_itp, Fpin_itp, pout_itp, L, d::Float64, gas; ng=false, vis="Blumberg", control="Pressure")
+function flow(t, T_itp, Fpin_itp, pout_itp, L, d::Number, gas; ng=false, vis="Blumberg", control="Pressure")
 	# normalized Flow at time t in a temperature program with potential thermal
 	# gradient
     # TODO: test for gradient in d(x)
@@ -575,7 +575,7 @@ function mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=f
     return rM
 end
 
-function mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d::Float64, gas; ng=false, vis="Blumberg", control="Pressure")
+function mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d::Number, gas; ng=false, vis="Blumberg", control="Pressure")
     if control == "Pressure"
         pin_itp = Fpin_itp
         pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control="Pressure")
@@ -683,7 +683,7 @@ function retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀)
     return k
 end
 
-function retention_factor(x, t, T_itp, d::Float64, df::Float64, Tchar, θchar, ΔCp, φ₀)
+function retention_factor(x, t, T_itp, d::Number, df::Number, Tchar, θchar, ΔCp, φ₀)
     # this version of the function, where every parameter is
     # given to the function separatly seems to be the fastest
     # version
@@ -700,7 +700,7 @@ function retention_factor(x, t, T_itp, d::Float64, df::Float64, Tchar, θchar, �
     return k
 end
 
-function retention_factor(x, t, T_itp, d, df::Float64, Tchar, θchar, ΔCp, φ₀)
+function retention_factor(x, t, T_itp, d, df::Number, Tchar, θchar, ΔCp, φ₀)
     # this version of the function, where every parameter is
     # given to the function separatly seems to be the fastest
     # version
@@ -717,7 +717,7 @@ function retention_factor(x, t, T_itp, d, df::Float64, Tchar, θchar, ΔCp, φ�
     return k
 end
 
-function retention_factor(x, t, T_itp, d::Float64, df, Tchar, θchar, ΔCp, φ₀)
+function retention_factor(x, t, T_itp, d::Number, df, Tchar, θchar, ΔCp, φ₀)
     # this version of the function, where every parameter is
     # given to the function separatly seems to be the fastest
     # version
@@ -803,7 +803,7 @@ function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θc
     return H
 end
 
-function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d::Float64, df::Float64, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure")
+function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d::Number, df::Number, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure")
     id = d# - 2.0*df
     uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
     μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀))
@@ -816,7 +816,7 @@ function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d::Float64, df::Float6
     return H
 end
 
-function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df::Float64, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure")
+function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df::Number, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure")
     id = d(x)# - 2.0*df
     uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
     μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀))
@@ -829,7 +829,7 @@ function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df::Float64, gas, T
     return H
 end
 
-function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d::Float64, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure")
+function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d::Number, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure")
     id = d# - 2.0*df(x)
     uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
     μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀))
