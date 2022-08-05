@@ -15,10 +15,11 @@ The interaction between the substances and the stationary phase of the GC-system
 For further details see [`[8]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References).
 
 The simulation uses the following packages:
-- [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl)
+- [OrdinaryDiffEq.jl](https://github.com/SciML/OrdinaryDiffEq.jl) part of [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl)
 - [Interpolations.jl](https://github.com/JuliaMath/Interpolations.jl)
-- [QuadGK.jl](https://github.com/JuliaMath/QuadGK.jl)
+- [Integrals.jl](https://github.com/SciML/Integrals.jl)
 - [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)
+- [ChemicalIdentifiers.jl](https://github.com/longemen3000/ChemicalIdentifiers.jl)
 - [Pluto.jl](https://github.com/fonsp/Pluto.jl)
 
 The manual is structured as followed:
@@ -27,6 +28,7 @@ The manual is structured as followed:
 Pages = [
     "installation.md",
     "usage.md",
+    "examples.md",
     "functions.md",
     "references.md"
     ]
