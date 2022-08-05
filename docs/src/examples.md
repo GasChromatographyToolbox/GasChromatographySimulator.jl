@@ -38,6 +38,7 @@ The conventional GC program simulated here is `Prog. D` from [`[8]`](https://jan
 The standard options are used. Only the option `ng` (non-gradient) is changed to `true`. Because the conventional GC does not use non-uniform temperature, diameter or film thickness, the model can be simplified and the calculation of the separation is faster.
 ```@example ex_meas
 using GasChromatographySimulator # hide
+using DataFrames, CSV 
 opt = GasChromatographySimulator.Options(ng=true)
 ```
 
