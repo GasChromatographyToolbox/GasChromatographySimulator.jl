@@ -1,16 +1,16 @@
 module GasChromatographySimulator
 
 using Reexport
-@reexport using Interpolations
+using Interpolations
 using Integrals
-@reexport using DifferentialEquations
+@reexport using OrdinaryDiffEq: OwrenZen3, OwrenZen4, OwrenZen5
 using ForwardDiff
-@reexport using DataFrames
-@reexport using CSV
+using DataFrames
+using CSV
 using Plots
 using HypertextLiteral
 using PlutoUI
-@reexport using ChemicalIdentifiers
+using ChemicalIdentifiers
 
 # some constants
 const Tst = 273.15            # K
