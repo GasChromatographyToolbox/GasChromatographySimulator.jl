@@ -27,7 +27,7 @@ Manifest.toml
 *.DS_Store
 Overview_functions_and_tests.xlsx
 
-.vscode
+.vscode/
 
 # ChemicalIdentifier.jl custom database (?)
 #*.arrow
