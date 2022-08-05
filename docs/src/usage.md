@@ -12,7 +12,7 @@ A fourth set of parameters, [`GasChromatographySimulator.Options`](@ref), holds 
 - `reltol`: The relative tolerance for the ODE solver. Recommended value 1e-3 to 1e-5. 
 - `Tcontrol`: Option defining at which point of the column the temperature program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
 - `odesys`: Combine the ODEs for migration and peak-width into a system of ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
-- `ng`: Option to calculate the simulation without a gradient (`ng = true`) or with a gradient (`ng = false`). 
+- `ng`: Option to calculate the simulation without a gradient (`ng = true`, uniform `T`, `d` and `df`) or with a gradient (`ng = false`, non-uniform `T`, `d` and/or `df`). 
 - `vis`: Used model of viscosity. `HP` is a model taken from the HP flow calculator with a linear temperature dependency of the viscosity. `Blumberg` is an emperical formula according to the book [`[7]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References)
 - `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
@@ -30,7 +30,7 @@ A GC column is defined by the dimensions of the column, length `L`, diameter `d`
 
 These values are collected in the type structure [`GasChromatographySimulator.Column`](@ref), which allows to define a function depending on column position `x` of the diameter `d(x, a_d)` and film thickness `df(x, a_df)`, where `a_d`, resp. `a_df` are parameters of the function.
 
-The following method constructs the Column structure `col` with a constant diameter and film thickness:
+The following method constructs the Column structure `col` with an uniform diameter and uniform film thickness:
 
 ```@example ex
 col = GasChromatographySimulator.Column(10.0, 0.25e-3, 0.25e-6, "SPB50", "He")
@@ -47,7 +47,7 @@ Different methods exist to construct the Program structure, depending on the usa
 
 ### Without thermal gradient
 
-Without a thermal gradient the temperature is the same at every column position at the same time. This is the normal case for conventional GC. One example of such a program can be achieved by the following method [`GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, L)`](@ref), which constructs the Program structure:
+Without a thermal gradientthe temperature is the same at every column position (uniform) at the same time. This is the normal case for conventional GC. One example of such a program can be achieved by the following method [`GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, L)`](@ref), which constructs the Program structure:
 
 ```@example ex
 prog = GasChromatographySimulator.Program(  [0.0, 60.0, 600.0, 120.0],
@@ -91,7 +91,7 @@ These functions can also be used for the notation of other programs, e.g. progra
 
 #### Predefined gradient function
 
-In the following text the expression _temperature program_ means the change of the temperature with time `t`, while the expression _temperature gradient_ means the change of the temperature with column position `x`.
+In the following text the expression _temperature program_ means the change of the temperature with time `t` (dynamic), while the expression _temperature gradient_ means the change of the temperature with column position `x` (non-uniform).
 
 In addition to a linear temperature and pressure program , a temperature gradient can be defined. Using the method [`GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, a_gf, Tcontrol, L)`](@ref) a pre-defined temperature function `gf(x)` is used to set the GC program.
 
@@ -134,11 +134,11 @@ For `α=0` a linear change of the temperature along the column is achieved. For 
 
 From the parameters `time_steps`, `temp_steps`, `a_gf` and gradient function `gf(x)` the temperature at every position `x` and every time `t` is linearly interpolated in a function `T_itp(x,t)`, which is stored in the [`GasChromatographySimulator.Program`](@ref) structure. The parameters `time_steps` and `pin_steps`, resp. `pout_steps`, are used to construct the linear interpolated pressure function in time `pin_itp(t)`, resp. `pout_itp(t)`. These interpolated functions are used throughout the simulation.
 
-
+In the section [Self-defined gradient function](@ref) in [Notes](@ref) an example for a user defined gradient function is shown.
 
 ## Substance parameters
 
-A third set of parameters, [`GasChromatographySimulator.Substance`](@ref), is used to store the informations about the substances which are separated in the simulated GC-run. The stored information are the name, the CAS-number, three thermodynamic parameters (`Tchar` `θchar` `ΔCp`, see also [`[6]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References)), the dimensionless film thickness (df/d) of the Column for which the thermodynamic parameters were estimated, the diffusivity (calculated from the molecular formula, number of rings in the molecule and mol mass), the injection time and initial peak width. For several substances an array of the type [`GasChromatographySimulator.Substance`](@ref) is used.
+A third set of parameters, [`GasChromatographySimulator.Substance`](@ref), is used to store the informations about the substances which are separated in the simulated GC-run. The stored information are the name, the CAS-number, three thermodynamic parameters (`Tchar` `θchar` `ΔCp`, see also [`[6]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References)), the dimensionless film thickness (df/d) of the Column for which the thermodynamic parameters were estimated, the diffusivity (calculated from the molecular formula, number of rings in the molecule and mol mass, which are extracted using [ChemicalIdentifiers.jl](https://github.com/longemen3000/ChemicalIdentifiers.jl) from an external database), the injection time and initial peak width. For several substances an array of the type [`GasChromatographySimulator.Substance`](@ref) is used.
 
 With the function [`GasChromatographySimulator.load_solute_database`](@ref) the data for selected substances and a selected stationary phase is loaded from an external database (a .csv-file).
 
@@ -205,6 +205,7 @@ peaklist # hide
 - uR            ... velocity of the substance at retention time in m/s
 - kR            ... retention factor at retention time
 - Res           ... resolution between the substance and its following neighbor
+- Δs            ... separation metric between the substance and its following neighbor
 
 From the `peaklist` a chromatogram can be calculated (gaussian peak form with the same area are assumed) and plotted:
 
@@ -289,15 +290,10 @@ db = DataFrame(CSV.File("../../data/Database_test.csv", header=1, silencewarning
 It consists of 14 different columns:
 - Name          ... name of the substance
 - CAS           ... CAS number for unique identification of the substance
-- Cnumber       ... number of carbon atoms in the substance molecule
-- Hnumber       ... number of hydrogen atoms in the substance molecule
-- Onumber       ... number of oxygen atoms in the substance molecule
-- Nnumber       ... number of nitrogen atoms in the substance molecule
-- Ringnumber    ... number of ring structures in the substance molecule
-- Molmass       ... molar mass of the substance molecule
 - Phase         ... name of the stationary phase which corresponds to the thermodynamic parameters
 - Tchar         ... the first thermodynamic parameter in °C
 - thetachar     ... the second thermodynamic parameter in °C
 - DeltaCp       ... the third thermodynamic parameter in J mol⁻¹ K⁻¹
 - phi0          ... the dimensionless film thickness (df/d) for which the thermodynamic parameters were estimated
-- Annotation    ... a note, e.g. reference for the thermodynamic parameters
+- Source        ... a note, e.g. reference for the thermodynamic parameters
+- Cat           ... a number of columns with optional names for categories of the substances
