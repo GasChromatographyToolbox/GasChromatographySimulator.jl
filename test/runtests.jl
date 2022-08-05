@@ -1,4 +1,4 @@
-using Test, GasChromatographySimulator, PlutoUI
+using Test, GasChromatographySimulator, PlutoUI, DataFrames, CSV
 
 # general parameters
 L = 10.0
