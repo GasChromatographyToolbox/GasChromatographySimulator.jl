@@ -133,14 +133,14 @@ for i=2:length(time)
     time_steps[i] = time[i]-time[i-1]
 end
 time_steps[1] = 0.0
-temp_step = prog_settings.T[1:20:end]
+temp_steps = prog_settings.T[1:20:end]
 ΔT_steps = prog_settings.DeltaT[1:20:end]
 pin_steps = prog_settings.pinj[1:20:end].*1000.0 .+ 101300.0
 pout_steps = prog_settings.pdet[1:20:end].*1000.0
 α_steps = -3.0.*ones(length(ΔT_steps))
 x₀_steps = zeros(length(ΔT_steps))
 L₀_steps = col_tg.L.*ones(length(ΔT_steps))
-prog_med_grad = GasChromatographySimulator.Program(time_step, temp_step, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, "outlet", col_tg.L)
+prog_med_grad = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, "outlet", col_tg.L)
 ```
 
 The same solutes are used as in the previous example.
