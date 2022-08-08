@@ -38,7 +38,7 @@ The conventional GC program simulated here is `Prog. D` from [`[8]`](https://jan
 The standard options are used. Only the option `ng` (non-gradient) is changed to `true`. Because the conventional GC does not use non-uniform temperature, diameter or film thickness, the model can be simplified and the calculation of the separation is faster.
 ```@example ex_meas
 using GasChromatographySimulator # hide
-using DataFrames, CSV 
+using DataFrames, CSV # hide
 opt = GasChromatographySimulator.Options(ng=true)
 ```
 
@@ -75,9 +75,10 @@ par = GasChromatographySimulator.Parameters(col, prog_D, sub, opt)
 And the simulation is run:
 ```@example ex_meas
 peaklist, sol = GasChromatographySimulator.simulate(par)
+peaklist
 ```
 
-THe file [`Leppert2020b_measured_RT_progD.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/Leppert2020b_measured_RT_progD.csv) contains the retention times and peak widths (as standard deviations) from the measured chromatogram.
+The file [`Leppert2020b_measured_RT_progD.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/measurements/Leppert2020b_measured_RT_progD.csv) contains the retention times and peak widths (as standard deviations) from the measured chromatogram.
 ```@example ex_meas
 measurement_D = DataFrame(CSV.File("../../data/measurements/Leppert2020b_measured_RT_progD.csv", header=1, silencewarnings=true))
 measurement_D[!, 2] = measurement_D[!, 2] .* 60.0 # conversion from min -> s
@@ -91,12 +92,69 @@ compare = GasChromatographySimulator.compare_peaklist(measurement_D, peaklist)
 or by comparing the chromatograms:
 ```@example ex_meas
 chrom_D = DataFrame(CSV.File("../../data/measurements/Leppert2020b_measured_Chrom_progD.csv", header=1, silencewarnings=true))
-p_chrom, t, chrom = GasChromatographySimulator.plot_chromatogram(peaklist[4], (0.0, round(meas_chrom[end,1];sigdigits=2)); annotation=false, number=true, mirror=true, offset=0.0)
-plot!(p_chrom,meas_chrom[!,1], meas_chrom[!,2].*400.0.+0.1)
+p_chrom, t, chrom = GasChromatographySimulator.plot_chromatogram(peaklist, (0.0, round(chrom_D[end,1];sigdigits=2)); annotation=false, number=true, mirror=true, offset=0.0)
+plot!(p_chrom, chrom_D[!,1], chrom_D[!,2].*400.0.+0.1)
 ylims!(-1.6,1.6)
-xlims!(0.0,round(meas_chrom[end,1];sigdigits=2))
+xlims!(0.0,round(chrom_D[end,1];sigdigits=2))
 p_chrom
 ```
 ### Thermal gradient GC
 
-**here an example of a simulation of one of the thermal gradient measurements in Leppert2020b** 
+The following example of a thermal gradient GC is the example `medium gradient` from [`[8]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References). 
+
+Standard options are used:
+```@example ex_meas
+opt_tg = GasChromatographySimulator.Options()
+```
+
+And the column is defined as:
+```@example ex_meas
+col_tg = GasChromatographySimulator.Column(2.05, 0.104e-3, 0.104e-6, "FS5ms", "He")
+```
+
+The program is taken from the measured temperatures and pressures during the GC run, stored in the file [`x90.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/measurements/x90.csv):
+```@example ex_meas
+prog_settings = DataFrame(CSV.File("../../data/measurements/x90.csv", header=1, silencewarnings=true)))
+time_step = prog_settings.Deltat
+temp_step = prog_settings.T
+ΔT_steps = prog_settings.DeltaT
+pin_steps = prog_settings.pinj.*1000.0 .+ 101300.0
+pout_steps = prog_settings.pdet.*1000.0
+α_steps = -3.0.*ones(length(ΔT_steps))
+x₀_steps = zeros(length(ΔT_steps))
+L₀_steps = col.L.*ones(length(ΔT_steps))
+prog_med_grad = GasChromatographySimulator.Program(time_step, temp_step, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, "outlet", col.L)
+```
+
+The same solutes are used as in the previous example.
+
+The parameters are combined:
+```@example ex_meas
+par_tg = GasChromatographySimulator.Parameters(col_tg, prog_med_grad, sub, opt_tg)
+```
+And the simulation is run:
+```@example ex_meas
+peaklist_tg, sol_tg = GasChromatographySimulator.simulate(par_tg)
+peaklist_tg
+```
+
+The file [`Leppert2020b_measured_RT_med_gradient.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/measurements/Leppert2020b_measured_RT_med_gradient.csv) contains the retention times and peak widths (as standard deviations) from the measured chromatogram.
+```@example ex_meas
+measurement_tg = DataFrame(CSV.File("../../data/measurements/Leppert2020b_measured_RT_med_gradient.csv", header=1, silencewarnings=true))
+measurement_tg[!, 3] = measurement_tg[!, 3] ./ 1000.0 # conversion from ms -> s
+rename!(measurement_tg, [:Name, :tR, :τR])
+```
+
+The simulated and measured separations can be compared by comparing the peak lists:
+```@example ex_meas
+compare_tg = GasChromatographySimulator.compare_peaklist(measurement_tg, peaklist_tg)
+```
+or by comparing the chromatograms:
+```@example ex_meas
+chrom_tg = DataFrame(CSV.File("../../data/measurements/Leppert2020b_measured_Chrom_med_gradient_x90.csv", header=1, silencewarnings=true))
+p_chrom_tg, t_tg, chrom_tg = GasChromatographySimulator.plot_chromatogram(peaklist_tg, (0.0, 55.0); annotation=false, number=true, mirror=true, offset=0.0)
+plot!(p_chrom_tg, chrom_tg[!,1], chrom_tg[!,2].*8e-5)
+ylims!(-13,13)
+xlims!(0.0,55.0)
+p_chrom_tg
+```
