@@ -39,6 +39,7 @@ The standard options are used. Only the option `ng` (non-gradient) is changed to
 ```@example ex_meas
 using GasChromatographySimulator # hide
 using DataFrames, CSV # hide
+using Plots # hide
 opt = GasChromatographySimulator.Options(ng=true)
 ```
 
@@ -72,6 +73,16 @@ The parameters are combined:
 ```@example ex_meas
 par = GasChromatographySimulator.Parameters(col, prog_D, sub, opt)
 ```
+
+The temperature program and the pressure/flow program can be plotted:
+```@example ex_meas
+p_flow = GasChromatographySimulator.plot_flow(par)
+p_press = GasChromatographySimulator.plot_pressure(par)
+p_temp = GasChromatographySimulator.plot_temperature(par)
+l = @layout([a{0.65w} [b; c]])
+p_TpF = plot(p_temp, p_press, p_flow, layout=l)
+```
+
 And the simulation is run:
 ```@example ex_meas
 peaklist, sol = GasChromatographySimulator.simulate(par)
@@ -112,9 +123,9 @@ And the column is defined as:
 col_tg = GasChromatographySimulator.Column(2.05, 0.104e-3, 0.104e-6, "FS5ms", "He")
 ```
 
-The program is taken from the measured temperatures and pressures during the GC run, stored in the file [`x90.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/measurements/x90.csv):
+The program is taken from the measured temperatures and pressures during the GC run, stored in the file [`Leppert2020b_prog_settings_med_gradient_x90.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/measurements/Leppert2020b_prog_settings_med_gradient_x90.csv):
 ```@example ex_meas
-prog_settings = DataFrame(CSV.File("../../data/measurements/x90.csv", header=1, silencewarnings=true)))
+prog_settings = DataFrame(CSV.File("../../data/measurements/Leppert2020b_prog_settings_med_gradient_x90.csv", header=1, silencewarnings=true)))
 time_step = prog_settings.Deltat
 temp_step = prog_settings.T
 ΔT_steps = prog_settings.DeltaT
@@ -132,6 +143,16 @@ The parameters are combined:
 ```@example ex_meas
 par_tg = GasChromatographySimulator.Parameters(col_tg, prog_med_grad, sub, opt_tg)
 ```
+
+The temperature program and the pressure/flow program can be plotted:
+```@example ex_meas
+p_flow_tg = GasChromatographySimulator.plot_flow(par_tg)
+p_press_tg = GasChromatographySimulator.plot_pressure(par_tg)
+p_temp_tg = GasChromatographySimulator.plot_temperature(par_tg)
+l = @layout([a{0.65w} [b; c]])
+p_TpF_tg = plot(p_temp_tg, p_press_tg, p_flow_tg, layout=l)
+```
+
 And the simulation is run:
 ```@example ex_meas
 peaklist_tg, sol_tg = GasChromatographySimulator.simulate(par_tg)
