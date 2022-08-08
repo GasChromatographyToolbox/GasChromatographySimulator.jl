@@ -79,7 +79,9 @@ peaklist, sol = GasChromatographySimulator.simulate(par)
 
 THe file [`Leppert2020b_measured_RT_progD.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/Leppert2020b_measured_RT_progD.csv) contains the retention times and peak widths (as standard deviations) from the measured chromatogram.
 ```@example ex_meas
-measurement_D = DataFrame(CSV.File("/../../data/Leppert2020b_measured_RT_progD.csv", header=1, silencewarnings=true))
+db_path = "/Users/janleppert/Documents/GitHub/GasChromatographySimulator/data/"
+db_file = "Database_Leppert2020b.csv"
+measurement_D = DataFrame(CSV.File(string(db_path, db_file), header=1, silencewarnings=true))
 measurement_D = measurement_D[!, 2] .* 60.0 # conversion from min -> s
 rename!(measurement_D, [:Name, :tR, :τR])
 ```
