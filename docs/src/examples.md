@@ -125,16 +125,22 @@ col_tg = GasChromatographySimulator.Column(2.05, 0.104e-3, 0.104e-6, "FS5ms", "H
 
 The program is taken from the measured temperatures and pressures during the GC run, stored in the file [`Leppert2020b_prog_settings_med_gradient_x90.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/measurements/Leppert2020b_prog_settings_med_gradient_x90.csv):
 ```@example ex_meas
-prog_settings = DataFrame(CSV.File("../../data/measurements/Leppert2020b_prog_settings_med_gradient_x90.csv", header=1, silencewarnings=true)))
-time_step = prog_settings.Deltat
-temp_step = prog_settings.T
-ΔT_steps = prog_settings.DeltaT
-pin_steps = prog_settings.pinj.*1000.0 .+ 101300.0
-pout_steps = prog_settings.pdet.*1000.0
+prog_settings = DataFrame(CSV.File("../../data/measurements/Leppert2020b_prog_settings_med_gradient_x90.csv", header=1, silencewarnings=true))
+# use only every 20th measurement
+time = cumsum(prog_settings.Deltat)[1:20:end]
+time_steps = Array{Float64}(undef, length(time))
+for i=2:length(time)
+    time_steps[i] = time[i]-time[i-1]
+end
+time_steps[1] = 0.0
+temp_step = prog_settings.T[1:20:end]
+ΔT_steps = prog_settings.DeltaT[1:20:end]
+pin_steps = prog_settings.pinj[1:20:end].*1000.0 .+ 101300.0
+pout_steps = prog_settings.pdet[1:20:end].*1000.0
 α_steps = -3.0.*ones(length(ΔT_steps))
 x₀_steps = zeros(length(ΔT_steps))
-L₀_steps = col.L.*ones(length(ΔT_steps))
-prog_med_grad = GasChromatographySimulator.Program(time_step, temp_step, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, "outlet", col.L)
+L₀_steps = col_tg.L.*ones(length(ΔT_steps))
+prog_med_grad = GasChromatographySimulator.Program(time_step, temp_step, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, "outlet", col_tg.L)
 ```
 
 The same solutes are used as in the previous example.
