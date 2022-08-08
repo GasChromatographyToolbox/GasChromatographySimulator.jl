@@ -56,7 +56,7 @@ We want to use all solutes for the stationary phase FS5ms, which are in the data
 ```@example ex_meas
 db_path = "/Users/janleppert/Documents/GitHub/GasChromatographySimulator/data/"
 db_file = "Database_Leppert2020b.csv"
-db_dataframe = DataFrame(CSV.File(CSV.File(string(db_path, db_file), header=1, silencewarnings=true))
+db_dataframe = DataFrame(CSV.File(string(db_path, db_file), header=1, silencewarnings=true))
 ```
 and extract all the names of the substances with:
 ```@example ex_meas
