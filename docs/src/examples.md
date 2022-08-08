@@ -54,9 +54,7 @@ prog_D = GasChromatographySimulator.Program([0.0, 60.0, 1680.0, 60.0, 360.0, 60.
 
 We want to use all solutes for the stationary phase FS5ms, which are in the database. We load the database into a dataframe:
 ```@example ex_meas
-db_path = "../../data/"
-db_file = "Database_Leppert2020b.csv"
-db_dataframe = DataFrame(CSV.File(string(db_path, db_file), header=1, silencewarnings=true))
+db_dataframe = DataFrame(CSV.File("../../data/Database_Leppert2020b.csv", header=1, silencewarnings=true))
 ```
 and extract all the names of the substances with:
 ```@example ex_meas
@@ -64,11 +62,11 @@ solutes = GasChromatographySimulator.all_solutes(col.sp, db_dataframe)
 ```
 The data for all solutes is finally loaded with:
 ```@example ex_meas 
-t₀ = 0.8.*ones(length(solutes))
+t₀ = zeros(length(solutes))
 τ₀ = zeros(length(solutes))
 sub = GasChromatographySimulator.load_solute_database(db_dataframe, col.sp, col.gas, solutes, t₀, τ₀)
 ```
-Here the injection time `t₀` of all substances is set to 0.8s, because the autosampler used with the GC starts the temperature program shortly before injection. Otherwise the injection is assumed to be ideal with initial peak widths `τ₀` of 0 seconds.
+The injection is assumed to be ideal with initial peak widths `τ₀` of 0 seconds and occuring at the beginning of the temperature program (`t₀` of 0 seconds).
 
 The parameters are combined:
 ```@example ex_meas
@@ -81,10 +79,8 @@ peaklist, sol = GasChromatographySimulator.simulate(par)
 
 THe file [`Leppert2020b_measured_RT_progD.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/Leppert2020b_measured_RT_progD.csv) contains the retention times and peak widths (as standard deviations) from the measured chromatogram.
 ```@example ex_meas
-data_path = "../../data/measurements/"
-data_file = "Leppert2020b_measured_RT_progD.csv"
-measurement_D = DataFrame(CSV.File(string(data_path, data_file), header=1, silencewarnings=true))
-measurement_D = measurement_D[!, 2] .* 60.0 # conversion from min -> s
+measurement_D = DataFrame(CSV.File("../../data/measurements/Leppert2020b_measured_RT_progD.csv", header=1, silencewarnings=true))
+measurement_D[!, 2] = measurement_D[!, 2] .* 60.0 # conversion from min -> s
 rename!(measurement_D, [:Name, :tR, :τR])
 ```
 
@@ -93,8 +89,14 @@ The simulated and measured separations can be compared by comparing the peak lis
 compare = GasChromatographySimulator.compare_peaklist(measurement_D, peaklist)
 ```
 or by comparing the chromatograms:
-**PlotChromatograms**
-
+```@example ex_meas
+chrom_D = DataFrame(CSV.File("../../data/measurements/Leppert2020b_measured_Chrom_progD.csv", header=1, silencewarnings=true))
+p_chrom, t, chrom = GasChromatographySimulator.plot_chromatogram(peaklist[4], (0.0, round(meas_chrom[end,1];sigdigits=2)); annotation=false, number=true, mirror=true, offset=0.0)
+plot!(p_chrom,meas_chrom[!,1], meas_chrom[!,2].*400.0.+0.1)
+ylims!(-1.6,1.6)
+xlims!(0.0,round(meas_chrom[end,1];sigdigits=2))
+p_chrom
+```
 ### Thermal gradient GC
 
 **here an example of a simulation of one of the thermal gradient measurements in Leppert2020b** 
