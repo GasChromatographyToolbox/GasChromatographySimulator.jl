@@ -179,7 +179,7 @@ compare_tg = GasChromatographySimulator.compare_peaklist(measurement_tg, peaklis
 or by comparing the chromatograms:
 ```@example ex_meas
 chrom_tg = DataFrame(CSV.File("../../data/measurements/Leppert2020b_measured_Chrom_med_gradient_x90.csv", header=1, silencewarnings=true))
-p_chrom_tg, t_tg, chrom_tg = GasChromatographySimulator.plot_chromatogram(peaklist_tg, (0.0, 55.0); annotation=false, number=true, mirror=true, offset=0.0)
+p_chrom_tg, t_, chrom_ = GasChromatographySimulator.plot_chromatogram(peaklist_tg, (0.0, 55.0); annotation=false, number=true, mirror=true, offset=0.0)
 plot!(p_chrom_tg, chrom_tg[!,1], chrom_tg[!,2].*8e-5)
 ylims!(-13,13)
 xlims!(0.0,55.0)
