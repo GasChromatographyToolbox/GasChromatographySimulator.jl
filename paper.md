@@ -26,8 +26,6 @@ The modeling of GC separations is used for the prediction of retention times and
 # Statement of need
 `GasChromatographySimulator.jl` is a Julia package [@Julia] to simulate the separation of a number of substances in a gas chromatographic (GC) system with programmed temperature $T(t)$ and programmed inlet pressure $p_{in}(t)$ resp. programmed flow $F(t)$ . In principle, the outlet pressure can also be programmed $p_{out}(t)$. The package also allows for spatial changes of the diameter of the GC column $d(x)$, of the film thickness of the stationary phase $d_f(x)$ and of the temperature $T(x)$. The simulation is based on solving a system of ordinary differential equations (ODE) for the migration of the substances through the GC system $t(x)$ and for the development of the temporal variance of the substance distribution $\tau^2(x,t)$.
 
-This package is unique because it allows to simulate GC systems with non-uniform diameter, stationary film thickness and temperature. Available simulations, like published as supplemental material for [@Gaida:2021] or [@Hou:2018], are only able to simulate conventional GC. A commercial but free to use simulation software is Pro EZGC by Restek Corporation [@ProEZGC], which only allows the simulation of conventional GC for defined stationary phases (produced by Restek) and defined substances.
-
 `GasChromatographySimulator.jl` provides an interface to define a GC system consisting of: 
 
 - column (length, diameter, film thickness, type of stationary and mobile phase) 
@@ -48,9 +46,12 @@ $$
 with $r$ the inverse substance velocity ($r=1/u$) and $H$ the local plate height, [@Leppert:2020a], on the interval of $0 \leq x \leq L$, where $L$ is the length of the column. The basic equations building the model are presented in an earlier publication [@Leppert:2020b] and can be found in the documentation of the package. This ODE system is solved by using the Julia package `DifferentialEquations.jl` [@DifferentialEquations].
 
 Fig. \autoref{fig:example} shows the simulation of a separation of n-alkanes and compares it to a real measurement from [@Leppert:2020b].
+
 ![Comparison of measured and simulated thermal gradient GC separation. For more details see the examples section in the documentation.\label{fig:example}](compare_TGGC.png)
 
 A collection of `Pluto.jl` notebooks [@Pluto] are made available together with this package to provide a simple user interface to setup and simulate arbitrary GC systems for users with low coding experience.
+
+This package is unique because it allows to simulate GC systems with non-uniform diameter, stationary film thickness and temperature. Available simulations, like published as supplemental material for [@Gaida:2021] or [@Hou:2018], are only able to simulate conventional GC. A commercial but free to use simulation software is Pro EZGC by Restek Corporation [@ProEZGC], which only allows the simulation of conventional GC for defined stationary phases (produced by Restek) and defined substances.
 
 A full investigation of the properties of thermal gradient GC using `GasChromatographySimulator.jl` is in preparation. Also two packages are in development, using this package. One uses the fully automatic differentiable simulation to determine the thermodynamic parameters of substances based on optimization to match measured retention times in temperature programmed GC, similar to [@Hou:2018]. A second package uses `GasChromatographySimulator.jl` to simulate complex multidimensional GC-Systems in a modular way. Different modules, like columns, thermal modulators, flow modulators and splitters can be combined to create arbitrary systems and the movement of substances through it will be simulated. 
 
