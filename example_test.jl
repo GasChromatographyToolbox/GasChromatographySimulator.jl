@@ -196,7 +196,7 @@ p_press_tg = GasChromatographySimulator.plot_pressure(par_tg)
 p_temp_tg = GasChromatographySimulator.plot_temperature(par_tg)
 l = @layout([a{0.65w} [b; c]])
 p_TpF_tg = plot(p_temp_tg, p_press_tg, p_flow_tg, layout=l)
-
+#savefig(p_temp_tg,"Tprog_TGGC.svg")
 
 
 peaklist_tg, sol_tg = GasChromatographySimulator.simulate(par_tg);
