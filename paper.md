@@ -45,9 +45,9 @@ $$
 $$
 with $r$ the inverse substance velocity ($r=1/u$) and $H$ the local plate height, [@Leppert:2020a], on the interval of $0 \leq x \leq L$, where $L$ is the length of the column. The basic equations building the model are presented in an earlier publication [@Leppert:2020b] and can be found in the documentation of the package. This ODE system is solved by using the Julia package `DifferentialEquations.jl` [@DifferentialEquations].
 
-Fig. \autoref{fig:example} shows the simulation of a separation of n-alkanes and compares it to a real measurement from [@Leppert:2020b].
+Fig. \autoref{fig:example} shows the simulation of a separation with thermal gradient of n-alkanes and compares it to a real measurement from [@Leppert:2020b].
 
-![Comparison of measured and simulated thermal gradient GC separation. For more details see the examples section in the documentation.\label{fig:example}](compare_TGGC.png)
+![Comparison of measured and simulated thermal gradient GC separation. For more details see the examples section in the documentation.\label{fig:example}](compare_TGGC_Tprog.png)
 
 A collection of `Pluto.jl` notebooks [@Pluto] are made available together with this package to provide a simple user interface to setup and simulate arbitrary GC systems for users with low coding experience.
 
