@@ -47,7 +47,7 @@ By providing the thermodynamic parameters [@Blumberg:2017] for the interaction o
 
 Fig. \autoref{fig:example} shows the simulation of a separation with thermal gradient of n-alkanes and compares it to a real measurement from [@Leppert:2020b].
 
-![Comparison of measured and simulated thermal gradient GC separation. For more details see the examples section in the documentation.\label{fig:example}](compare_TGGC_Tprog.png)
+![Comparison of measured and simulated thermal gradient GC separation. For more details see the examples section in the documentation.\label{fig:example}](compare_TGGC_Tprog.svg)
 
 A collection of `Pluto.jl` notebooks [@Pluto] are made available together with this package to provide a simple user interface to setup and simulate arbitrary GC systems for users with less coding experience.
 
