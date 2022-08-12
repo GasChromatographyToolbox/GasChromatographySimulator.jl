@@ -34,7 +34,7 @@ and
 $$
 \frac{d\tau^2}{dx} = H(x,t)r(x,t) + 2 \tau^2(x,t) \frac{\partial r(x,t)}{\partial t}
 $$
-with $r$ the inverse substance velocity ($r=1/u$) and $H$ the local plate height, [@Leppert:2020a], on the interval of $0 \leq x \leq L$, where $L$ is the length of the column. The basic equations building the model are presented in an earlier publication [@Leppert:2020b] and can be found in the documentation of the package. This ODE system is solved by using the Julia packages `OrdinaryDiffEq.jl` and `Integrals.jl`, part of `DifferentialEquations.jl` [@DifferentialEquations] and `ForwardDiff.jl` [@ForwardDiff].
+with $r$ the inverse substance velocity ($r=1/u$) and $H$ the local plate height, [@Leppert:2020a], on the interval of $0 \leq x \leq L$, where $L$ is the length of the column. The basic equations building the model are presented in an earlier publication [@Leppert:2020b] and can be found in the documentation of the package. This ODE system is solved by using the Julia packages `OrdinaryDiffEq.jl` and `Integrals.jl`, part of `DifferentialEquations.jl` [@DifferentialEquations] and `ForwardDiff.jl` [@ForwardDiff]. Also the packages `Interpolations.jl` and `ChemicalIdentifiers.jl` are used. 
 
 `GasChromatographySimulator.jl` provides an interface to define a GC system consisting of: 
 
