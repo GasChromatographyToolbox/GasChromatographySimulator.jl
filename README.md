@@ -4,6 +4,7 @@
 [![codecov.io](http://codecov.io/github/JanLeppert/GasChromatographySimulator.jl/coverage.svg?branch=main)](http://codecov.io/github/JanLeppert/GasChromatographySimulator.jl?branch=main)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://JanLeppert.github.io/GasChromatographySimulator.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://JanLeppert.github.io/GasChromatographySimulator.jl/dev)
+[![DOI](https://zenodo.org/badge/421858896.svg)](https://zenodo.org/badge/latestdoi/421858896)
 
 A package for the simulation of gas chromatography (GC) with additional velocity gradients produced by:
 - non-uniform temperature ``T(x)``
