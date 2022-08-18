@@ -1,10 +1,11 @@
 # GasChromatographySimulator.jl
 
-[![CI](https://github.com/JanLeppert/GasChromatographySimulator.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/JanLeppert/GasChromatographySimulator.jl/actions/workflows/ci.yml)
-[![codecov.io](http://codecov.io/github/JanLeppert/GasChromatographySimulator.jl/coverage.svg?branch=main)](http://codecov.io/github/JanLeppert/GasChromatographySimulator.jl?branch=main)
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.04565/status.svg)](https://doi.org/10.21105/joss.04565)
+[![DOI](https://zenodo.org/badge/421858896.svg)](https://zenodo.org/badge/latestdoi/421858896)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://JanLeppert.github.io/GasChromatographySimulator.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://JanLeppert.github.io/GasChromatographySimulator.jl/dev)
-[![DOI](https://zenodo.org/badge/421858896.svg)](https://zenodo.org/badge/latestdoi/421858896)
+[![CI](https://github.com/JanLeppert/GasChromatographySimulator.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/JanLeppert/GasChromatographySimulator.jl/actions/workflows/ci.yml)
+[![codecov.io](http://codecov.io/github/JanLeppert/GasChromatographySimulator.jl/coverage.svg?branch=main)](http://codecov.io/github/JanLeppert/GasChromatographySimulator.jl?branch=main)
 
 A package for the simulation of gas chromatography (GC) with additional velocity gradients produced by:
 - non-uniform temperature ``T(x)``
@@ -73,9 +74,16 @@ You can contribute (e.g. fix bugs, add new features, add to the documentation) t
 ## Citation
 
 ```
-@misc{GCSimulator,
+@article{Leppert2022, 
   title = {GasChromatographySimulator.jl},
-  author = {Jan Leppert},
-  howpublished = {\url{https://github.com/JanLeppert/GasChromatographySimulator.jl}}
+  author = {Jan Leppert}, 
+  journal = {Journal of Open Source Software},
+  year = {2022}, 
+  volume = {7}, 
+  number = {76}, 
+  pages = {4565},
+  publisher = {The Open Journal}, 
+  doi = {10.21105/joss.04565}, 
+  url = {https://doi.org/10.21105/joss.04565}, 
 }
 ```
