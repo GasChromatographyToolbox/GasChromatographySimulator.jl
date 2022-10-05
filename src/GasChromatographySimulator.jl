@@ -542,7 +542,7 @@ following options are realized:
 
 # Examples
 ```julia
-julia> d(x) = gradient(x, 0.1e-3)
+julia> d(x) = gradient(x, [0.1e-3])
 ```
 
 ```julia
