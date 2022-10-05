@@ -90,6 +90,11 @@ md"""
 Plot $(@bind yy Select(["z", "t", "T", "τ", "σ", "u"]; default="t")) over $(@bind xx Select(["z", "t", "T", "τ", "σ", "u"]; default="z"))
 """
 
+# ╔═╡ 95e1ca30-9442-4f39-9af0-34bd202fcc24
+md"""
+# End
+"""
+
 # ╔═╡ f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
 col = GasChromatographySimulator.Column(col_values[1], col_values[2]*1e-3, col_values[3]*1e-6, col_values[4], col_values[5]);
 
@@ -98,36 +103,6 @@ col = GasChromatographySimulator.Column(col_values[1], col_values[2]*1e-3, col_v
 
 # ╔═╡ e3277bb4-301a-4a1e-a838-311832b6d6aa
 sub = GasChromatographySimulator.load_solute_database(db, col.sp, col.gas, sub_values[1], sub_values[2].*ones(length(sub_values[1])), sub_values[3].*ones(length(sub_values[1])));
-
-# ╔═╡ 85e52a8b-2709-4bff-b46b-09a2ea85c2cf
-function UI_Options()
-	PlutoUI.combine() do Child
-		@htl("""
-		<h3>Option settings</h3>
-		
-		abstol: 1e $(
-			Child(NumberField(-10:1:-3; default=-8))
-		) reltol: 1e $(
-			Child(NumberField(-8:1:-2; default=-5))
-		) Tcontrol: $(
-			Child(Select(["inlet", "outlet"]; default="inlet"))
-		)
-		<br>
-		viscosity model: $(
-			Child(Select(["HP", "Blumberg"]; default="Blumberg"))
-		) control mode: $(
-			Child(Select(["Pressure", "Flow"]; default="Pressure"))
-		)
-		<br>
-		""")
-	end
-end
-
-# ╔═╡ 3e053ac1-db7b-47c1-b52c-00e26b59912f
-@bind opt_values confirm(UI_Options())
-
-# ╔═╡ 115fa61e-8e82-42b2-8eea-9c7e21d97ea8
-opt = GasChromatographySimulator.Options(;abstol=10.0^opt_values[1], reltol=10.0^opt_values[2], Tcontrol=opt_values[3], vis=opt_values[4], control=opt_values[5]);
 
 # ╔═╡ 3eccee4a-ee64-4910-bddf-faa124d51e1f
 function UI_Program(opt; default=("0 60 300 300 120", "40 40 170 300 300", "0 0 40 60 0", "-3 -3 -3 -3 -3", "18 18 58 98 98", "0 0 0 0 0"))
@@ -168,6 +143,36 @@ function UI_Program(opt; default=("0 60 300 300 120", "40 40 170 300 300", "0 0 
 		""")
 	end
 end
+
+# ╔═╡ 85e52a8b-2709-4bff-b46b-09a2ea85c2cf
+function UI_Options()
+	PlutoUI.combine() do Child
+		@htl("""
+		<h3>Option settings</h3>
+		
+		abstol: 1e $(
+			Child(NumberField(-10:1:-3; default=-8))
+		) reltol: 1e $(
+			Child(NumberField(-8:1:-2; default=-5))
+		) Tcontrol: $(
+			Child(Select(["inlet", "outlet"]; default="inlet"))
+		)
+		<br>
+		viscosity model: $(
+			Child(Select(["HP", "Blumberg"]; default="Blumberg"))
+		) control mode: $(
+			Child(Select(["Pressure", "Flow"]; default="Pressure"))
+		)
+		<br>
+		""")
+	end
+end
+
+# ╔═╡ 3e053ac1-db7b-47c1-b52c-00e26b59912f
+@bind opt_values confirm(UI_Options())
+
+# ╔═╡ 115fa61e-8e82-42b2-8eea-9c7e21d97ea8
+opt = GasChromatographySimulator.Options(;abstol=10.0^opt_values[1], reltol=10.0^opt_values[2], Tcontrol=opt_values[3], vis=opt_values[4], control=opt_values[5]);
 
 # ╔═╡ a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
 @bind prog_values confirm(UI_Program(opt))
@@ -248,9 +253,45 @@ begin
 	GasChromatographySimulator.local_plots(xx, yy, solution, par)
 end
 
-# ╔═╡ 95e1ca30-9442-4f39-9af0-34bd202fcc24
+# ╔═╡ 03ff111e-674a-44c9-89fd-d8f4e255ee53
+function export_str(opt_values, col_values, prog_values, pl)
+	opt_str_array = ["viscosity = $(opt_values[1])", "control = $(opt_values[2])"]
+	opt_str = string(join(opt_str_array, ", "), "\n")
+	
+	col_str_array = ["L = $(col_values[1]) m", "d = $(col_values[2]) mm", "df = $(col_values[3]) µm", col_values[4], "gas = $(col_values[5])"]
+	col_str = string(join(col_str_array, ", "), "\n")
+
+	if opt.control == "Pressure"
+		prog_str_array = ["time steps in s: $(prog_values[1])", "temperature steps in °C = $(prog_values[2])", "gradient ΔT in °C = $(prog_values[3])", "gradient α = $(prog_values[4])", "pin in kPa(g) = $(prog_values[5])", "pout in kPa(a) = $(prog_values[6])"]
+	elseif opt.control == "Flow"
+		prog_str_array = ["Program: $(prog_values[1])", "F = $(prog_values[2]) mL/min", "outlet = $(prog_values[3])"]
+	end
+	prog_str = string(join(prog_str_array, ", "), "\n")
+
+	header = string(join(names(pl), ", "), "\n")
+
+	pl_array = Array{String}(undef, length(pl.Name))
+	for i=1:length(pl.Name)
+		pl_array[i] = string(join(Matrix(pl)[i,:], ", "), "\n")
+	end
+	pl_str = join(pl_array)
+	
+	export_str = string("Option settings: \n", opt_str, "Column settings: \n", col_str, "Program settings: \n", prog_str, "Peaklist: \n", header, pl_str)
+	return export_str
+end
+
+# ╔═╡ bef25d30-f654-425b-aad1-926ffff22679
+begin
+	export_str_ = export_str(opt_values, col_values, prog_values, peaklist)
+	md"""
+	## Export Results
+	Filename: $(@bind result_filename TextField((20,1); default="Result.txt"))
+	"""
+end
+
+# ╔═╡ 10846818-ea29-4c8a-aec0-20eca782e509
 md"""
-# End
+$(DownloadButton(export_str_, result_filename))
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -657,10 +698,10 @@ uuid = "c87230d0-a227-11e9-1b43-d7ebe4e7570a"
 version = "0.4.1"
 
 [[deps.FFMPEG_jll]]
-deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "Pkg", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
-git-tree-sha1 = "ccd479984c7838684b3ac204b716c89955c76623"
+deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "PCRE2_jll", "Pkg", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
+git-tree-sha1 = "74faea50c1d007c85837327f6775bea60b5492dd"
 uuid = "b22a6f82-2f65-5046-a5b2-351ab43fb4e5"
-version = "4.4.2+0"
+version = "4.4.2+2"
 
 [[deps.FastBroadcast]]
 deps = ["ArrayInterface", "ArrayInterfaceCore", "LinearAlgebra", "Polyester", "Static", "StrideArraysCore"]
@@ -1272,6 +1313,10 @@ deps = ["Adapt", "ArrayInterface", "ArrayInterfaceGPUArrays", "ArrayInterfaceSta
 git-tree-sha1 = "6be470b4eb54a4f7c46bc3e0c7bd77f9113d787f"
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 version = "6.20.0"
+
+[[deps.PCRE2_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
 
 [[deps.PCRE_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1989,13 +2034,16 @@ version = "1.4.1+0"
 # ╟─a2287fe8-5aa2-4259-bf7c-f715cc866243
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
 # ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
+# ╟─bef25d30-f654-425b-aad1-926ffff22679
+# ╟─10846818-ea29-4c8a-aec0-20eca782e509
+# ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
 # ╟─115fa61e-8e82-42b2-8eea-9c7e21d97ea8
 # ╟─f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
 # ╟─ee267b33-4086-4e04-9f39-b7f53f2ec920
 # ╟─e3277bb4-301a-4a1e-a838-311832b6d6aa
 # ╟─85954bdb-d649-4772-a1cd-0bda5d9917e9
-# ╟─85e52a8b-2709-4bff-b46b-09a2ea85c2cf
 # ╟─3eccee4a-ee64-4910-bddf-faa124d51e1f
-# ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
+# ╟─85e52a8b-2709-4bff-b46b-09a2ea85c2cf
+# ╟─03ff111e-674a-44c9-89fd-d8f4e255ee53
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
