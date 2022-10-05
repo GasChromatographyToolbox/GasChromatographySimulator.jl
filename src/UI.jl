@@ -4,7 +4,7 @@
 """
     UI_Column(sp)
 
-Construct a combined PlutoUI widget for the settings of the GC Column with then selectable stationary phases `sp`. 
+Construct a combined PlutoUI widget for the settings of the GC Column with the selectable stationary phases `sp`. 
 	
 # UI fields
 * ``L``: column length in m.
@@ -27,6 +27,38 @@ function UI_Column(sp; default=(10.0, 0.25, 0.25, 1, "He"))
 				Child(Select(sp; default=sp[default[4]]))
 			)  Gas: $(
 				Child(Select(["He", "H2", "N2"]; default=default[5]))
+			) 
+			
+			""")
+	end
+end
+
+"""
+    UI_Transferline(sp)
+
+Construct a combined PlutoUI widget for the settings of a transfer line (Column at constant temperature). 
+	
+# UI fields
+* ``L``: transfer line length in m.
+* ``d``: transfer line diameter in mm.
+* ``d_f``: film thickness in µm.
+* stat. phase: stationary phase of the transfer line
+* T: temperature in °C of the transfer line
+"""
+function UI_Transferline(sp; default=(0.25, 0.25, 0.25, 1, 300.0))
+		PlutoUI.combine() do Child
+			@htl("""
+			<h3>Transfer line settings</h3>
+			L [m]: $(
+				Child(NumberField(0.1:0.1:100.0; default=default[1]))
+			)  d [mm]: $(
+				Child(NumberField(0.01:0.01:1.00; default=default[2]))
+			)  d_f [µm]: $(
+				Child(NumberField(0.01:0.01:1.00; default=default[3]))
+			)  stat. phase: $(
+				Child(Select([""; sp]; default=sp[default[4]]))
+			)  T [°C]: $(
+				Child(NumberField(0.0:1.0:500.0; default=default[5]))
 			) 
 			
 			""")
