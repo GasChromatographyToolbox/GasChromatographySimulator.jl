@@ -91,6 +91,11 @@ md"""
 Plot $(@bind yy Select(["z", "t", "T", "τ", "σ", "u"]; default="t")) over $(@bind xx Select(["z", "t", "T", "τ", "σ", "u"]; default="z"))
 """
 
+# ╔═╡ 95e1ca30-9442-4f39-9af0-34bd202fcc24
+md"""
+# End
+"""
+
 # ╔═╡ f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
 col = GasChromatographySimulator.Column(col_values[1], col_values[2]*1e-3, col_values[3]*1e-6, col_values[4], col_values[5]);
 
@@ -266,9 +271,45 @@ begin
 	GasChromatographySimulator.local_plots(xx, yy, solution, par)
 end
 
-# ╔═╡ 95e1ca30-9442-4f39-9af0-34bd202fcc24
+# ╔═╡ 69cf18dd-a7b5-4f29-a8d2-e35420242db9
+function export_str(opt_values, col_values, prog_values, pl)
+	opt_str_array = ["viscosity = $(opt_values[1])", "control = $(opt_values[2])"]
+	opt_str = string(join(opt_str_array, ", "), "\n")
+	
+	col_str_array = ["L = $(col_values[1]) m", "d = $(col_values[2]) mm", "df = $(col_values[3]) µm", col_values[4], "gas = $(col_values[5])"]
+	col_str = string(join(col_str_array, ", "), "\n")
+
+	if opt.control == "Pressure"
+		prog_str_array = ["Program: $(prog_values[1])", "pin = $(prog_values[2]) kPa(g)", "outlet = $(prog_values[3])"]
+	elseif opt.control == "Flow"
+		prog_str_array = ["Program: $(prog_values[1])", "F = $(prog_values[2]) mL/min", "outlet = $(prog_values[3])"]
+	end
+	prog_str = string(join(prog_str_array, ", "), "\n")
+
+	header = string(join(names(pl), ", "), "\n")
+
+	pl_array = Array{String}(undef, length(pl.Name))
+	for i=1:length(pl.Name)
+		pl_array[i] = string(join(Matrix(pl)[i,:], ", "), "\n")
+	end
+	pl_str = join(pl_array)
+	
+	export_str = string("Option settings: \n", opt_str, "Column settings: \n", col_str, "Program settings: \n", prog_str, "Peaklist: \n", header, pl_str)
+	return export_str
+end
+
+# ╔═╡ e8f84397-bd60-41a2-98c7-494873f6faf4
+begin
+	export_str_ = export_str(opt_values, col_values, prog_values, peaklist)
+	md"""
+	## Export Results
+	Filename: $(@bind result_filename TextField((20,1); default="Result.txt"))
+	"""
+end
+
+# ╔═╡ 8cea4027-0987-4147-ac60-3b6bacb551ca
 md"""
-# End
+$(DownloadButton(export_str_, result_filename))
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -675,10 +716,10 @@ uuid = "c87230d0-a227-11e9-1b43-d7ebe4e7570a"
 version = "0.4.1"
 
 [[deps.FFMPEG_jll]]
-deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "Pkg", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
-git-tree-sha1 = "ccd479984c7838684b3ac204b716c89955c76623"
+deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "PCRE2_jll", "Pkg", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
+git-tree-sha1 = "74faea50c1d007c85837327f6775bea60b5492dd"
 uuid = "b22a6f82-2f65-5046-a5b2-351ab43fb4e5"
-version = "4.4.2+0"
+version = "4.4.2+2"
 
 [[deps.FastBroadcast]]
 deps = ["ArrayInterface", "ArrayInterfaceCore", "LinearAlgebra", "Polyester", "Static", "StrideArraysCore"]
@@ -1290,6 +1331,10 @@ deps = ["Adapt", "ArrayInterface", "ArrayInterfaceGPUArrays", "ArrayInterfaceSta
 git-tree-sha1 = "6be470b4eb54a4f7c46bc3e0c7bd77f9113d787f"
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 version = "6.20.0"
+
+[[deps.PCRE2_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
 
 [[deps.PCRE_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2006,6 +2051,9 @@ version = "1.4.1+0"
 # ╟─a2287fe8-5aa2-4259-bf7c-f715cc866243
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
 # ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
+# ╟─e8f84397-bd60-41a2-98c7-494873f6faf4
+# ╟─8cea4027-0987-4147-ac60-3b6bacb551ca
+# ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
 # ╟─115fa61e-8e82-42b2-8eea-9c7e21d97ea8
 # ╟─f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
 # ╟─5f5e16ec-2730-4a17-bd64-a751426a033f
@@ -2014,6 +2062,6 @@ version = "1.4.1+0"
 # ╟─8c831fdb-0bfa-4f36-b720-e82fcf5d2427
 # ╟─50f1bd7f-a479-453d-a8ea-57c37a4e330c
 # ╟─c26c1ea7-575f-495d-86bc-987aca991664
-# ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
+# ╟─69cf18dd-a7b5-4f29-a8d2-e35420242db9
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
