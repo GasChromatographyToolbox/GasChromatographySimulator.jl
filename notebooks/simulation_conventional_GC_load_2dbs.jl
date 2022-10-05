@@ -897,10 +897,10 @@ uuid = "c87230d0-a227-11e9-1b43-d7ebe4e7570a"
 version = "0.4.1"
 
 [[deps.FFMPEG_jll]]
-deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "Pkg", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
-git-tree-sha1 = "ccd479984c7838684b3ac204b716c89955c76623"
+deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "PCRE2_jll", "Pkg", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
+git-tree-sha1 = "74faea50c1d007c85837327f6775bea60b5492dd"
 uuid = "b22a6f82-2f65-5046-a5b2-351ab43fb4e5"
-version = "4.4.2+0"
+version = "4.4.2+2"
 
 [[deps.FastBroadcast]]
 deps = ["ArrayInterface", "ArrayInterfaceCore", "LinearAlgebra", "Polyester", "Static", "StrideArraysCore"]
@@ -1512,6 +1512,10 @@ deps = ["Adapt", "ArrayInterface", "ArrayInterfaceGPUArrays", "ArrayInterfaceSta
 git-tree-sha1 = "6be470b4eb54a4f7c46bc3e0c7bd77f9113d787f"
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 version = "6.20.0"
+
+[[deps.PCRE2_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
 
 [[deps.PCRE_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2232,6 +2236,7 @@ version = "1.4.1+0"
 # ╟─9c1e5bc5-8396-4caf-bb80-fe89fea0a5c5
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
 # ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
+# ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
 # ╟─f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
 # ╟─0bb1bc3e-9c23-4fbd-9872-fe2e4a2dbdea
 # ╟─e3277bb4-301a-4a1e-a838-311832b6d6aa
@@ -2240,6 +2245,5 @@ version = "1.4.1+0"
 # ╟─7e7b2e6c-0bda-4bfa-9b96-ff148222fe1a
 # ╟─f88ee558-0536-448e-bc30-112818f8edfb
 # ╟─3561a76e-fc8d-4b20-b247-64b50b439dea
-# ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
