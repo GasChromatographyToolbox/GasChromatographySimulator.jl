@@ -680,6 +680,9 @@ function retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀)
         lnk₀ = (C + Tchar/θchar) * (Tchar/T - 1) + C*log(T/Tchar)
         k = φ/φ₀*exp(lnk₀)
     end
+    if k > k_th
+        k = k_th
+    end
     return k
 end
 
@@ -696,6 +699,9 @@ function retention_factor(x, t, T_itp, d::Number, df::Number, Tchar, θchar, ΔC
         C = ΔCp/R
         lnk₀ = (C + Tchar/θchar) * (Tchar/T - 1) + C*log(T/Tchar)
         k = φ/φ₀*exp(lnk₀)
+    end
+    if k > k_th
+        k = k_th
     end
     return k
 end
@@ -714,6 +720,9 @@ function retention_factor(x, t, T_itp, d, df::Number, Tchar, θchar, ΔCp, φ₀
         lnk₀ = (C + Tchar/θchar) * (Tchar/T - 1) + C*log(T/Tchar)
         k = φ/φ₀*exp(lnk₀)
     end
+    if k > k_th
+        k = k_th
+    end
     return k
 end
 
@@ -730,6 +739,9 @@ function retention_factor(x, t, T_itp, d::Number, df, Tchar, θchar, ΔCp, φ₀
         C = ΔCp/R
         lnk₀ = (C + Tchar/θchar) * (Tchar/T - 1) + C*log(T/Tchar)
         k = φ/φ₀*exp(lnk₀)
+    end
+    if k > k_th
+        k = k_th
     end
     return k
 end
