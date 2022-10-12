@@ -19,6 +19,7 @@ const Tn = 25.0 + Tst         # K
 const pn = 101300             # Pa
 const custom_database_filepath = string(pkgdir(GasChromatographySimulator), "/data/custom_CI_db.tsv")
 const shortnames_filepath = string(pkgdir(GasChromatographySimulator), "/data/shortnames.csv")
+const k_th = 1e15            # threshold for retention factor k, if k>k_th => k=k_th 
 
 # ---Begin-Structures---
 """

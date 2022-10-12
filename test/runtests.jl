@@ -240,6 +240,13 @@ end
     pl1 = results_g[1][1]
     comp = GasChromatographySimulator.compare_measurement_simulation(meas, pl1)
     @test isnan(comp.simulated_tR[1])
+
+    # simulation of a highly retained solute, retention factor > 1e15
+    sub_ret = GasChromatographySimulator.Substance("Glyceryl triacetate", "102-76-1", 719.3, 31.282, 1552.2, 0.001, "Brehmer2022, triglyceride, ester", 9.459e-5, 0.0, 0.0)
+    prog_ret = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, opt[1].Tcontrol, col.L)
+    par_ret = GasChromatographySimulator.Parameters(col, prog_ret, [sub_ret], opt[1])
+    results_ret = GasChromatographySimulator.simulate(par_ret)
+    @test !isnan(results_ret[1].tR[1])
 end
 
 @testset "plots check" begin
