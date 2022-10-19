@@ -665,7 +665,7 @@ function steps_interpolation(time_steps::Array{<:Real,1}, steps::Array{<:Real,1}
 end
 
 """
-	CAS_identification(data::DataFrame)
+	CAS_identification(Name::Array{String})
 
 Look up the substance name from the `data` dataframe with ChemicalIdentifiers.jl to find the `CAS`-number, the `formula`, the molecular weight `MW` and the `smiles`-identifier. If the name is not found in the database of ChemicalIdentifiers.jl a list with alternative names (`shortnames.csv`) is used. If there are still no matches, `missing` is used.
 """
