@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.10
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -18,7 +18,7 @@ end
 begin
     using CSV, DataFrames,  GasChromatographySimulator, HypertextLiteral, Plots, PlutoUI, UrlDownload
 	md"""
-	Packages, simulation\_conventional\_GC\_TL.jl, for GasChromatographySimulator v0.3.11
+	Packages, simulation\_conventional\_GC\_TL.jl, for GasChromatographySimulator v0.3.12
 	"""
 end
 
@@ -258,7 +258,7 @@ begin # Program of the column and transferline
 		a = 101300.0
 		b = 1000.0
 		for i=1:length(time_steps) # calc pressure between col and tl
-			p_o_col[i] = sqrt(((a+b*prog_values[2])^2*κL_col(time_steps[i]) + pout_steps[1]^2*κL_tl(time_steps[i]))/(κL_col(time_steps[i]) + κL_tl(time_steps[i])))
+			p_o_col[i] = sqrt(((a+b*prog_values[2])^2*κL_tl(time_steps[i]) + pout_steps[1]^2*κL_col(time_steps[i]))/(κL_col(time_steps[i]) + κL_tl(time_steps[i])))
 		end
 		Fpin_steps = (a + b * prog_values[2]).*ones(length(time_steps))
 		Fpin_tl = p_o_col
@@ -273,7 +273,7 @@ begin # Program of the column and transferline
 	end
 	
 	# with additional transferline we have to calculate the outlet pressure of the column
-	# (p_i,col^2-p_o,col^2)κ_col - (p_i,tl^2 - p_o,tl^2)κ_tl = 0
+	# (p_i,col^2-p_o,col^2)/κ_col - (p_i,tl^2 - p_o,tl^2)/κ_tl = 0
 	# 
 	
 	prog_col = GasChromatographySimulator.Program( 	time_steps,
@@ -2137,7 +2137,7 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═115b320f-be42-4116-a40a-9cf1b55d39b5
+# ╟─115b320f-be42-4116-a40a-9cf1b55d39b5
 # ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
