@@ -1110,7 +1110,7 @@ Note: The result is the solution structure from
 DifferentialEquations.jl.    
 """
 function solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas)
-	t_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, p[5], p[6], p[7], gas, p[1], p[2], p[3], p[4]; ng=opt.ng, vis=opt.vis, control=opt.control)
+	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, p[5], p[6], p[7], gas, p[1], p[2], p[3], p[4]; ng=opt.ng, vis=opt.vis, control=opt.control)
 	t₀ = 0.0
 	zspan = (0.0, L)
 	p = [Tchar, θchar, ΔCp, φ₀, L, d, df]
