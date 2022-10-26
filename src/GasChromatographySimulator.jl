@@ -1100,6 +1100,27 @@ function solving_migration(col::Column, prog::Program, sub::Substance, opt::Opti
 end
 
 """
+    solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas)
+
+Solve for the migration ``t(z)`` of solute with retention parameters `Tchar` `θchar` and `ΔCp` estimated for a dimensionless
+film thickness `φ₀` in a GC Column with length `L`, internal diameter `d` and film thickness `df` for a GC program `prog`, 
+options `opt` and mobile phase `gas`.
+    
+Note: The result is the solution structure from
+DifferentialEquations.jl.    
+"""
+function solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas)
+	t_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, p[5], p[6], p[7], gas, p[1], p[2], p[3], p[4]; ng=opt.ng, vis=opt.vis, control=opt.control)
+	t₀ = 0.0
+	zspan = (0.0, L)
+	p = [Tchar, θchar, ΔCp, φ₀, L, d, df]
+	prob_tz = ODEProblem(f_tz, t₀, zspan, p)
+	solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol, reltol=opt.reltol)
+	#tR = solution.u[end]
+	return solution_tz
+end
+
+"""
     solving_peakvariance(solution_tz, col::Column, prog::Program, sub::Substance, opt::Options)
 
 Solve for the development of the peak variance ``τ²(z)`` of solute `sub` in the GC Column `col` with
