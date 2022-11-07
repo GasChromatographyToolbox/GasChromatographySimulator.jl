@@ -36,24 +36,24 @@ function pressure(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blu
     if ng==true
         if control == "Pressure"
             pin_itp = Fpin_itp
-            pp = sqrt(pin_itp(t)^2 - x/L*(pin_itp(t)^2-pout_itp(t)^2))
+            pp = real(sqrt(Complex(pin_itp(t)^2 - x/L*(pin_itp(t)^2-pout_itp(t)^2))))
         elseif control == "Flow"
             F_itp = Fpin_itp
             if isa(d, Function) 
-                pp = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(x, t, T_itp, gas, vis=vis)* T_itp(x,t)/d(x)^4 * F_itp(t) * (L - x))
+                pp = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(x, t, T_itp, gas, vis=vis)* T_itp(x,t)/d(x)^4 * F_itp(t) * (L - x))))
             else
-                pp = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(x, t, T_itp, gas, vis=vis)* T_itp(x,t)/d^4 * F_itp(t) * (L - x))
+                pp = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(x, t, T_itp, gas, vis=vis)* T_itp(x,t)/d^4 * F_itp(t) * (L - x))))
             end
         end
     else
         if control == "Pressure"
             pin_itp = Fpin_itp
-            pp = sqrt(pin_itp(t)^2 - flow_restriction(x, t, T_itp, d, gas, vis=vis)/flow_restriction(L, t, T_itp, d, gas, vis=vis)*(pin_itp(t)^2-pout_itp(t)^2))
+            pp = real(sqrt(Complex(pin_itp(t)^2 - flow_restriction(x, t, T_itp, d, gas, vis=vis)/flow_restriction(L, t, T_itp, d, gas, vis=vis)*(pin_itp(t)^2-pout_itp(t)^2))))
         elseif control == "Flow"
             F_itp = Fpin_itp
             κL = flow_restriction(L, t, T_itp, d, gas, vis=vis)
             κx = flow_restriction(x, t, T_itp, d, gas, vis=vis)
-            pp = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * F_itp(t) * (κL - κx))
+            pp = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * F_itp(t) * (κL - κx))))
         end
     end
     return pp
@@ -273,10 +273,10 @@ function inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="
     elseif control == "Flow"
         F_itp = Fpin_itp
         if ng == true 
-            pin = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(0.0, t, T_itp, gas; vis="Blumberg") * T_itp(0.0, t) * L / d(0.0)^4 * F_itp(t))
+            pin = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(0.0, t, T_itp, gas; vis="Blumberg") * T_itp(0.0, t) * L / d(0.0)^4 * F_itp(t))))
         else
             κL = flow_restriction(L, t, T_itp, d, gas, vis=vis)
-            pin = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * κL * F_itp(t))
+            pin = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * κL * F_itp(t))))
         end
     end
     return pin
@@ -288,10 +288,10 @@ function inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d::Number, gas; ng=fals
     elseif control == "Flow"
         F_itp = Fpin_itp
         if ng == true 
-            pin = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(0.0, t, T_itp, gas; vis="Blumberg") * T_itp(0.0, t) * L / d^4 * F_itp(t))
+            pin = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(0.0, t, T_itp, gas; vis="Blumberg") * T_itp(0.0, t) * L / d^4 * F_itp(t))))
         else
             κL = flow_restriction(L, t, T_itp, d, gas, vis=vis)
-            pin = sqrt(pout_itp(t)^2 + 256/π * pn/Tn * κL * F_itp(t))
+            pin = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * κL * F_itp(t))))
         end
     end
     return pin
@@ -326,7 +326,7 @@ function holdup_time(T::Float64, Fpin::Float64, pout::Float64, L::Float64, d::Fl
         pin = Fpin
     elseif control == "Flow"
         F = Fpin
-        pin = sqrt(pout^2 + 256/π * pn/Tn * viscosity(T, gas; vis="Blumberg") * T * L / d^4 * F)
+        pin = real(sqrt(Complex(pout^2 + 256/π * pn/Tn * viscosity(T, gas; vis="Blumberg") * T * L / d^4 * F)))
     end
 	tM = 128/3*L^2/d^2*η*(pin^3-pout^3)/(pin^2-pout^2)^2
 	return tM
