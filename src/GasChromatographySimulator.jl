@@ -19,7 +19,7 @@ const Tn = 25.0 + Tst         # K
 const pn = 101300             # Pa
 const custom_database_filepath = string(pkgdir(GasChromatographySimulator), "/data/custom_CI_db.tsv")
 const shortnames_filepath = string(pkgdir(GasChromatographySimulator), "/data/shortnames.csv")
-const k_th = 1e12            # threshold for retention factor k, if k>k_th => k=k_th 
+#const k_th = 1e20#1e12            # threshold for retention factor k, if k>k_th => k=k_th 
 
 # ---Begin-Structures---
 """
@@ -114,7 +114,7 @@ struct Substance
 end
 
 """
-    Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis)
+    Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis, control, k_th)
 
 Structure describing some general options for the simulation. 
 
@@ -126,8 +126,10 @@ Structure describing some general options for the simulation.
 * `odesys`: Combine the ODEs for migration and peak-width into a system of ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`) or with a gradient (`ng = false`).
 * `vis`: Used model of viscosity. `HP` is a second-order polynomial taken from the HP flow calculator. `Blumberg` is an emperical formula according to the book
-    `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH) 
-* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
+    `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH).
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program.
+* `k_th`: Threshold for the maximum of the retention factor. If the calculated retention factor is bigger than `k_th` than the retention factor is set to the value `k_th`.
+    This is done to avoid to small step widths in the solver for highly retained soultes at the beginning of a GC program. 
 
 **TODO**: add option for the retention model ('ABC', 'K-centric')
 
@@ -143,6 +145,7 @@ struct Options
     ng::Bool            # non-gradient calculation, ignores a defined spatial change of d, df or T
     vis::String         # viscosity model 'HP' or 'Blumberg'
     control::String     # control of the 'Flow' or of the inlet 'Pressure' during the program
+    k_th                # threshold for the max. possible retention factor
 end
 
 """
@@ -426,7 +429,7 @@ function Program(TP, FpinP, L; pout="vacuum", time_unit="min")
 end
 
 """
-    Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg", control="Pressure")
+    Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
 
 Construct the structure `Options` with default values. 
 
@@ -446,6 +449,7 @@ Construct the structure `Options` with default values.
 * `vis`: Used model of viscosity. `HP` is a second-order polynomial taken from the HP flow calculator. `Blumberg` is an emperical formula according to the book
     `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH) 
 * `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
+* `k_th`: Threshold for the maxima allowed value of retention factor.
 
 For more informations about the arguments `alg`, `abstol` and `reltol` see
 the documentation of the DifferentialEquations.jl package.
@@ -459,13 +463,13 @@ julia> Options()
 julia> Options(abstol=1e-8, Tcontrol="outlet")
 ```
 """
-function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg", control="Pressure")
-    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis, control)
+function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
+    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis, control, k_th)
     return opt
 end
 
 """
-    Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg", control="Pressure")
+    Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
 
 Construct the structure `Options` with given values. 
 
@@ -485,6 +489,7 @@ Construct the structure `Options` with given values.
 * `vis`: Used model of viscosity. `HP` is a second-order polynomial taken from the HP flow calculator. `Blumberg` is an emperical formula according to the book
     `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH) 
 * `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
+* `k_th`: Threshold for the maxima allowed value of retention factor.
 
 For more informations about the arguments `alg`, `abstol` and `reltol` see
 the documentation of the DifferentialEquations.jl package.
@@ -498,8 +503,8 @@ julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true)
 julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true; ng=true, vis="HP", control="Flow")
 ```
 """
-function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg", control="Pressure")
-    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis, control)
+function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
+    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis, control, k_th)
     return opt
 end
 
@@ -1091,7 +1096,7 @@ Note: The result is the solution structure from
 DifferentialEquations.jl.
 """
 function solving_migration(col::Column, prog::Program, sub::Substance, opt::Options)
-	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control)
+	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
     t₀ = sub.t₀
     zspan = (0.0,col.L)
     prob_tz = ODEProblem(f_tz, t₀, zspan)
@@ -1110,7 +1115,7 @@ Note: The result is the solution structure from
 DifferentialEquations.jl.    
 """
 function solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas)
-	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, p[5], p[6], p[7], gas, p[1], p[2], p[3], p[4]; ng=opt.ng, vis=opt.vis, control=opt.control)
+	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, p[5], p[6], p[7], gas, p[1], p[2], p[3], p[4]; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
 	t₀ = 0.0
 	zspan = (0.0, L)
 	p = [Tchar, θchar, ΔCp, φ₀, L, d, df]
@@ -1185,7 +1190,7 @@ function odesystem_r!(dt, t, p, z)
 	prog = p[2]
 	sub = p[3]
 	opt = p[4]
-    dt[1] = residency(z, t[1], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control)
+    dt[1] = residency(z, t[1], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
     dt[2] = peakode(z, t[1], t[2], col, prog, sub, opt)
 end
 
@@ -1202,14 +1207,14 @@ See also: [`solving_odesystem_r`](@ref), [`odesystem_r!`](@ref)
 """
 function peakode(z, t, τ², col, prog, sub, opt)
     if opt.ng==true
-        r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis, control=opt.control)
-        H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; ng=true, vis=opt.vis, control=opt.control)
+        r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis, control=opt.control, k_th=opt.kth)
+        H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; ng=true, vis=opt.vis, control=opt.control, k_th=opt.k_th)
         ∂r∂t_ng(z,t) = ForwardDiff.gradient(r_ng, [z, t])[2]
         return H_ng(z,t)*r_ng([z,t])^2 + 2*τ²*∂r∂t_ng(z,t)
     else
-        r(z, t) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; vis=opt.vis, control=opt.control)
+        r(z, t) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; vis=opt.vis, control=opt.control, k_th=opt.k_th)
         rz(t) = r(z, t)
-        H(z, t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; vis=opt.vis, control=opt.control)
+        H(z, t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; vis=opt.vis, control=opt.control, k_th=opt.k_th)
         ∂rz∂t(t) = ForwardDiff.derivative(rz, t)
         return H(z,t)*r(z,t)^2 + 2*τ²*∂rz∂t(t)
     end
@@ -1260,10 +1265,10 @@ function peaklist(sol, par)
         if sol[i].t[end]==par.col.L
             tR[i] = sol[i].u[end][1]
             TR[i] = par.prog.T_itp(par.col.L, tR[i]) - 273.15 
-            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis, control=par.opt.control)
+            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis, control=par.opt.control, k_th=par.opt.k_th)
             τR[i] = sqrt(sol[i].u[end][2])
             σR[i] = τR[i]*uR[i]
-            kR[i] = retention_factor(par.col.L, tR[i], par.prog.T_itp, par.col.d, par.col.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
+            kR[i] = retention_factor(par.col.L, tR[i], par.prog.T_itp, par.col.d, par.col.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; k_th=par.opt.k_th)
         else
             tR[i] = NaN
             TR[i] = NaN
@@ -1325,10 +1330,10 @@ function peaklist(sol, peak, par)
         if sol[i].t[end]==par.col.L
             tR[i] = sol[i].u[end]
             TR[i] = par.prog.T_itp(par.col.L, tR[i]) - 273.15 
-            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis, control=par.opt.control)
+            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis, control=par.opt.control, k_th=par.opt.k_th)
             τR[i] = sqrt(peak[i].u[end])
             σR[i] = τR[i]*uR[i]
-            kR[i] = retention_factor(par.col.L, tR[i], par.prog.T_itp, par.col.d, par.col.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
+            kR[i] = retention_factor(par.col.L, tR[i], par.prog.T_itp, par.col.d, par.col.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; k_th=par.opt.k_th)
         else
             tR[i] = NaN
             TR[i] = NaN
