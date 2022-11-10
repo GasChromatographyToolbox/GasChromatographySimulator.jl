@@ -805,7 +805,7 @@ See also: [`diffusion_mobile`](@ref), [`mobile_phase_residency`](@ref), [`retent
 function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
     id = d(x)# - 2.0*df(x)
     uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
-    μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th))
+    μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th=k_th))
     DM = diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=ng, vis=vis, control=control)
     DS = DM/10000
     H1 = 2*DM/uM
@@ -818,7 +818,7 @@ end
 function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d::Number, df::Number, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
     id = d# - 2.0*df
     uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
-    μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th))
+    μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th=k_th))
     DM = diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=ng, vis=vis, control=control)
     DS = DM/10000
     H1 = 2*DM/uM
@@ -831,7 +831,7 @@ end
 function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df::Number, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
     id = d(x)# - 2.0*df
     uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
-    μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th))
+    μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th=k_th))
     DM = diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=ng, vis=vis, control=control)
     DS = DM/10000
     H1 = 2*DM/uM
@@ -844,7 +844,7 @@ end
 function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d::Number, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
     id = d# - 2.0*df(x)
     uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
-    μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th))
+    μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th=k_th))
     DM = diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=ng, vis=vis, control=control)
     DS = DM/10000
     H1 = 2*DM/uM
