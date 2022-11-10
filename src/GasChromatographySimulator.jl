@@ -1211,7 +1211,7 @@ See also: [`solving_odesystem_r`](@ref), [`odesystem_r!`](@ref)
 """
 function peakode(z, t, τ², col, prog, sub, opt)
     if opt.ng==true
-        r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis, control=opt.control, k_th=opt.kth)
+        r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis, control=opt.control, k_th=opt.k_th)
         H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; ng=true, vis=opt.vis, control=opt.control, k_th=opt.k_th)
         ∂r∂t_ng(z,t) = ForwardDiff.gradient(r_ng, [z, t])[2]
         return H_ng(z,t)*r_ng([z,t])^2 + 2*τ²*∂r∂t_ng(z,t)
