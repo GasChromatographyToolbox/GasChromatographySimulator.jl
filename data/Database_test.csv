@@ -9,7 +9,7 @@ Decane,124-18-5,SLB5ms,106.44,28.588,76.602,0.001,Blumberg2017,alkane,Grob,alkan
 5-Nonanol,623-93-8,SLB5ms,122.92,29.571,90.768,0.001,Blumberg2017,alcohol,,
 Undecane,1120-21-4,SLB5ms,124.75,29.628,83.819,0.001,Blumberg2017,alkane,Grob,alkanes
 2-Nonanol,628-99-9,SLB5ms,124.84,29.561,93.722,0.001,Blumberg2017,alcohol,,
-1-Nonanol,143-8-8,SLB5ms,136.59,30.235,99.004,0.001,Blumberg2017,alcohol,,
+1-Nonanol,143-08-8,SLB5ms,136.59,30.235,99.004,0.001,Blumberg2017,alcohol,,
 5-Decanol,5205-34-5,SLB5ms,139.54,30.354,96.469,0.001,Blumberg2017,alcohol,,
 2-Decanone,693-54-9,SLB5ms,140.21,30.591,91.994,0.001,Blumberg2017,ketone,alkanones,
 Dodecane,112-40-3,SLB5ms,141.26,30.301,92.491,0.001,Blumberg2017,alkane,alkanes,
@@ -28,7 +28,7 @@ Undecane,1120-21-4,SPB50,108.95,29.003,74.488,0.001,Blumberg2017,alkane,Grob,alk
 2-Nonanol,628-99-9,SPB50,124.18,29.919,81.323,0.001,Blumberg2017,alcohol,,
 Dodecane,112-40-3,SPB50,125.52,29.71,80.744,0.001,Blumberg2017,alkane,alkanes,
 5-Decanol,5205-34-5,SPB50,137.36,30.558,84.657,0.001,Blumberg2017,alcohol,,
-1-Nonanol,143-8-8,SPB50,138.27,30.925,85.39,0.001,Blumberg2017,alcohol,,
+1-Nonanol,143-08-8,SPB50,138.27,30.925,85.39,0.001,Blumberg2017,alcohol,,
 Tridecane,629-50-5,SPB50,140.99,30.37,85.071,0.001,Blumberg2017,alkane,alkanes,
 2-Decanone,693-54-9,SPB50,143.14,30.959,85.186,0.001,Blumberg2017,ketone,alkanones,
 Tetradecane,629-59-4,SPB50,155.51,30.95,89.343,0.001,Blumberg2017,alkane,alkanes,
@@ -49,4 +49,4 @@ Pentadecane,629-62-9,Wax,147.47,32.122,98.572,0.001,Blumberg2017,alkane,alkanes,
 2-Decanone,693-54-9,Wax,150.11,33.907,78.098,0.001,Blumberg2017,ketone,alkanones,
 1-Octanol,111-87-5,Wax,155.4,32.317,97.29,0.001,Blumberg2017,alcohol,Grob,alcohols
 5-Decanol,5205-34-5,Wax,157.26,31.981,107.11,0.001,Blumberg2017,alcohol,,
-1-Nonanol,143-8-8,Wax,169.04,33.106,102.05,0.001,Blumberg2017,alcohol,,
+1-Nonanol,143-08-8,Wax,169.04,33.106,102.05,0.001,Blumberg2017,alcohol,,
