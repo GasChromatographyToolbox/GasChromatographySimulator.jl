@@ -18,7 +18,7 @@ end
 begin
     using CSV, DataFrames,  GasChromatographySimulator, HypertextLiteral, Plots, PlutoUI, UrlDownload
 	md"""
-	Packages, simulation\_example.jl, for GasChromatographySimulator v0.3.11
+	Packages, simulation\_example.jl, for GasChromatographySimulator v0.3.14
 	"""
 end
 
