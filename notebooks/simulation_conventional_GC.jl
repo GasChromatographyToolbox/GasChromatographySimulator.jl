@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.10
+# v0.19.14
 
 using Markdown
 using InteractiveUtils
@@ -84,6 +84,20 @@ md"""
 Number of ramps: $(@bind n_ramp confirm(NumberField(0:1:100; default=1)))
 """
 
+# ╔═╡ 052062dc-790c-4c08-96e4-ba6e0efeb2c4
+md"""### Substance category"""
+
+# ╔═╡ 293ab0ef-bbad-4fc4-a12b-e69f69b1af69
+begin
+
+cat_filter=filter([:Phase]=>(x)-> x.== col_values[4], db)
+	
+@bind cat_values confirm(MultiSelect(["all categories"; unique(skipmissing([cat_filter.Cat_1 cat_filter.Cat_2 cat_filter.Cat_3]))]))
+end	
+
+# ╔═╡ 3a853586-effa-43a3-9778-ed8ff379e29b
+db
+
 # ╔═╡ 3c856d47-c6c2-40d3-b547-843f9654f48d
 md"""
 ### Plot of local values
@@ -100,7 +114,27 @@ md"""
 col = GasChromatographySimulator.Column(col_values[1], col_values[2]*1e-3, col_values[3]*1e-6, col_values[4], col_values[5]);
 
 # ╔═╡ 7a00bb54-553f-47f5-b5db-b40d226f4183
-@bind sub_values confirm(GasChromatographySimulator.UI_Substance(GasChromatographySimulator.all_solutes(col.sp, db)))
+begin 	
+	if cat_values == ["all categories"]
+		@bind sub_values confirm(GasChromatographySimulator.UI_Substance(GasChromatographySimulator.all_solutes(col.sp, db)))
+	else	
+
+		dbfilter=
+			try 
+				filter([:Cat_1]=>(x)-> occursin(string(x), string(cat_values)), db) 
+			catch
+				try 
+					filter([:Cat_2]=>(x)-> occursin(string(x), string(cat_values)), db)
+				catch
+					try 
+						filter([:Cat_3]=>(x)-> occursin(string(x), string(cat_values)), db)
+					catch
+					end
+				end
+			end
+		@bind sub_values confirm(GasChromatographySimulator.UI_Substance(GasChromatographySimulator.all_solutes(col.sp, dbfilter),default=(1:1,)))
+	end 
+end
 
 # ╔═╡ e3277bb4-301a-4a1e-a838-311832b6d6aa
 sub = GasChromatographySimulator.load_solute_database(db, col.sp, col.gas, sub_values[1], zeros(length(sub_values[1])), zeros(length(sub_values[1])));
@@ -337,7 +371,7 @@ UrlDownload = "~1.0.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.7.1"
+julia_version = "1.7.2"
 manifest_format = "2.0"
 
 [[deps.AbstractFFTs]]
@@ -1139,9 +1173,9 @@ version = "1.42.0+0"
 
 [[deps.Libiconv_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "42b62845d70a619f063a7da093d995ec8e15e778"
+git-tree-sha1 = "c7cb1f5d892775ba13767a87c7ada0b980ea0a71"
 uuid = "94ce4f54-9a6c-5748-9c1c-f9c7231a4531"
-version = "1.16.1+1"
+version = "1.16.1+2"
 
 [[deps.Libmount_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1442,9 +1476,9 @@ version = "1.7.2"
 
 [[deps.Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
-git-tree-sha1 = "c6c0f690d0cc7caddb74cef7aa847b824a16b256"
+git-tree-sha1 = "0c03844e2231e12fda4d0086fd7cbe4098ee8dc5"
 uuid = "ea2cea3b-5b76-57ae-a6ef-0a8af62496e1"
-version = "5.15.3+1"
+version = "5.15.3+2"
 
 [[deps.QuadGK]]
 deps = ["DataStructures", "LinearAlgebra"]
@@ -2033,7 +2067,7 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═115b320f-be42-4116-a40a-9cf1b55d39b5
+# ╟─115b320f-be42-4116-a40a-9cf1b55d39b5
 # ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
@@ -2044,7 +2078,10 @@ version = "1.4.1+0"
 # ╟─e0669a58-d5ac-4d01-b079-05412b413dda
 # ╟─51eb4859-20b9-4cac-bde4-ef30c6fea59d
 # ╟─83851755-fe6c-4751-aa8e-3226e0fd50da
+# ╟─052062dc-790c-4c08-96e4-ba6e0efeb2c4
+# ╟─293ab0ef-bbad-4fc4-a12b-e69f69b1af69
 # ╟─7a00bb54-553f-47f5-b5db-b40d226f4183
+# ╟─3a853586-effa-43a3-9778-ed8ff379e29b
 # ╟─fdb39284-201b-432f-bff6-986ddbc49a7d
 # ╟─49faa7ea-0f22-45ca-9ab5-338d0db25564
 # ╟─14db2d66-eea6-43b1-9caf-2039709d1ddb
