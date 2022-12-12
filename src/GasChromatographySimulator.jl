@@ -884,6 +884,10 @@ function conventional_program(CP; time_unit="min")
             time_steps[i+1] = (value_steps[i+1] - value_steps[i])/heating_rates[Int(i/2)] * c
         end
     end
+    if time_steps[1] == time_steps[2] && value_steps[1] == value_steps[2]
+		time_steps = time_steps[2:end]
+		value_steps = value_steps[2:end]
+	end
     return time_steps, value_steps
 end
 
