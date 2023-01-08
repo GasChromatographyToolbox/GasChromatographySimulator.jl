@@ -74,9 +74,9 @@ struct Program{Fgf<:Function}
     pout_steps::Array{<:Real, 1}            # vector outlet pressure steps for the pressure program
     gf::Fgf                                 # function of x of the gradient form
     a_gf::Array{<:Real}                     # parameters of the gradient function gf(x)
-  	T_itp::Interpolations.Extrapolation     # interpolation function of T(x,t)
-    Fpin_itp::Interpolations.Extrapolation  # interpolation function of Fpin(t)
-    pout_itp::Interpolations.Extrapolation	# interpolation function of pout(t)
+  	T_itp#::Interpolations.Extrapolation     # interpolation function of T(x,t)
+    Fpin_itp#::Interpolations.Extrapolation  # interpolation function of Fpin(t)
+    pout_itp#::Interpolations.Extrapolation	# interpolation function of pout(t)
     # add inner constructor to check the lengths of the Arrays and of the result of gf
     Program(ts, Ts, Fpis, pos, gf, agf, T, Fpin, po) = (length(ts)!=length(Ts) || length(ts)!=length(gf(0.0)) || length(ts)!=length(Fpis) || length(ts)!=length(pos)) || length(ts)!=size(agf)[1] ? error("Mismatch between length(time_steps) = $(length(ts)), length(temp_steps) = $(length(Ts)), length(Fpin_steps) = $(length(Fpis)), length(pout_steps) = $(length(pos)), length(gf(0.0)) = $(length(gf(0.0))) and size(a_gf)[1] = $(size(agf)[1]).") : new{typeof(gf)}(ts, Ts, Fpis, pos, gf, agf, T, Fpin, po)
 end
