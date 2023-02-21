@@ -11,14 +11,15 @@ using Plots
 using HypertextLiteral
 using PlutoUI
 using ChemicalIdentifiers
+using UrlDownload
 
 # some constants
 const Tst = 273.15            # K
 const R = 8.31446261815324    # J mol⁻¹ K⁻¹
 const Tn = 25.0 + Tst         # K
 const pn = 101300             # Pa
-const custom_database_filepath = string(pkgdir(GasChromatographySimulator), "/data/custom_CI_db.tsv")
-const shortnames_filepath = string(pkgdir(GasChromatographySimulator), "/data/shortnames.csv")
+const custom_database_url = "https://raw.githubusercontent.com/JanLeppert/RetentionData/main/data/add_CI_db.tsv"
+const shortnames_url = "https://raw.githubusercontent.com/JanLeppert/RetentionData/main/data/shortnames.csv"
 #const k_th = 1e20#1e12            # threshold for retention factor k, if k>k_th => k=k_th 
 
 # ---Begin-Structures---
@@ -675,15 +676,16 @@ end
 Look up the substance name from the `data` dataframe with ChemicalIdentifiers.jl to find the `CAS`-number, the `formula`, the molecular weight `MW` and the `smiles`-identifier. If the name is not found in the database of ChemicalIdentifiers.jl a list with alternative names (`shortnames.csv`) is used. If there are still no matches, `missing` is used.
 """
 function CAS_identification(Name::Array{<:AbstractString})
-    load_custom_CI_database(custom_database_filepath)
-	shortnames = DataFrame(CSV.File(shortnames_filepath))
+    load_custom_CI_database(custom_database_url)
+	#shortnames = DataFrame(CSV.File(shortnames_filepath))
+    shortnames = DataFrame(urldownload(shortnames_url))
 	CAS = Array{Union{Missing,AbstractString}}(missing, length(Name))
 	for i=1:length(Name)
 		if Name[i] in shortnames.shortname
 			j = findfirst(Name[i].==shortnames.shortname)
-			ci = search_chemical(string(shortnames.name[j]))
+			ci = search_chemical(String(shortnames.name[j]))
 		else
-			ci = search_chemical(Name[i])
+			ci = search_chemical(String(Name[i]))
 		end
         if length(digits(ci.CAS[2])) == 1
             CAS[i] = string(ci.CAS[1], "-0", ci.CAS[2], "-", ci.CAS[3])
@@ -694,6 +696,8 @@ function CAS_identification(Name::Array{<:AbstractString})
 	id = DataFrame(Name=Name, CAS=CAS)
 	return id
 end
+
+
 
 """
     load_solute_database(db, sp, gas, solutes, t₀, τ₀)
@@ -750,9 +754,9 @@ function load_solute_database(db::DataFrame, sp::String, gas::String, solutes::A
         else # newer database version without information about the solute structure
             nCat = length(names(db))-8
             if nCat < 1
-                Annotation = string.(db_filtered_1.Source)
+                Annotation = String.(db_filtered_1.Source)
             else
-                Annotation = string.(db_filtered_1.Source)
+                Annotation = String.(db_filtered_1.Source)
                 for i=1:nCat
                     for j=1:length(Annotation)
                         if typeof(db_filtered_1[j,8+i]) != Missing
