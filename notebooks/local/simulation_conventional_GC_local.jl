@@ -269,9 +269,6 @@ begin
 	GasChromatographySimulator.local_plots(xx, yy, solution, par)
 end
 
-# ╔═╡ 4ff397f5-7641-43a9-be07-e6e1d06cffa0
-GasChromatographySimulator.search_chemical("cis-8,11,14-Eicosatrienoic acid methyl ester")
-
 # ╔═╡ 95e1ca30-9442-4f39-9af0-34bd202fcc24
 md"""
 # End
@@ -304,5 +301,4 @@ md"""
 # ╟─8c831fdb-0bfa-4f36-b720-e82fcf5d2427
 # ╟─50f1bd7f-a479-453d-a8ea-57c37a4e330c
 # ╟─c26c1ea7-575f-495d-86bc-987aca991664
-# ╠═4ff397f5-7641-43a9-be07-e6e1d06cffa0
 # ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
