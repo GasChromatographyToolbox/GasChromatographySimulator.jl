@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.4
+# v0.19.19
 
 using Markdown
 using InteractiveUtils
@@ -19,7 +19,7 @@ begin
     import Pkg
     # activate the shared project environment
     Pkg.activate(Base.current_project())
-    using Plots, PlutoUI, UrlDownload, HypertextLiteral, GasChromatographySimulator
+    using Plots, PlutoUI, UrlDownload, HypertextLiteral, GasChromatographySimulator, DataFrames, CSV
 	md"""
 	Packages, simulation\_conventional\_GC.jl, for GasChromatographySimulator v0.3.5
 	"""

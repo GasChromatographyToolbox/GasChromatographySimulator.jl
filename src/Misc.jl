@@ -79,13 +79,13 @@ function compare_measurement_simulation(meas, peaklist)
 end
 
 """
-	load_custom_CI_database(custom_database_filepath)
+	load_custom_CI_database(custom_database_url)
 
-Load a custom database for ChemicalIdentifiers.jl from the location `custom_database_filepath`, if the custom database is not already loaded.	
+Load a custom database for ChemicalIdentifiers.jl from the location `custom_database_url`, if the custom database is not already loaded.	
 """
-function load_custom_CI_database(custom_database_filepath)
-	if !(:custom in keys(ChemicalIdentifiers.DATA_DB))
-		ChemicalIdentifiers.load_data!(:custom, file = custom_database_filepath)
+function load_custom_CI_database(custom_database_url)
+	#if !(:custom in keys(ChemicalIdentifiers.DATA_DB))
+		ChemicalIdentifiers.load_data!(:custom, url = custom_database_url)
 		ChemicalIdentifiers.load_db!(:custom)
-	end
+	#end
 end
