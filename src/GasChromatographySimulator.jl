@@ -687,10 +687,14 @@ function CAS_identification(Name::Array{<:AbstractString})
 		else
 			ci = search_chemical(String(Name[i]))
 		end
-        if length(digits(ci.CAS[2])) == 1
-            CAS[i] = string(ci.CAS[1], "-0", ci.CAS[2], "-", ci.CAS[3])
+        if ismissing(ci)
+            CAS[i] = missing
         else
-		    CAS[i] = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
+            if length(digits(ci.CAS[2])) == 1
+                CAS[i] = string(ci.CAS[1], "-0", ci.CAS[2], "-", ci.CAS[3])
+            else
+		        CAS[i] = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
+            end
         end
 	end
 	id = DataFrame(Name=Name, CAS=CAS)
