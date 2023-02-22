@@ -9,6 +9,7 @@ gas = "He"
 time_steps = [0.0, 60.0, 600.0, 300.0]
 temp_steps = [40.0, 40.0, 300.0, 300.0]
 pin_steps = [200.0, 200.0, 300.0, 300.0].*1000.0 .+ 101300
+F_steps = [1.0, 1.0, 1.0, 1.0]./60e6
 pout_steps = [0.0, 0.0, 0.0, 0.0].*1000.0
 ΔT_steps = [20.0, 30.0, 50.0, 40.0]
 x₀_steps = zeros(length(time_steps))
@@ -110,7 +111,7 @@ end
     # Substance from the load-function-> 1st test
     db_path = string(@__DIR__, "/data")
     db = "Database_test.csv"
-    solutes = ["C10", "C11"]
+    solutes = ["C10", "C11", "Glyceryl trioctanoate"]
     init_t = zeros(length(solutes))
     init_τ = zeros(length(solutes))
     sub = GasChromatographySimulator.load_solute_database(db_path, db, col.sp, col.gas, solutes, init_t, init_τ)
@@ -131,7 +132,7 @@ end
     @test round(sub_0[1].Cag; sigdigits=5) == 2.5268e-5
     # test for error-cases of GasChromatographySimulator.load_solute_database
 
-    # test for new database format
+    # test for old database format
     db_old = "Database_test_old_format.csv"
     sub_new = GasChromatographySimulator.load_solute_database(db_path, db, "Wax", "He", ["C14", "Decyl acetate", "Hexadecane", "C15", "Methyl myristate"], [1.0, 2.0, 3.0, 4.0, 5.0], [0.1, 0.2, 0.3, 0.4, 0.5])
     sub_old = GasChromatographySimulator.load_solute_database(db_path, db_old, "Wax", "He", ["C14", "Decyl acetate", "Hexadecane", "C15", "Methyl myristate"], [1.0, 2.0, 3.0, 4.0, 5.0], [0.1, 0.2, 0.3, 0.4, 0.5])
@@ -146,6 +147,24 @@ end
     @test par.prog.T_itp(L, sum(time_steps)) == temp_steps[end] - ΔT_steps[end] + 273.15
     @test par.sub[1].Cag == GasChromatographySimulator.diffusivity(par.sub[1].CAS, "He")
     @test  isapprox(par.sub[2].Cag, GasChromatographySimulator.diffusivity(156.31, 11, 24, 0, 0, 0, "He"), atol=1e-6)
+
+    # retention factor of low volatile solute "Glyceryl trioctanoate"
+    k = GasChromatographySimulator.retention_factor(0.0, 0.0, par.col, par.prog, par.sub[3], par.opt)
+    @test k == opt.k_th
+
+    H = GasChromatographySimulator.plate_height(0.0, 0.0, par.col, par.prog, par.sub[3], par.opt)
+    H_ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, d, par.col.df, par.col.gas, par.sub[3].Tchar, par.sub[3].θchar, par.sub[3].ΔCp, par.sub[3].φ₀, par.sub[3].Cag)
+    H__ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, d, par.col.df, par.col.gas, 0.0, 0.0, 0.0, par.sub[3].φ₀, par.sub[3].Cag)
+    @test H == H_
+    @test H > H__
+
+    # control="Flow"
+    opt_F = GasChromatographySimulator.Options(control="Flow")
+    prog_F = GasChromatographySimulator.constructor_Program(time_steps, temp_steps, F_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, opt.Tcontrol, col.L)
+    par_F = GasChromatographySimulator.Parameters(col, prog_F, sub, opt_F)
+    pin_F = GasChromatographySimulator.inlet_pressure(0.0, par_F)
+    pin_F_ = GasChromatographySimulator.inlet_pressure(0.0, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, d, col.gas; control=opt_F.control) 
+    @test pin_F == pin_F_
 end
 
 @testset "solving check" begin
@@ -409,8 +428,10 @@ end
     tM_T = GasChromatographySimulator.holdup_time(T_test, prog_ng.Fpin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
     tM_t = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.Fpin_itp, prog_ng.pout_itp, col.L, col.d, col.gas)
     tM_t_ng = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.Fpin_itp, prog_ng.pout_itp, col.L, col.d, col.gas; ng=true)
+    tM_t_d = GasChromatographySimulator.holdup_time(t, prog_ng.T_itp, prog_ng.Fpin_itp, prog_ng.pout_itp, col.L, d, col.gas)
     @test isapprox(tM_T, tM_t, atol=1e-3) 
     @test isapprox(tM_T, tM_t_ng, atol=1e-3)
+    @test isapprox(tM_t, tM_t_d, atol=1e-3)
 
     F_T = GasChromatographySimulator.flow(T_test, prog_ng.Fpin_itp(t), prog_ng.pout_itp(t), col.L, col.a_d[1], col.gas) # only defined for non-gradient case
     F_t = GasChromatographySimulator.flow(t, prog_ng.T_itp, prog_ng.Fpin_itp, prog_ng.pout_itp, col.L, col.d, col.gas)
@@ -427,6 +448,7 @@ end
    
     @test F_T  ≈  F_t
     @test F_T ≈ GasChromatographySimulator.flow(T_test, pin(t), prog_F.pout_itp(t), col.L, col.a_d[1], col.gas; control="Pressure")
+    @test F_t ≈ GasChromatographySimulator.flow(t, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, d, col.gas; control="Flow")
 
     tM_T = GasChromatographySimulator.holdup_time(T_test, prog_F.Fpin_itp(t), prog_F.pout_itp(t), col.L, col.a_d[1], col.gas; control="Flow") # only defined for non-gradient case
     tM_t = GasChromatographySimulator.holdup_time(t, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; control="Flow") # prog_F is without gradient -> should be the same
