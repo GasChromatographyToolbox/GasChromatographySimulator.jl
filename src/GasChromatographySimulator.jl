@@ -722,9 +722,17 @@ phase `gas` from the database `db` into an array of the structure `Substance`.
 julia> sub = load_solute_database(db, "DB5", "He", ["C10", "C11"], [0.0, 0.0], [0.5, 0.5])
 ```
 """
-function load_solute_database(db::DataFrame, sp::String, gas::String, solutes::Array{<:AbstractString,1}, t₀::Array{Float64,1}, τ₀::Array{Float64,1})
+function load_solute_database(db_::DataFrame, sp::String, gas::String, solutes::Array{<:AbstractString,1}, t₀::Array{Float64,1}, τ₀::Array{Float64,1})
 	# compare names to CAS, using ChemicalIdentifiers.jl and a synonym list (different names of the same solute for different stationary phases) 
     id = CAS_identification(solutes)
+    # remove solutes with missing CAS
+    if true in ismissing.(db_.CAS)
+        @warn "Some CAS-numbers are missing. These substances are skipped."
+        db = disallowmissing!(db_[completecases(db_, :CAS), :], :CAS)
+    else
+        db = db_
+    end
+
     if sp == "" # no stationary phase is selected, like for transferlines
         Name = id.Name
         CAS = id.CAS
@@ -741,7 +749,6 @@ function load_solute_database(db::DataFrame, sp::String, gas::String, solutes::A
 	elseif isa(findfirst(unique(db.Phase).==sp), Nothing) && sp!=""
 		error("Unknown selction of stationary phase. Choose one of these: $phases_db")	
 	else
-        # old database config (simpler, additional stationary phases are appended in new rows, multiple entrys for a solute)
         # 1. Filter the stationary phase
         db_filtered = filter([:Phase] => x -> x==sp, db)
         # 2. Filter the solutes
