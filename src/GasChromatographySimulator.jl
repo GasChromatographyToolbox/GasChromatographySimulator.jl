@@ -20,6 +20,7 @@ const Tn = 25.0 + Tst         # K
 const pn = 101300             # Pa
 const custom_database_url = "https://raw.githubusercontent.com/JanLeppert/RetentionData/main/data/add_CI_db.tsv"
 const shortnames_url = "https://raw.githubusercontent.com/JanLeppert/RetentionData/main/data/shortnames.csv"
+const missingsubs_url = "https://raw.githubusercontent.com/JanLeppert/RetentionData/main/data/missing.csv"
 #const k_th = 1e20#1e12            # threshold for retention factor k, if k>k_th => k=k_th 
 
 # ---Begin-Structures---
@@ -686,6 +687,7 @@ function CAS_identification(Name::Array{<:AbstractString})
     load_custom_CI_database(custom_database_url)
 	#shortnames = DataFrame(CSV.File(shortnames_filepath))
     shortnames = DataFrame(urldownload(shortnames_url))
+    missingsubs = DataFrame(urldownload(missingsubs_url))
 	CAS = Array{Union{Missing,AbstractString}}(missing, length(Name))
 	for i=1:length(Name)
 		if Name[i] in shortnames.shortname
@@ -695,9 +697,14 @@ function CAS_identification(Name::Array{<:AbstractString})
 			ci = search_chemical(String(Name[i]))
 		end
         if ismissing(ci)
-            CAS[i] = missing
+            if Name[i] in missingsubs.name
+				j = findfirst(Name[i].==missingsubs.name)
+				CAS[i] = missingsubs.CAS[j]
+            else
+                CAS[i] = missing
+            end
         else
-            if length(digits(ci.CAS[2])) == 1
+            if length(digits(ci.CAS[2])) == 1 # if the second CAS numver has only one digit, add a leading zero
                 CAS[i] = string(ci.CAS[1], "-0", ci.CAS[2], "-", ci.CAS[3])
             else
 		        CAS[i] = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
@@ -1064,6 +1071,18 @@ function simulate(par)
 	end
 end
 
+function simulate(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt)
+    if opt.odesys==true
+        sol = solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt)
+    	pl = GasChromatographySimulator.peaklist(sol, par) #!!!!
+        return pl, sol
+	else
+		sol, peak = solve_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt)
+    	pl = GasChromatographySimulator.peaklist(sol, peak, par) #!!!!
+        return pl, sol, peak
+	end
+end
+
 """
     solve_system_multithreads(par::Parameters)
 
@@ -1084,6 +1103,15 @@ function solve_system_multithreads(par)
 	sol = Array{Any}(undef, n)
 	Threads.@threads for i=1:n
 		sol[i] = solving_odesystem_r(par.col, par.prog, par.sub[i], par.opt)
+	end
+	return sol
+end
+
+function solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt)
+	n = length(Tchar_)
+	sol = Array{Any}(undef, n)
+	Threads.@threads for i=1:n
+		sol[i] = solving_odesystem_r(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], gas, opt)
 	end
 	return sol
 end
@@ -1112,6 +1140,17 @@ function solve_multithreads(par)
     Threads.@threads for i=1:n
         sol[i] = solving_migration(par.col, par.prog, par.sub[i], par.opt)
         peak[i] = solving_peakvariance(sol[i], par.col, par.prog, par.sub[i], par.opt)
+    end
+    return sol, peak
+end
+
+function solve_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt)
+    n = length(Tchar_)
+    sol = Array{Any}(undef, n)
+    peak = Array{Any}(undef, n)
+    Threads.@threads for i=1:n
+        sol[i] = solving_migration(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], gas, opt)
+        peak[i] = solving_peakvariance(sol[i], T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], gas, opt)
     end
     return sol, peak
 end
@@ -1155,6 +1194,17 @@ function solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas)
 	return solution_tz
 end
 
+function solving_migration(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
+	p = [T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt]
+	f_tz(t,p,z) = residency(z, t, p[1], p[2], p[3], p[4], p[5], p[6], p[12], p[7], p[8], p[9], p[10]; ng=p[13].ng, vis=p[13].vis, control=p[13].control, k_th=p[13].k_th)
+	t₀ = 0.0
+	zspan = (0.0, L)
+	prob_tz = ODEProblem(f_tz, t₀, zspan, p)
+	solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol, reltol=opt.reltol)
+	#tR = solution.u[end]
+	return solution_tz
+end
+
 """
     solving_peakvariance(solution_tz, col::Column, prog::Program, sub::Substance, opt::Options)
 
@@ -1168,6 +1218,18 @@ function solving_peakvariance(solution_tz, col, prog, sub, opt)
     t(z) = solution_tz(z)
     p = [col, prog, sub, opt]
     f_τ²z(τ²,p,z) = peakode(z, t(z), τ², col, prog, sub, opt)
+    τ²₀ = sub.τ₀^2
+    zspan = (0.0, col.L)
+    prob_τ²z = ODEProblem(f_τ²z, τ²₀, zspan, p)
+    solution_τ²z = solve(prob_τ²z, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
+    return solution_τ²z
+end
+
+function solving_peakvariance(solution_tz, T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
+    t(z) = solution_tz(z)
+    p = [T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt]
+    #f_τ²z(τ²,p,z) = peakode(z, t(z), τ², T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
+	f_τ²z(τ²,p,z) = peakode(z, t(z), τ², p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13])
     τ²₀ = sub.τ₀^2
     zspan = (0.0, col.L)
     prob_τ²z = ODEProblem(f_τ²z, τ²₀, zspan, p)
@@ -1200,6 +1262,20 @@ function solving_odesystem_r(col::Column, prog::Program, sub::Substance, opt::Op
     return solution
 end
 
+function solving_odesystem_r(L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt::GasChromatographySimulator.Options)
+    t₀ = [sub.t₀; sub.τ₀^2]
+    zspan = (0.0,col.L)
+	p = [L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt]
+    prob = ODEProblem(odesystem_r!, t₀, zspan, p)
+
+    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
+
+    #if solution.t[end]<col.L
+    #    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol, dt=col.L/1000000)
+    #end
+    return solution
+end
+
 """
     odesystem_r!(dt, t, p, z)
 
@@ -1224,6 +1300,26 @@ function odesystem_r!(dt, t, p, z)
     dt[2] = peakode(z, t[1], t[2], col, prog, sub, opt)
 end
 
+function odesystem_r!(dt, t, p, z)
+    # t[1] ... t time
+    # t[2] ... τ² band variance
+	L = p[1]
+    d = p[2]
+    df = p[3]
+	T_itp = p[4]
+    Fpin_itp = p[5]
+    pout_itp = p[6]
+	Tchar = p[7]
+    θchar = p[8]
+    ΔCp = p[9]
+    φ₀ = p[10]
+    Cag = p[11]
+    gas = p[12]
+	opt = p[13]
+    dt[1] = residency(z, t[1], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+    dt[2] = peakode(z, t[1], t[2], T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
+end
+
 """
     peakode(z, t, τ², col, prog, sub, opt)
 
@@ -1245,6 +1341,21 @@ function peakode(z, t, τ², col, prog, sub, opt)
         r(z, t) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; vis=opt.vis, control=opt.control, k_th=opt.k_th)
         rz(t) = r(z, t)
         H(z, t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; vis=opt.vis, control=opt.control, k_th=opt.k_th)
+        ∂rz∂t(t) = ForwardDiff.derivative(rz, t)
+        return H(z,t)*r(z,t)^2 + 2*τ²*∂rz∂t(t)
+    end
+end
+
+function peakode(z, t, τ², T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
+    if opt.ng==true
+        r_ng(zt) = residency(zt[1], zt[2], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=true, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+        H_ng(z,t) = plate_height(z, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=true, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+        ∂r∂t_ng(z,t) = ForwardDiff.gradient(r_ng, [z, t])[2]
+        return H_ng(z,t)*r_ng([z,t])^2 + 2*τ²*∂r∂t_ng(z,t)
+    else
+        r(z, t) = residency(z, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; vis=opt.vis, control=opt.control, k_th=opt.k_th)
+        rz(t) = r(z, t)
+        H(z, t) = plate_height(z, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; vis=opt.vis, control=opt.control, k_th=opt.k_th)
         ∂rz∂t(t) = ForwardDiff.derivative(rz, t)
         return H(z,t)*r(z,t)^2 + 2*τ²*∂rz∂t(t)
     end
