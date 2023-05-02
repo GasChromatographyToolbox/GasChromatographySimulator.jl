@@ -692,9 +692,17 @@ function CAS_identification(Name::Array{<:AbstractString})
 	for i=1:length(Name)
 		if Name[i] in shortnames.shortname
 			j = findfirst(Name[i].==shortnames.shortname)
-			ci = search_chemical(String(shortnames.name[j]))
+			ci = try
+                search_chemical(String(shortnames.name[j]))
+            catch
+                missing
+            end
 		else
-			ci = search_chemical(String(Name[i]))
+			ci = try
+                search_chemical(String(Name[i]))
+            catch
+                missing
+            end
 		end
         if ismissing(ci)
             if Name[i] in missingsubs.name
