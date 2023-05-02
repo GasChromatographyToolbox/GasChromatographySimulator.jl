@@ -1292,15 +1292,33 @@ See also: [`solving_odesystem_r`](@ref), [`peakode`](@ref)
 function odesystem_r!(dt, t, p, z)
     # t[1] ... t time
     # t[2] ... τ² band variance
-	col = p[1]
-	prog = p[2]
-	sub = p[3]
-	opt = p[4]
-    dt[1] = residency(z, t[1], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
-    dt[2] = peakode(z, t[1], t[2], col, prog, sub, opt)
+    if length(p) == 4
+        col = p[1]
+        prog = p[2]
+        sub = p[3]
+        opt = p[4]
+        dt[1] = residency(z, t[1], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+        dt[2] = peakode(z, t[1], t[2], col, prog, sub, opt)
+    else
+        L = p[1]
+    d = p[2]
+    df = p[3]
+	T_itp = p[4]
+    Fpin_itp = p[5]
+    pout_itp = p[6]
+	Tchar = p[7]
+    θchar = p[8]
+    ΔCp = p[9]
+    φ₀ = p[10]
+    Cag = p[11]
+    gas = p[12]
+	opt = p[13]
+    dt[1] = residency(z, t[1], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+    dt[2] = peakode(z, t[1], t[2], T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
+    end
 end
 
-function odesystem_r!(dt, t, p, z)
+#=function odesystem_r!(dt, t, p, z)
     # t[1] ... t time
     # t[2] ... τ² band variance
 	L = p[1]
@@ -1318,7 +1336,7 @@ function odesystem_r!(dt, t, p, z)
 	opt = p[13]
     dt[1] = residency(z, t[1], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
     dt[2] = peakode(z, t[1], t[2], T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
-end
+end=#
 
 """
     peakode(z, t, τ², col, prog, sub, opt)
