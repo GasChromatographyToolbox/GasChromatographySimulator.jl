@@ -937,7 +937,8 @@ end
     diffusivity(CAS, gas)
 
 Calculate the diffusivity constant `Cag` of solute `a` in gas `g` using the
-emperical Fuller-Schettler-Giddings model [1], using the CAS number to look the formula of the solute up in ChemicalIdentifiers.jl.
+emperical Fuller-Schettler-Giddings model [1], using the CAS number to look the formula of the solute up in ChemicalIdentifiers.jl. 
+`CAS` can also be the PubChem ID. If `CAS` is neither a CAS number nor a PubChem ID, the diffusitivity of n-Pentadecane is used as a placeholder.   
 
 [1] Fuller, Edward N.; Ensley, Keith; Giddings, J. Calvin, Diffusion of
 Halogenated Hydrocarbons in Helium. The Effect of Structure on Collision
@@ -969,8 +970,10 @@ function diffusivity(CAS, gas)
     regexCAS = r"\b[1-9]{1}[0-9]{1,5}-\d{2}-\d\b"
     if split(CAS, ' ')[1] == "PubChem" # CAS is a pubchemid
         solute = search_chemical(split(CAS, ' ')[end])
-    else #typeof(match(regexCAS, CAS)) == RegexMatch # CAS is a CAS number
+    elseif typeof(match(regexCAS, CAS)) == RegexMatch # CAS is a CAS number
         solute = search_chemical(Tuple(parse.(Int, split(CAS, '-'))))
+    else # e.g. CAS is missing, use pentadecane as placeholder
+        solute = search_chemical("629-62-9")
     end
     formula = formula_to_dict(solute.formula)
     Rn = ring_number(solute.smiles)
