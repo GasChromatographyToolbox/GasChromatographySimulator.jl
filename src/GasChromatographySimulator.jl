@@ -104,7 +104,7 @@ See also: [`load_solute_database`](@ref)
 """
 struct Substance
     name::String        # name of solute
-    CAS::String         # CAS registry number
+    CAS::Union{Missing,String}         # CAS registry number
     Tchar               # characteristic temperature in K
     θchar               # characteristic thermal constant in °C
     ΔCp                 # 3rd parameter
