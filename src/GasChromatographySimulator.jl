@@ -723,7 +723,37 @@ function CAS_identification(Name::Array{<:AbstractString})
 	return id
 end
 
+"""
+    search_chemical_by_cas(cas)
 
+Look up the substance by CAS number from ChemicalIdentifiers.jl, respectively from the `missing.csv`-file from `https://github.com/JanLeppert/RetentionData`.
+
+Returns a named tupel with the common name (`name`), CAS number (`CAS`), chemical formula (`formula`), molar weight (`MW`) and the SMILES identifier (`smiles`).
+
+If the CAS number is not found in the ChemicalIdentifiers.jl or `missing.csv` databases, than the values from n-pentadecane are used as placeholders.
+"""
+function search_chemical_by_cas(cas)
+    load_custom_CI_database(custom_database_url)
+    missingsubs = DataFrame(urldownload(missingsubs_url))
+
+    if cas in missingsubs.CAS
+		j = findfirst(cas.==missingsubs.CAS)
+		id = (Name = missingsubs.name[j], CAS = missingsubs.CAS[j], formula = missingsubs.formula[j], MW = missingsubs.MW[j], smiles = missingsubs.smiles[j])
+    else
+		ci = try
+			search_chemical(cas)
+		catch
+			missing
+		end
+		if ismissing(ci)
+            ci_ = search_chemical("629-62-9")
+			id = (Name = "placeholder", CAS = cas, formula = ci_.formula, MW = ci_.MW, smiles = ci_.smiles)
+		else
+			id = (Name = ci.common_name, CAS = ci.CAS, formula = ci.formula, MW = ci.MW, smiles = ci.smiles)
+		end
+	end
+	return id
+end
 
 """
     load_solute_database(db, sp, gas, solutes, t₀, τ₀)

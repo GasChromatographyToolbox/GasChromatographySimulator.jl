@@ -971,7 +971,7 @@ function diffusivity(CAS, gas)
     if split(CAS, ' ')[1] == "PubChem" # CAS is a pubchemid
         solute = search_chemical(split(CAS, ' ')[end])
     elseif typeof(match(regexCAS, CAS)) == RegexMatch # CAS is a CAS number
-        solute = search_chemical(Tuple(parse.(Int, split(CAS, '-'))))
+        solute = search_chemical_by_cas(CAS)
     else # e.g. CAS is missing, use pentadecane as placeholder
         solute = search_chemical("629-62-9")
     end
