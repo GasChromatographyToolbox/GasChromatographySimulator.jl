@@ -145,7 +145,7 @@ end
     @test par.prog.gf(0.0) == par.prog.gf(L) + par.prog.a_gf[:,1]
     @test par.prog.T_itp(0.0, 0.0) == temp_steps[1] + 273.15
     @test par.prog.T_itp(L, sum(time_steps)) == temp_steps[end] - ΔT_steps[end] + 273.15
-    @test par.sub[1].Cag == GasChromatographySimulator.diffusivity(par.sub[1].CAS, "He")
+    @test par.sub[1].Cag == GasChromatographySimulator.diffusivity(GasChromatographySimulator.CAS_identification(par.sub[1].name), "He")
     @test  isapprox(par.sub[2].Cag, GasChromatographySimulator.diffusivity(156.31, 11, 24, 0, 0, 0, "He"), atol=1e-6)
 
     # retention factor of low volatile solute "Glyceryl trioctanoate"
