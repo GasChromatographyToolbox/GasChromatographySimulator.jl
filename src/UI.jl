@@ -148,7 +148,7 @@ function UI_Program(; default=("0 60 300 300 120", "40 40 170 300 300", "0 0 40 
 			$(
 				Child(TextField((50,1); default=default[3]))
 			) p_in steps [kPa(g)]
-	
+
 			$(
 				Child(Select(["vacuum", "atmosphere"]; default=default[4]))
 				) column outlet
