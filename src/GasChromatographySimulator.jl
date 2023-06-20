@@ -749,7 +749,12 @@ function search_chemical_by_cas(cas)
             ci_ = search_chemical("629-62-9")
 			id = (Name = "placeholder", CAS = cas, formula = ci_.formula, MW = ci_.MW, smiles = ci_.smiles)
 		else
-			id = (Name = ci.common_name, CAS = ci.CAS, formula = ci.formula, MW = ci.MW, smiles = ci.smiles)
+            if length(digits(ci.CAS[2])) == 1 # if the second CAS numver has only one digit, add a leading zero
+                CAS = string(ci.CAS[1], "-0", ci.CAS[2], "-", ci.CAS[3])
+            else
+		        CAS = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
+            end
+			id = (Name = ci.common_name, CAS = CAS, formula = ci.formula, MW = ci.MW, smiles = ci.smiles)
 		end
 	end
 	return id
