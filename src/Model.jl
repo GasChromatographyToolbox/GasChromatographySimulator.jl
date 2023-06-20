@@ -934,11 +934,10 @@ function diffusivity(M, Cn, Hn, On, Nn, Rn, gas)
 end
 
 """
-    diffusivity(CAS, gas)
+    diffusivity(id, gas)
 
-Calculate the diffusivity constant `Cag` of solute `a` in gas `g` using the
-emperical Fuller-Schettler-Giddings model [1], using the CAS number to look the formula of the solute up in ChemicalIdentifiers.jl. 
-`CAS` can also be the PubChem ID. If `CAS` is neither a CAS number nor a PubChem ID, the diffusitivity of n-Pentadecane is used as a placeholder.   
+Calculate the diffusivity constant `Cag` of solute `id` in gas `gas` using the
+emperical Fuller-Schettler-Giddings model [1], using the identifier of the solute `id`.
 
 [1] Fuller, Edward N.; Ensley, Keith; Giddings, J. Calvin, Diffusion of
 Halogenated Hydrocarbons in Helium. The Effect of Structure on Collision
@@ -946,10 +945,10 @@ Cross Sections, The Journal of Physical Chemistry, Volume 73, Issue 11,
 1969, 3679–3685
 
 # Arguments
-* `CAS`: CAS number of the solute.
+* `id`: Named tupel identifying the solute. (Name, CAS, formula, MW, smiles)
 * `gas`: The name of the mobile phase. Allowed values: He, H2 or N2.
 """
-function diffusivity(CAS, gas)
+function diffusivity(id, gas)
     if gas=="H2"
         Vg = 6.12
         Mg = 2.02
@@ -965,20 +964,10 @@ function diffusivity(CAS, gas)
     else
         error("Unknown selection of gas. Choose one of these: He, H2, N2 or Ar.")
     end
-    load_custom_CI_database(custom_database_url)
-    # is CAS realy a CAS number (could also be pubchem ID)
-    regexCAS = r"\b[1-9]{1}[0-9]{1,5}-\d{2}-\d\b"
-    if split(CAS, ' ')[1] == "PubChem" # CAS is a pubchemid
-        solute = search_chemical(split(CAS, ' ')[end])
-    elseif typeof(match(regexCAS, CAS)) == RegexMatch # CAS is a CAS number
-        solute = search_chemical_by_cas(CAS)
-    else # e.g. CAS is missing, use pentadecane as placeholder
-        solute = search_chemical("629-62-9")
-    end
-    formula = formula_to_dict(solute.formula)
-    Rn = ring_number(solute.smiles)
+    formula = formula_to_dict(id.formula)
+    Rn = ring_number(id.smiles)
     Va = molecular_diffusion_volume(formula, Rn) # in cm³
-    Cag = pn*sqrt(1/solute.MW+1/Mg)/(Vg^(1/3)+Va^(1/3))^2*1e-7 # pn m²/s ('Cag at normal pressure')
+    Cag = pn*sqrt(1/id.MW+1/Mg)/(Vg^(1/3)+Va^(1/3))^2*1e-7 # pn m²/s ('Cag at normal pressure')
     return Cag
 end
 
