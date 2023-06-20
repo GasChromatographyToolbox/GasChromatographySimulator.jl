@@ -679,83 +679,51 @@ function steps_interpolation(time_steps::Array{<:Real,1}, steps::Array{<:Real,1}
 end
 
 """
-	CAS_identification(Name::Array{<:AbstractString})
+	CAS_identification(Name)
 
 Look up the substance name from the `data` dataframe with ChemicalIdentifiers.jl to find the `CAS`-number, the `formula`, the molecular weight `MW` and the `smiles`-identifier. If the name is not found in the database of ChemicalIdentifiers.jl a list with alternative names (`shortnames.csv`) is used. If there are still no matches, `missing` is used.
 """
-function CAS_identification(Name::Array{<:AbstractString})
+function CAS_identification(Name)
     load_custom_CI_database(custom_database_url)
 	#shortnames = DataFrame(CSV.File(shortnames_filepath))
     shortnames = DataFrame(urldownload(shortnames_url))
     missingsubs = DataFrame(urldownload(missingsubs_url))
-	CAS = Array{Union{Missing,AbstractString}}(missing, length(Name))
-	for i=1:length(Name)
-		if Name[i] in shortnames.shortname
-			j = findfirst(Name[i].==shortnames.shortname)
-			ci = try
-                search_chemical(String(shortnames.name[j]))
-            catch
-                missing
-            end
-		else
-			ci = try
-                search_chemical(String(Name[i]))
-            catch
-                missing
-            end
-		end
-        if ismissing(ci)
-            if Name[i] in missingsubs.name
-				j = findfirst(Name[i].==missingsubs.name)
-				CAS[i] = missingsubs.CAS[j]
-            else
-                CAS[i] = missing
-            end
-        else
-            if length(digits(ci.CAS[2])) == 1 # if the second CAS numver has only one digit, add a leading zero
-                CAS[i] = string(ci.CAS[1], "-0", ci.CAS[2], "-", ci.CAS[3])
-            else
-		        CAS[i] = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
-            end
-        end
-	end
-	id = DataFrame(Name=Name, CAS=CAS)
-	return id
-end
-
-"""
-    search_chemical_by_cas(cas)
-
-Look up the substance by CAS number from ChemicalIdentifiers.jl, respectively from the `missing.csv`-file from `https://github.com/JanLeppert/RetentionData`.
-
-Returns a named tupel with the common name (`name`), CAS number (`CAS`), chemical formula (`formula`), molar weight (`MW`) and the SMILES identifier (`smiles`).
-
-If the CAS number is not found in the ChemicalIdentifiers.jl or `missing.csv` databases, than the values from n-pentadecane are used as placeholders.
-"""
-function search_chemical_by_cas(cas)
-    load_custom_CI_database(custom_database_url)
-    missingsubs = DataFrame(urldownload(missingsubs_url))
-
-    if cas in missingsubs.CAS
-		j = findfirst(cas.==missingsubs.CAS)
-		id = (Name = missingsubs.name[j], CAS = missingsubs.CAS[j], formula = missingsubs.formula[j], MW = missingsubs.MW[j], smiles = missingsubs.smiles[j])
+#	id = Array{NamedTuple{(:Name, :CAS, :formula, :MW, :smiles), Tuple{String, String, String, Float64, String}}}(undef, length(Name))
+#	for i=1:length(Name)
+    if Name in missingsubs.name # first look the name up in the missing.csv
+        j = findfirst(Name.==missingsubs.name)
+        id = (Name = missingsubs.name[j], CAS = missingsubs.CAS[j], formula = missingsubs.formula[j], MW = missingsubs.MW[j], smiles = missingsubs.smiles[j])
     else
-		ci = try
-			search_chemical(cas)
-		catch
-			missing
-		end
-		if ismissing(ci)
+        if Name in shortnames.shortname # second look for name alternative in shortnames.csv for an alternative name used for the search
+            j = findfirst(Name.==shortnames.shortname)
+            name = String(shortnames.name[j])
+        else # otherwise use the input name
+            name = Name
+        end
+        ci = try
+            search_chemical(name)
+        catch
+            missing
+        end
+        if ismissing(ci) # 
             ci_ = search_chemical("629-62-9")
-			id = (Name = "placeholder", CAS = cas, formula = ci_.formula, MW = ci_.MW, smiles = ci_.smiles)
-		else
+            id = (Name = string(Name,"_ph"), CAS = "629-62-9", formula = ci_.formula, MW = ci_.MW, smiles = ci_.smiles)
+        else
             if length(digits(ci.CAS[2])) == 1 # if the second CAS numver has only one digit, add a leading zero
                 CAS = string(ci.CAS[1], "-0", ci.CAS[2], "-", ci.CAS[3])
             else
-		        CAS = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
+                CAS = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
             end
-			id = (Name = ci.common_name, CAS = CAS, formula = ci.formula, MW = ci.MW, smiles = ci.smiles)
-		end
+            id = (Name = Name, CAS = CAS, formula = ci.formula, MW = ci.MW, smiles = ci.smiles)
+        end
+    end
+	return id
+end
+
+function CAS_identification(Name::Array{<:AbstractString})
+	id = Array{NamedTuple{(:Name, :CAS, :formula, :MW, :smiles), Tuple{String, String, String, Float64, String}}}(undef, length(Name))
+	for i=1:length(Name)
+        id[i] = CAS_identification(Name[i])
 	end
 	return id
 end
@@ -782,6 +750,7 @@ julia> sub = load_solute_database(db, "DB5", "He", ["C10", "C11"], [0.0, 0.0], [
 function load_solute_database(db_::DataFrame, sp::String, gas::String, solutes::Array{<:AbstractString,1}, t₀::Array{Float64,1}, τ₀::Array{Float64,1})
 	# compare names to CAS, using ChemicalIdentifiers.jl and a synonym list (different names of the same solute for different stationary phases) 
     id = CAS_identification(solutes)
+    id_df = DataFrame(id)
     # remove solutes with missing CAS
     if true in ismissing.(db_.CAS)
         @warn "Some CAS-numbers are missing. These substances are skipped."
@@ -791,8 +760,8 @@ function load_solute_database(db_::DataFrame, sp::String, gas::String, solutes::
     end
 
     if sp == "" # no stationary phase is selected, like for transferlines
-        Name = id.Name
-        CAS = id.CAS
+        Name = id_df.Name
+        CAS = id_df.CAS
         # use placeholder values
         Tchar = ones(length(Name))
         θchar = ones(length(Name))
@@ -809,7 +778,7 @@ function load_solute_database(db_::DataFrame, sp::String, gas::String, solutes::
         # 1. Filter the stationary phase
         db_filtered = filter([:Phase] => x -> x==sp, db)
         # 2. Filter the solutes
-        db_filtered_1=db_filtered[in(id.CAS).(db_filtered.CAS),:]
+        db_filtered_1=db_filtered[in(id_df.CAS).(db_filtered.CAS),:]
         # values
         Name = db_filtered_1.Name
         CAS = db_filtered_1.CAS
@@ -837,14 +806,15 @@ function load_solute_database(db_::DataFrame, sp::String, gas::String, solutes::
         # correct assignment of the t₀ and τ₀ values to the correct values from the input
         indices = Array{Int}(undef, length(Name))
         for i=1:length(Name)
-            indices[i] = findfirst(db_filtered_1.CAS[i].==id.CAS)
+            indices[i] = findfirst(db_filtered_1.CAS[i].==id_df.CAS)
         end
         t₀_ = t₀[indices]
         τ₀_ = τ₀[indices]  
 	end
     sub = Array{Substance}(undef, length(Name))
     for i=1:length(Name)
-        Cag = diffusivity(CAS[i], gas)
+        ii = findfirst(CAS[i].==id_df.CAS)
+        Cag = diffusivity(id[ii], gas)
         sub[i] = Substance(Name[i],
                             CAS[i],
                             Tchar[i], 
