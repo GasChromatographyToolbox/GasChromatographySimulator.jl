@@ -835,7 +835,7 @@ function load_solute_database(db_, sp, gas, solutes, t₀, τ₀)
 	i_notfound = findall(x ∉ found_cas for x in id_df.CAS)
 	found_name = [sub[i].name for i in 1:length(sub)]
 	i_notfound_name = findall(x ∉ found_name for x in solutes)
-	if isempty(i_notfound) == false
+	if isempty(i_notfound) == false && isempty(i_notfound_name) == false
 		@warn "Some solutes could not be found: $(solutes[intersect(i_notfound, i_notfound_name)])."
 	end
 	return unique(sub) # remove duplicates
@@ -1414,7 +1414,8 @@ simulation of the GC system defined by `par`.
 
 # Output
 
-The peaklist DataFrame consists of the entrys: 
+The peaklist DataFrame consists of the entrys:
+* `No`: Number of the solute in the database. 
 * `Name`: Name of the solute.
 * `tR`: Retention time of the solute (in s).
 * `τR`: Peak width of the solute (in s). 
@@ -1424,6 +1425,7 @@ The peaklist DataFrame consists of the entrys:
 * `kR`: Retention factor of the solute at retention time.
 * `Res`: Resolution (4τ) between neighboring peaks.
 * `Δs`: separation metric between neighboring peaks, assuming linear development of peak width `τR` between the peaks.
+* `Annotations`: additional anotations, e.g. Source, categories, if available
 
 # Examples
 
@@ -1435,6 +1437,7 @@ julia> pl = peaklist(sol, par)
 function peaklist(sol, par)
 	n = length(par.sub)
     # sol is solution from ODE system
+    No = Array{Int}(undef, n)
     Name = Array{String}(undef, n)
     tR = Array{Float64}(undef, n)
     TR = Array{Float64}(undef, n)
@@ -1444,6 +1447,7 @@ function peaklist(sol, par)
     kR = Array{Float64}(undef, n)
     Res = fill(NaN, n)
     Δs = fill(NaN, n)
+    Annotations = Array{String}(undef, n)
     Threads.@threads for i=1:n
         Name[i] = par.sub[i].name
         if sol[i].t[end]==par.col.L
@@ -1461,14 +1465,25 @@ function peaklist(sol, par)
             σR[i] = NaN
             kR[i] = NaN
         end
+        No[i] = try
+            parse(Int,split(par.sub[i].ann, ", ")[end])
+        catch
+            NaN
+        end
+        if No[i] == NaN
+            Annotations[i] = par.sub[i].ann
+        else
+            Annotations[i] = join(split(par.sub[i].ann, ", ")[1:end-1], ", ")
+        end
     end  
-    df = sort!(DataFrame(Name = Name, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, ), [:tR])
+    df = sort!(DataFrame(No = No, Name = Name, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, ), [:tR])
     Threads.@threads for i=1:n-1
         Res[i] = (df.tR[i+1] - df.tR[i])/(2*(df.τR[i+1] + df.τR[i]))
         Δs[i] = (df.tR[i+1] - df.tR[i])/(df.τR[i+1] - df.τR[i]) * log(df.τR[i+1]/df.τR[i])
     end
     df[!, :Res] = Res
-    df[!, :Δs] = Δs  
+    df[!, :Δs] = Δs 
+    df[!, :Annotations] = Annotations 
     return df
 end
 
@@ -1480,7 +1495,8 @@ the simulation of the GC system defined by `par`.
 
 # Output
 
-The peaklist DataFrame consists of the entrys: 
+The peaklist DataFrame consists of the entrys:
+* `No`: Number of the solute in the database.  
 * `Name`: Name of the solute.
 * `tR`: Retention time of the solute (in s).
 * `τR`: Peak width of the solute (in s). 
@@ -1490,6 +1506,7 @@ The peaklist DataFrame consists of the entrys:
 * `kR`: Retention factor of the solute at retention time.
 * `Res`: Resolution (4τ) between neighboring peaks.
 * `Δs`: separation metric between neighboring peaks, assuming linear development of peak width `τR` between the peaks.
+* `Annotations`: additional anotations, e.g. Source, categories, if available
 
 # Examples
 
@@ -1500,6 +1517,7 @@ julia> pl = peaklist(sol, peak, par)
 """
 function peaklist(sol, peak, par)
 	n = length(par.sub)
+    No = Array{Int}(undef, n)
     Name = Array{String}(undef, n)
     tR = Array{Float64}(undef, n)
     TR = Array{Float64}(undef, n)
@@ -1509,6 +1527,7 @@ function peaklist(sol, peak, par)
     kR = Array{Float64}(undef, n)
     Res = fill(NaN, n)
     Δs = fill(NaN, n)
+    Annotations = Array{String}(undef, n)
     Threads.@threads for i=1:n
         Name[i] = par.sub[i].name
         if sol[i].t[end]==par.col.L
@@ -1526,14 +1545,25 @@ function peaklist(sol, peak, par)
             σR[i] = NaN
             kR[i] = NaN
         end
+        No[i] = try
+            parse(Int,split(par.sub[i].ann, ", ")[end])
+        catch
+            NaN
+        end
+        if No[i] == NaN
+            Annotations[i] = par.sub[i].ann
+        else
+            Annotations[i] = join(split(par.sub[i].ann, ", ")[1:end-1], ", ")
+        end
     end  
-    df = sort!(DataFrame(Name = Name, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, ), [:tR])
+    df = sort!(DataFrame(No = No, Name = Name, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, ), [:tR])
     Threads.@threads for i=1:n-1
         Res[i] = (df.tR[i+1] - df.tR[i])/(2*(df.τR[i+1] + df.τR[i]))
         Δs[i] = (df.tR[i+1] - df.tR[i])/(df.τR[i+1] - df.τR[i]) * log(df.τR[i+1]/df.τR[i])
     end
     df[!, :Res] = Res 
     df[!, :Δs] = Δs   
+    df[!, :Annotations] = Annotations 
     return df
 end
 
