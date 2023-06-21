@@ -720,13 +720,13 @@ function CAS_identification(Name)
 	return id
 end
 
-function CAS_identification(Name::Array{<:AbstractString})
-	id = Array{NamedTuple{(:Name, :CAS, :formula, :MW, :smiles), Tuple{String, String, String, Float64, String}}}(undef, length(Name))
-	for i=1:length(Name)
-        id[i] = CAS_identification(Name[i])
-	end
-	return id
-end
+#function CAS_identification(Name::Array{<:AbstractString})
+#	id = Array{NamedTuple{(:Name, :CAS, :formula, :MW, :smiles), Tuple{String, String, String, Float64, String}}}(undef, length(Name))
+#	for i=1:length(Name)
+#        id[i] = CAS_identification(Name[i])
+#	end
+#	return id
+#end
 
 """
     load_solute_database(db, sp, gas, solutes, t₀, τ₀)
@@ -747,12 +747,12 @@ phase `gas` from the database `db` into an array of the structure `Substance`.
 julia> sub = load_solute_database(db, "DB5", "He", ["C10", "C11"], [0.0, 0.0], [0.5, 0.5])
 ```
 """
-function load_solute_database(db_::DataFrame, sp::String, gas::String, solutes::Array{<:AbstractString,1}, t₀::Array{Float64,1}, τ₀::Array{Float64,1})
+function load_solute_database(db_::DataFrame, sp::String, gas::String, solutes::Array{<:AbstractString,1}, t₀::Array{Float64,1}, τ₀::Array{Float64,1}; allowmissingCAS=true)
 	# compare names to CAS, using ChemicalIdentifiers.jl and a synonym list (different names of the same solute for different stationary phases) 
-    id = CAS_identification(solutes)
+    id = CAS_identification.(solutes)
     id_df = DataFrame(id)
     # remove solutes with missing CAS
-    if true in ismissing.(db_.CAS)
+    if true in ismissing.(db_.CAS) && allowmissingCAS == false
         @warn "Some CAS-numbers are missing. These substances are skipped."
         db = disallowmissing!(db_[completecases(db_, :CAS), :], :CAS)
     else
