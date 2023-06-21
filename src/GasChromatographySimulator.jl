@@ -771,7 +771,9 @@ function load_solute_database(db_, sp, gas, solutes, t₀, τ₀)
         t₀_ = t₀
         τ₀_ = τ₀ 
         indices = 1:length(Name)
-    elseif size(db)[2]>14
+    elseif size(db)[2]>14 && "No" ∉ names(db)
+        error("Data format not supported. Use the appended database structure.")
+    elseif size(db)[2]>15 && "No" ∈ names(db)
         error("Data format not supported. Use the appended database structure.")
 	elseif isa(findfirst(unique(db.Phase).==sp), Nothing) && sp!=""
 		error("Unknown selction of stationary phase. Choose one of these: $phases_db")	
@@ -846,7 +848,7 @@ end
 
 Load the data of `solutes` for the stationary phase `sp` and the mobile
 phase `gas` from the database file `db` (located in `db_path`) into an array
-of the structure `Substance`. 
+of the structure `Substance`. THe row number of the selected solutes in the loaded database are added to the annotations of the `Substance` structure. 
 
 # Arguments
 * `db_path::String`: Path to the database file.
@@ -874,6 +876,7 @@ function load_solute_database(db_path::String, db::String, sp::String, gas::Stri
     # τ₀ ... initial values of the peak width for the solutes
     # t₀ ... initial values of the time for the solutes
 	db_dataframe = DataFrame(CSV.File(string(db_path,"/",db), header=1, silencewarnings=true))
+    db_dataframe[!, :No] = collect(1:length(db_dataframe.Name))
     sub = load_solute_database(db_dataframe, sp, gas, solutes, t₀, τ₀)
 	return sub
 end
