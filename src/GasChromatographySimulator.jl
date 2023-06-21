@@ -1437,7 +1437,7 @@ julia> pl = peaklist(sol, par)
 function peaklist(sol, par)
 	n = length(par.sub)
     # sol is solution from ODE system
-    No = Array{Int}(undef, n)
+    No = Array{Union{Missing, Int64}}(undef, n)
     Name = Array{String}(undef, n)
     tR = Array{Float64}(undef, n)
     TR = Array{Float64}(undef, n)
@@ -1468,9 +1468,9 @@ function peaklist(sol, par)
         No[i] = try
             parse(Int,split(par.sub[i].ann, ", ")[end])
         catch
-            NaN
+            missing
         end
-        if No[i] == NaN
+        if ismissing(No[i])
             Annotations[i] = par.sub[i].ann
         else
             Annotations[i] = join(split(par.sub[i].ann, ", ")[1:end-1], ", ")
@@ -1517,7 +1517,7 @@ julia> pl = peaklist(sol, peak, par)
 """
 function peaklist(sol, peak, par)
 	n = length(par.sub)
-    No = Array{Int}(undef, n)
+    No = Array{Union{Missing, Int64}}(undef, n)
     Name = Array{String}(undef, n)
     tR = Array{Float64}(undef, n)
     TR = Array{Float64}(undef, n)
@@ -1548,9 +1548,9 @@ function peaklist(sol, peak, par)
         No[i] = try
             parse(Int,split(par.sub[i].ann, ", ")[end])
         catch
-            NaN
+            missing
         end
-        if No[i] == NaN
+        if ismissing(No[i])
             Annotations[i] = par.sub[i].ann
         else
             Annotations[i] = join(split(par.sub[i].ann, ", ")[1:end-1], ", ")
