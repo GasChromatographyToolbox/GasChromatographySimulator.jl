@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.19
+# v0.19.26
 
 using Markdown
 using InteractiveUtils
@@ -71,6 +71,7 @@ begin
 	else
 		db = DataFrame(CSV.File(db_file["data"], silencewarnings=true))
 	end
+	db[!, :No] = collect(1:length(db.Name))
 	sp = unique(db.Phase)
 	md"""
 	$(embed_display(db))
@@ -254,7 +255,7 @@ $(embed_display(peaklist))
 
 # ╔═╡ a2287fe8-5aa2-4259-bf7c-f715cc866243
 begin
-	plotly()
+	gr()
 	pchrom = GasChromatographySimulator.plot_chromatogram(peaklist, (0,sum(par.prog.time_steps)))[1]
 	md"""
 	### Chromatogram
@@ -265,7 +266,7 @@ end
 
 # ╔═╡ 0740f2e6-bce0-4590-acf1-ad4d7cb7c523
 begin
-	plotly()
+	gr()
 	GasChromatographySimulator.local_plots(xx, yy, solution, par)
 end
 
@@ -290,13 +291,13 @@ md"""
 # ╟─fdb39284-201b-432f-bff6-986ddbc49a7d
 # ╟─49faa7ea-0f22-45ca-9ab5-338d0db25564
 # ╟─14db2d66-eea6-43b1-9caf-2039709d1ddb
-# ╟─a2287fe8-5aa2-4259-bf7c-f715cc866243
+# ╠═a2287fe8-5aa2-4259-bf7c-f715cc866243
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
-# ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
+# ╠═0740f2e6-bce0-4590-acf1-ad4d7cb7c523
 # ╟─115fa61e-8e82-42b2-8eea-9c7e21d97ea8
 # ╟─f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
 # ╟─5f5e16ec-2730-4a17-bd64-a751426a033f
-# ╟─e3277bb4-301a-4a1e-a838-311832b6d6aa
+# ╠═e3277bb4-301a-4a1e-a838-311832b6d6aa
 # ╟─85954bdb-d649-4772-a1cd-0bda5d9917e9
 # ╟─8c831fdb-0bfa-4f36-b720-e82fcf5d2427
 # ╟─50f1bd7f-a479-453d-a8ea-57c37a4e330c
