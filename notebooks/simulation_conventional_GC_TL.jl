@@ -359,6 +359,7 @@ begin
 	# for definition of par_col and others see cells after section "End"
 	peaklist_col, solution_col = GasChromatographySimulator.simulate(par_col)
 	sub_tl = GasChromatographySimulator.load_solute_database(db, tl.sp, tl.gas, sub_values[1], peaklist_col.tR, peaklist_col.τR)
+	# ATTENTION: handover of the results from the column as initial values to the transferline is not correct -> replace this notebook using GasChromatographySystems.jl
 	par_tl = GasChromatographySimulator.Parameters(tl, prog_tl, sub_tl, opt)
 	peaklist_tl, solution_tl = GasChromatographySimulator.simulate(par_tl)
 	md"""
