@@ -1215,7 +1215,7 @@ function solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas)
 	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, p[5], p[6], p[7], gas, p[1], p[2], p[3], p[4]; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
 	t₀ = 0.0
 	zspan = (0.0, L)
-	p = [Tchar, θchar, ΔCp, φ₀, L, d, df]
+	p = (Tchar, θchar, ΔCp, φ₀, L, d, df)
 	prob_tz = ODEProblem(f_tz, t₀, zspan, p)
 	solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol, reltol=opt.reltol)
 	#tR = solution.u[end]
@@ -1223,7 +1223,7 @@ function solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas)
 end
 
 function solving_migration(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
-	p = [T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt]
+	p = (T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
 	f_tz(t,p,z) = residency(z, t, p[1], p[2], p[3], p[4], p[5], p[6], p[12], p[7], p[8], p[9], p[10]; ng=p[13].ng, vis=p[13].vis, control=p[13].control, k_th=p[13].k_th)
 	t₀ = 0.0
 	zspan = (0.0, L)
@@ -1244,7 +1244,7 @@ DifferentialEquations.jl.
 """
 function solving_peakvariance(solution_tz, col, prog, sub, opt)
     t(z) = solution_tz(z)
-    p = [col, prog, sub, opt]
+    p = (col, prog, sub, opt)
     f_τ²z(τ²,p,z) = peakode(z, t(z), τ², col, prog, sub, opt)
     τ²₀ = sub.τ₀^2
     zspan = (0.0, col.L)
@@ -1255,7 +1255,7 @@ end
 
 function solving_peakvariance(solution_tz, T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
     t(z) = solution_tz(z)
-    p = [T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt]
+    p = (T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
     #f_τ²z(τ²,p,z) = peakode(z, t(z), τ², T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
 	f_τ²z(τ²,p,z) = peakode(z, t(z), τ², p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13])
     τ²₀ = sub.τ₀^2
@@ -1279,7 +1279,7 @@ See also: [`odesystem_r!`](@ref)
 function solving_odesystem_r(col::Column, prog::Program, sub::Substance, opt::Options)
     t₀ = [sub.t₀; sub.τ₀^2]
     zspan = (0.0,col.L)
-	p = [col, prog, sub, opt]
+	p = (col, prog, sub, opt)
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
 
     solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
@@ -1293,7 +1293,7 @@ end
 function solving_odesystem_r(L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt::GasChromatographySimulator.Options)
     t₀ = [sub.t₀; sub.τ₀^2]
     zspan = (0.0,col.L)
-	p = [L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt]
+	p = (L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
 
     solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
