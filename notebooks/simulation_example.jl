@@ -298,7 +298,7 @@ end
 
 # ╔═╡ 03ff111e-674a-44c9-89fd-d8f4e255ee53
 function export_str(opt_values, col_values, prog_values, pl)
-	opt_str_array = ["viscosity = $(opt_values[1])", "control = $(opt_values[2])"]
+	opt_str_array = ["abstol = 1e$(opt_values[1])", "reltol = 1e$(opt_values[2])", "Tcontrol = $(opt_values[3])", "viscosity = $(opt_values[4])", "control = $(opt_values[5])"]
 	opt_str = string(join(opt_str_array, ", "), "\n")
 	
 	col_str_array = ["L = $(col_values[1]) m", "d = $(col_values[2]) mm", "df = $(col_values[3]) µm", col_values[4], "gas = $(col_values[5])"]
