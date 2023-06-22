@@ -99,6 +99,12 @@ md"""
 # ╔═╡ 63bd2c94-0626-4eb4-9d2d-368a93a7816d
 T(x,a,b) = a.*cos.(b.*π.*x)
 
+# ╔═╡ e5fad38a-1906-4e30-b213-eb68eb3d3265
+md"""
+!!! note
+	Any function of ``x`` with two parameters ``a`` and ``b`` can be defined here.
+"""
+
 # ╔═╡ f3d82459-4eca-4612-8fd8-0b1d7b2e400f
 md"""### Substance category"""
 
@@ -289,17 +295,17 @@ end
 
 # ╔═╡ 0c2bb479-31d4-4826-94a8-86e09af9063e
 function export_str(opt_values, col_values, prog_values, pl)
-	opt_str_array = ["viscosity = $(opt_values[1])", "control = $(opt_values[2])"]
+	opt_str_array = ["abstol = 1e$(opt_values[1])", "reltol = 1e$(opt_values[2])", "Tcontrol = $(opt_values[3])", "viscosity = Blumberg", "control = Pressure"]
 	opt_str = string(join(opt_str_array, ", "), "\n")
 	
 	col_str_array = ["L = $(col_values[1]) m", "d = $(col_values[2]) mm", "df = $(col_values[3]) µm", col_values[4], "gas = $(col_values[5])"]
 	col_str = string(join(col_str_array, ", "), "\n")
 
-	if opt.control == "Pressure"
-		prog_str_array = ["Program: $(prog_values[1])", "pin = $(prog_values[2]) kPa(g)", "outlet = $(prog_values[3])"]
-	elseif opt.control == "Flow"
-		prog_str_array = ["Program: $(prog_values[1])", "F = $(prog_values[2]) mL/min", "outlet = $(prog_values[3])"]
-	end
+	#if opt.control == "Pressure"
+		prog_str_array = ["time steps in s: $(prog_values[1])", "temperature steps in °C = $(prog_values[2])", "gradient parameter a = $(prog_values[5])", "gradient parameter b = $(prog_values[6])", "pin in kPa(g) = $(prog_values[3])", "pout in kPa(a) = $(prog_values[4])"]
+	#elseif opt.control == "Flow"
+	#	prog_str_array = ["Program: $(prog_values[1])", "F = $(prog_values[2]) mL/min", "outlet = $(prog_values[3])"]
+	#end
 	prog_str = string(join(prog_str_array, ", "), "\n")
 
 	header = string(join(names(pl), ", "), "\n")
@@ -2283,6 +2289,7 @@ version = "1.4.1+0"
 # ╟─a7e1f0ee-714e-4b97-8741-d4ab5321d5e0
 # ╟─49ac3705-9dbb-48e3-9db3-fc229edb9479
 # ╠═63bd2c94-0626-4eb4-9d2d-368a93a7816d
+# ╟─e5fad38a-1906-4e30-b213-eb68eb3d3265
 # ╟─f3d82459-4eca-4612-8fd8-0b1d7b2e400f
 # ╟─99ad0726-c4c4-40a7-b729-8ae16a1c13d1
 # ╟─7a00bb54-553f-47f5-b5db-b40d226f4183
