@@ -1481,7 +1481,7 @@ function peaklist(sol, par)
             Annotations[i] = join(split(par.sub[i].ann, ", ")[1:end-1], ", ")
         end
     end  
-    df = sort!(DataFrame(No = No, Name = Name, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, ), [:tR])
+    df = sort!(DataFrame(No = No, Name = Name, CAS = CAS, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, ), [:tR])
     Threads.@threads for i=1:n-1
         Res[i] = (df.tR[i+1] - df.tR[i])/(2*(df.τR[i+1] + df.τR[i]))
         Δs[i] = (df.tR[i+1] - df.tR[i])/(df.τR[i+1] - df.τR[i]) * log(df.τR[i+1]/df.τR[i])
@@ -1563,7 +1563,7 @@ function peaklist(sol, peak, par)
             Annotations[i] = join(split(par.sub[i].ann, ", ")[1:end-1], ", ")
         end
     end  
-    df = sort!(DataFrame(No = No, Name = Name, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, ), [:tR])
+    df = sort!(DataFrame(No = No, Name = Name, CAS = CAS, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, ), [:tR])
     Threads.@threads for i=1:n-1
         Res[i] = (df.tR[i+1] - df.tR[i])/(2*(df.τR[i+1] + df.τR[i]))
         Δs[i] = (df.tR[i+1] - df.tR[i])/(df.τR[i+1] - df.τR[i]) * log(df.τR[i+1]/df.τR[i])
