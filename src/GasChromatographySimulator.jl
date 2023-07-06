@@ -1442,6 +1442,7 @@ function peaklist(sol, par)
     # sol is solution from ODE system
     No = Array{Union{Missing, Int64}}(undef, n)
     Name = Array{String}(undef, n)
+    CAS = Array{String}(undef, n)
     tR = Array{Float64}(undef, n)
     TR = Array{Float64}(undef, n)
     σR = Array{Float64}(undef, n)
@@ -1453,6 +1454,7 @@ function peaklist(sol, par)
     Annotations = Array{String}(undef, n)
     Threads.@threads for i=1:n
         Name[i] = par.sub[i].name
+        CAS[i] = par.sub[i].CAS
         if sol[i].t[end]==par.col.L
             tR[i] = sol[i].u[end][1]
             TR[i] = par.prog.T_itp(par.col.L, tR[i]) - 273.15 
@@ -1522,6 +1524,7 @@ function peaklist(sol, peak, par)
 	n = length(par.sub)
     No = Array{Union{Missing, Int64}}(undef, n)
     Name = Array{String}(undef, n)
+    CAS = Array{String}(undef, n)
     tR = Array{Float64}(undef, n)
     TR = Array{Float64}(undef, n)
     σR = Array{Float64}(undef, n)
@@ -1533,6 +1536,7 @@ function peaklist(sol, peak, par)
     Annotations = Array{String}(undef, n)
     Threads.@threads for i=1:n
         Name[i] = par.sub[i].name
+        CAS[i] = par.sub[i].CAS
         if sol[i].t[end]==par.col.L
             tR[i] = sol[i].u[end]
             TR[i] = par.prog.T_itp(par.col.L, tR[i]) - 273.15 
