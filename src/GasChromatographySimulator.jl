@@ -776,7 +776,7 @@ function load_solute_database(db_, sp, gas, solutes, t₀, τ₀)
     elseif size(db)[2]>15 && "No" ∈ names(db)
         error("Data format not supported. Use the appended database structure.")
 	elseif isa(findfirst(unique(db.Phase).==sp), Nothing) && sp!=""
-		error("Unknown selction of stationary phase. Choose one of these: $phases_db")	
+		error("Unknown selction of stationary phase. Choose one of these: $(unique(db.Phase))")	
 	else
         # 1. Filter the stationary phase
         db_filtered = filter([:Phase] => x -> x==sp, db)
@@ -1475,11 +1475,11 @@ function peaklist(sol, par)
         catch
             missing
         end
-        if ismissing(No[i])
+        #if ismissing(No[i])
             Annotations[i] = par.sub[i].ann
-        else
-            Annotations[i] = join(split(par.sub[i].ann, ", ")[1:end-1], ", ")
-        end
+        #else
+        #    Annotations[i] = join(split(par.sub[i].ann, ", ")[1:end-1], ", ")
+        #end
     end  
     df = sort!(DataFrame(No = No, Name = Name, CAS = CAS, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, Annotations = Annotations, ), [:tR])
     Threads.@threads for i=1:n-1
