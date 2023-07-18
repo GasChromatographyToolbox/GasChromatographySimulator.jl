@@ -89,3 +89,12 @@ function load_custom_CI_database(custom_database_url)
 		ChemicalIdentifiers.load_db!(:custom)
 	#end
 end
+
+
+function pares_No_from_sub_values(sub_values; separator=" - ")
+	id = Array{Int}(undef, length(sub_values))
+	for i=1:length(sub_values)
+		id[i] = parse(Int, split(sub_values[i], separator)[1])
+	end
+	id
+end

@@ -738,7 +738,7 @@ phase `gas` from the database `db` into an array of the structure `Substance`.
 * `db::DataFrame`: DataFrame of the database. 
 * `sp::String`: Name of the stationary phase.
 * `gas::String`: Name of the mobile phase.
-* `solutes::Array{<:AbstractString,1}`: Name of the solutes.
+* `solutes`: Name of the solutes or the id number of the solutes (array of Integers). If id numbers are used, the dataframe of the database must include a column "No" with the id numbers.
 * `t₀::Array{Float64,1}`: Initial start times of the solutes.
 * `τ₀::Array{Float64,1}`: Initial peak widths of the solutes. 
 
@@ -747,10 +747,9 @@ phase `gas` from the database `db` into an array of the structure `Substance`.
 julia> sub = load_solute_database(db, "DB5", "He", ["C10", "C11"], [0.0, 0.0], [0.5, 0.5])
 ```
 """
-function load_solute_database(db_, sp, gas, solutes, t₀, τ₀)
-	# compare names to CAS, using ChemicalIdentifiers.jl and a synonym list (different names of the same solute for different stationary phases) 
-    id = CAS_identification.(solutes)
-    id_df = DataFrame(id)
+function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
+	# compare names to CAS, using ChemicalIdentifiers.jl and a synonym list (different names of the same solute for different stationary phases)
+	
     # remove solutes with missing CAS
     if true in ismissing.(db_.CAS) #&& allowmissingCAS == false
         @warn "Some CAS-numbers are missing. These substances are skipped."
@@ -758,6 +757,25 @@ function load_solute_database(db_, sp, gas, solutes, t₀, τ₀)
     else
         db = db_
     end
+	
+	if "No" in names(db)
+		datanames = ["No", "Name", "CAS", "Phase", "Tchar", "thetachar", "DeltaCp", "phi0", "Source"]
+		if typeof(solutes_) == Vector{Int}
+			s_i = [findfirst(solutes_[x].==db.No) for x in 1:length(solutes_)]
+			solutes = db.Name[s_i]
+		else
+			solutes = solutes_
+		end
+	else
+		datanames = ["Name", "CAS", "Phase", "Tchar", "thetachar", "DeltaCp", "phi0", "Source"]
+		solutes = solutes_
+	end
+	#i_No = findfirst("No".==names(db_))
+	
+	
+	
+    id = GasChromatographySimulator.CAS_identification.(solutes)
+    id_df = DataFrame(id)
 
     if sp == "" # no stationary phase is selected, like for transferlines
         Name = id_df.Name
@@ -781,7 +799,11 @@ function load_solute_database(db_, sp, gas, solutes, t₀, τ₀)
         # 1. Filter the stationary phase
         db_filtered = filter([:Phase] => x -> x==sp, db)
         # 2. Filter the solutes
-        db_filtered_1=db_filtered[in(id_df.CAS).(db_filtered.CAS),:]
+		if "No" in names(db_filtered) && typeof(solutes_) == Vector{Int}
+        	db_filtered_1=db_filtered[in(solutes_).(db_filtered.No),:]
+		else
+			db_filtered_1=db_filtered[in(id_df.CAS).(db_filtered.CAS),:]
+		end
 		# if placeholders are used in id results:
 		i_ph = findall(occursin.("_ph", id_df.Name))
 		if isempty(i_ph) == false
@@ -794,22 +816,29 @@ function load_solute_database(db_, sp, gas, solutes, t₀, τ₀)
         θchar = db_filtered_1.thetachar
         ΔCp = db_filtered_1.DeltaCp
         φ₀ = db_filtered_1.phi0
-        if "Cnumber" in names(db)
+        if "Cnumber" in names(db_filtered_1)
 			Annotation = db_filtered_1.Annotation 
         else # newer database version without information about the solute structure
-            nCat = length(names(db))-8
+            # columns which have additional information, not needed (e.g. Categories)
+            i_datanames = [findfirst(datanames[x] .== names(db)) for x in 1:length(datanames)]
+            Catnames = names(db)[Not(i_datanames)]
+            i_Catnames = [findfirst(Catnames[x] .== names(db)) for x in 1:length(Catnames)]
+            nCat = length(i_Catnames)
             if nCat < 1
                 Annotation = String.(db_filtered_1.Source)
             else
                 Annotation = String.(db_filtered_1.Source)
                 for i=1:nCat
                     for j=1:length(Annotation)
-                        if typeof(db_filtered_1[j,8+i]) != Missing
-                            Annotation[j] = string(Annotation[j], ", ", db_filtered_1[j,8+i])
+                        if typeof(db_filtered_1[j,i_Catnames[i]]) != Missing
+                            Annotation[j] = string(Annotation[j], ", ", db_filtered_1[j,i_Catnames[i]])
                         end
                     end
                 end
             end
+			if "No" in names(db_)
+				Annotation = Annotation.*string.(", No: ", db_filtered_1.No)
+			end
         end
         # correct assignment of the t₀ and τ₀ values to the correct values from the input
 		indices_cas = findall(in(db_filtered_1.CAS).(id_df.CAS))
@@ -876,13 +905,13 @@ function load_solute_database(db_path::String, db::String, sp::String, gas::Stri
     # τ₀ ... initial values of the peak width for the solutes
     # t₀ ... initial values of the time for the solutes
 	db_dataframe = DataFrame(CSV.File(string(db_path,"/",db), header=1, silencewarnings=true))
-    db_dataframe[!, :No] = collect(1:length(db_dataframe.Name))
+    insertcols!(db_dataframe, 1, :No => collect(1:length(db_dataframe.Name)))
     sub = load_solute_database(db_dataframe, sp, gas, solutes, t₀, τ₀)
 	return sub
 end
 
 """
-    all_solutes(sp, db) 
+    all_solutes(sp, db; id=false, separator=" - ") 
 
 Extract the name of all solutes for which data in a database `db` and the
 stationay phase `sp` is available. 
@@ -890,15 +919,25 @@ stationay phase `sp` is available.
 # Arguments
 * `sp`: Name of the stationary phase.
 * `db`: DataFrame of the database.
+* `id`: if `true` than the number of the solutes in the database are combined with the solute name. Default = false.
+* `separator`: string used to separate the solute number from the solute name. Default = " - ". 
 
 # Examples
 ```julia
 julia> all = all_solutes("DB5", db)
 ```
 """
-function all_solutes(sp, db)
+function all_solutes(sp, db; id=false, sperator=" - ")
 	db_filter = filter([:Phase] => x -> x==sp, db)
-	solutes = string.(db_filter.Name)
+	if id == true
+        if "No" in names(db)
+		    solutes = string.(db_filter.No, sperator, db_filter.Name)
+        else
+            @warn "For 'id=true' a column 'No' with the id numbers is needed in the database 'db'."
+        end
+	else
+		solutes = string.(db_filter.Name)
+	end
 	return solutes
 end
 
@@ -1473,7 +1512,11 @@ function peaklist(sol, par)
         No[i] = try
             parse(Int,split(par.sub[i].ann, ", ")[end])
         catch
-            missing
+            try 
+                parse(Int,split(par.sub[i].ann, ", No: ")[end])
+            catch
+                missing
+            end
         end
         #if ismissing(No[i])
             Annotations[i] = par.sub[i].ann
