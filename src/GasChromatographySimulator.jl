@@ -771,10 +771,7 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
 		solutes = solutes_
 	end
 	#i_No = findfirst("No".==names(db_))
-	# columns which have additional information, not needed (e.g. Categories)
-	i_datanames = [findfirst(datanames[x] .== names(db)) for x in 1:length(datanames)]
-	Catnames = names(db)[Not(i_datanames)]
-	i_Catnames = [findfirst(Catnames[x] .== names(db)) for x in 1:length(Catnames)]
+	
 	
 	
     id = GasChromatographySimulator.CAS_identification.(solutes)
@@ -822,6 +819,10 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
         if "Cnumber" in names(db_filtered_1)
 			Annotation = db_filtered_1.Annotation 
         else # newer database version without information about the solute structure
+            # columns which have additional information, not needed (e.g. Categories)
+            i_datanames = [findfirst(datanames[x] .== names(db)) for x in 1:length(datanames)]
+            Catnames = names(db)[Not(i_datanames)]
+            i_Catnames = [findfirst(Catnames[x] .== names(db)) for x in 1:length(Catnames)]
             nCat = length(i_Catnames)
             if nCat < 1
                 Annotation = String.(db_filtered_1.Source)
@@ -904,7 +905,7 @@ function load_solute_database(db_path::String, db::String, sp::String, gas::Stri
     # τ₀ ... initial values of the peak width for the solutes
     # t₀ ... initial values of the time for the solutes
 	db_dataframe = DataFrame(CSV.File(string(db_path,"/",db), header=1, silencewarnings=true))
-    db_dataframe[!, :No] = collect(1:length(db_dataframe.Name))
+    insertcols!(db_dataframe, 1, :No => collect(1:length(db_dataframe.Name)))
     sub = load_solute_database(db_dataframe, sp, gas, solutes, t₀, τ₀)
 	return sub
 end
