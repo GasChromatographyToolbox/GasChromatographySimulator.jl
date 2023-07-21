@@ -659,7 +659,7 @@ function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Arra
 end
 
 """
-    step_interpolation(time_steps, steps)
+    steps_interpolation(time_steps, steps)
 
 Construct a linear interpolated function depending on time `t` of the `steps`-values over `time_steps`.  
 
@@ -836,7 +836,7 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
                     end
                 end
             end
-			if "No" in names(db_)
+			if "No" in names(db_filtered_1)
 				Annotation = Annotation.*string.(", No: ", db_filtered_1.No)
 			end
         end
@@ -1116,7 +1116,7 @@ end
 
 #---Begin-Solving-Functions---
 """
-    simulate(par::Parameters)
+    simulate(par::Parameters; kwargs...)
 
 Simulate the GC system defined by the structure `par`.
 
@@ -1124,38 +1124,38 @@ Note: Based on the option for `odesys` the result is different. For `odesys =
 true` the result is a dataframe (the peaklist) and the solution of the ODEs
 as a system (solution structure from DifferentialEquations.jl). If `odesys =
 false` the result is a dataframe (the peaklist) and the two solutions of the
-ODEs for time ``t(z)`` and peak variance ``τ²(z)``.
+ODEs for time ``t(z)`` and peak variance ``τ²(z)``. `kwargs...` to pass additional options to the ODE solve function as named tuples.
 """
-function simulate(par)
+function simulate(par; kwargs...)
     if par.opt.odesys==true
-        sol = solve_system_multithreads(par)
+        sol = solve_system_multithreads(par; kwargs...)
     	pl = GasChromatographySimulator.peaklist(sol, par)
         return pl, sol
 	else
-		sol, peak = solve_multithreads(par)
+		sol, peak = solve_multithreads(par; kwargs...)
     	pl = GasChromatographySimulator.peaklist(sol, peak, par)
         return pl, sol, peak
 	end
 end
 
-function simulate(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt)
+function simulate(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt; kwargs...)
     if opt.odesys==true
-        sol = solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt)
+        sol = solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt; kwargs...)
     	pl = GasChromatographySimulator.peaklist(sol, par) #!!!!
         return pl, sol
 	else
-		sol, peak = solve_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt)
+		sol, peak = solve_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt; kwargs...)
     	pl = GasChromatographySimulator.peaklist(sol, peak, par) #!!!!
         return pl, sol, peak
 	end
 end
 
 """
-    solve_system_multithreads(par::Parameters)
+    solve_system_multithreads(par::Parameters, kwargs...)
 
 Simulate the GC system defined by the structure `par` by solving the
 ODEs for ``t(z)`` and ``τ²(z)`` together as a system of ODEs using multiple
-threads (parallel computing) for the simulation of different solutes. 
+threads (parallel computing) for the simulation of different solutes. `kwargs...` to pass additional options to the ODE solve function as named tuples. 
 
 Note: The result is an array of the solution structure from DifferentialEquations.jl.
 
@@ -1165,31 +1165,31 @@ Note: The result is an array of the solution structure from DifferentialEquation
 julia> sol = solve_system_multithreads(par)
 ```
 """
-function solve_system_multithreads(par)
+function solve_system_multithreads(par; kwargs...)
 	n = length(par.sub)
 	sol = Array{Any}(undef, n)
 	Threads.@threads for i=1:n
-		sol[i] = solving_odesystem_r(par.col, par.prog, par.sub[i], par.opt)
+		sol[i] = solving_odesystem_r(par.col, par.prog, par.sub[i], par.opt; kwargs...)
 	end
 	return sol
 end
 
-function solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt)
+function solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt; kwargs...)
 	n = length(Tchar_)
 	sol = Array{Any}(undef, n)
 	Threads.@threads for i=1:n
-		sol[i] = solving_odesystem_r(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], gas, opt)
+		sol[i] = solving_odesystem_r(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], gas, opt; kwargs...)
 	end
 	return sol
 end
 
 """
-    solve_multithreads(par::Parameters)
+    solve_multithreads(par::Parameters, kwargs...)
 
 Simulate the GC system defined by the structure `par` by solving the
 ODEs for ``t(z)`` and ``τ²(z)`` separatly (solving ``t(z)`` and using this result
 to solve for ``τ²(z)``) using multiple threads (parallel computing) for the
-simulation of different solutes.
+simulation of different solutes. `kwargs...` to pass additional options to the ODE solve function as named tuples.
 
 Note: The result are two arrays of the solution structure from
 DifferentialEquations.jl.
@@ -1200,99 +1200,99 @@ DifferentialEquations.jl.
 julia> sol, peak = solve_multithreads(par)
 ```
 """
-function solve_multithreads(par)
+function solve_multithreads(par; kwargs...)
     n = length(par.sub)
     sol = Array{Any}(undef, n)
     peak = Array{Any}(undef, n)
     Threads.@threads for i=1:n
-        sol[i] = solving_migration(par.col, par.prog, par.sub[i], par.opt)
-        peak[i] = solving_peakvariance(sol[i], par.col, par.prog, par.sub[i], par.opt)
+        sol[i] = solving_migration(par.col, par.prog, par.sub[i], par.opt; kwargs...)
+        peak[i] = solving_peakvariance(sol[i], par.col, par.prog, par.sub[i], par.opt; kwargs...)
     end
     return sol, peak
 end
 
-function solve_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt)
+function solve_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt; kwargs...)
     n = length(Tchar_)
     sol = Array{Any}(undef, n)
     peak = Array{Any}(undef, n)
     Threads.@threads for i=1:n
-        sol[i] = solving_migration(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], gas, opt)
-        peak[i] = solving_peakvariance(sol[i], T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], gas, opt)
+        sol[i] = solving_migration(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], gas, opt; kwargs...)
+        peak[i] = solving_peakvariance(sol[i], T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], gas, opt; kwargs...)
     end
     return sol, peak
 end
 
 """
-    solving_migration(col::Column, prog::Program, sub::Substance, opt::Options)
+    solving_migration(col::Column, prog::Program, sub::Substance, opt::Options; kwargs...)
 
 Solve for the migration ``t(z)`` of solute `sub` in the GC Column `col` with
-the program `prog` and the options `opt`.
+the program `prog` and the options `opt`. `kwargs...` to pass additional options to the ODE solve function as named tuples.
 
 Note: The result is the solution structure from
 DifferentialEquations.jl.
 """
-function solving_migration(col::Column, prog::Program, sub::Substance, opt::Options)
+function solving_migration(col::Column, prog::Program, sub::Substance, opt::Options; kwargs...)
 	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
     t₀ = sub.t₀
     zspan = (0.0,col.L)
     prob_tz = ODEProblem(f_tz, t₀, zspan)
-    solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
+    solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
     return solution_tz
 end
 
 """
-    solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas)
+    solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas; kwargs...)
 
 Solve for the migration ``t(z)`` of solute with retention parameters `Tchar` `θchar` and `ΔCp` estimated for a dimensionless
 film thickness `φ₀` in a GC Column with length `L`, internal diameter `d` and film thickness `df` for a GC program `prog`, 
-options `opt` and mobile phase `gas`.
+options `opt` and mobile phase `gas`. `kwargs...` to pass additional options to the ODE solve function as named tuples.
     
 Note: The result is the solution structure from
 DifferentialEquations.jl.    
 """
-function solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas)
+function solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas; kwargs...)
 	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, p[5], p[6], p[7], gas, p[1], p[2], p[3], p[4]; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
 	t₀ = 0.0
 	zspan = (0.0, L)
 	p = (Tchar, θchar, ΔCp, φ₀, L, d, df)
 	prob_tz = ODEProblem(f_tz, t₀, zspan, p)
-	solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol, reltol=opt.reltol)
+	solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol, reltol=opt.reltol; kwargs...)
 	#tR = solution.u[end]
 	return solution_tz
 end
 
-function solving_migration(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
+function solving_migration(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt; kwargs...)
 	p = (T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
 	f_tz(t,p,z) = residency(z, t, p[1], p[2], p[3], p[4], p[5], p[6], p[12], p[7], p[8], p[9], p[10]; ng=p[13].ng, vis=p[13].vis, control=p[13].control, k_th=p[13].k_th)
 	t₀ = 0.0
 	zspan = (0.0, L)
 	prob_tz = ODEProblem(f_tz, t₀, zspan, p)
-	solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol, reltol=opt.reltol)
+	solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol, reltol=opt.reltol; kwargs...)
 	#tR = solution.u[end]
 	return solution_tz
 end
 
 """
-    solving_peakvariance(solution_tz, col::Column, prog::Program, sub::Substance, opt::Options)
+    solving_peakvariance(solution_tz, col::Column, prog::Program, sub::Substance, opt::Options; kwargs...)
 
 Solve for the development of the peak variance ``τ²(z)`` of solute `sub` in the GC Column `col` with
-the program `prog` and the options `opt` during its migration defined by `solution_tz`.
+the program `prog` and the options `opt` during its migration defined by `solution_tz`. `kwargs...` to pass additional options to the ODE solve function as named tuples.
 
 Note: The result is the solution structure from
 DifferentialEquations.jl.
 """
-function solving_peakvariance(solution_tz, col, prog, sub, opt)
+function solving_peakvariance(solution_tz, col, prog, sub, opt; kwargs...)
     t(z) = solution_tz(z)
     p = (col, prog, sub, opt)
     f_τ²z(τ²,p,z) = peakode(z, t(z), τ², col, prog, sub, opt)
     τ²₀ = sub.τ₀^2
     zspan = (0.0, col.L)
     prob_τ²z = ODEProblem(f_τ²z, τ²₀, zspan, p)
-    solution_τ²z = solve(prob_τ²z, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
+    solution_τ²z = solve(prob_τ²z, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
     return solution_τ²z
 end
 
-function solving_peakvariance(solution_tz, T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
+function solving_peakvariance(solution_tz, T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt; kwargs...)
     t(z) = solution_tz(z)
     p = (T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
     #f_τ²z(τ²,p,z) = peakode(z, t(z), τ², T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
@@ -1300,42 +1300,42 @@ function solving_peakvariance(solution_tz, T_itp, Fpin_itp, pout_itp, L, d, df, 
     τ²₀ = sub.τ₀^2
     zspan = (0.0, col.L)
     prob_τ²z = ODEProblem(f_τ²z, τ²₀, zspan, p)
-    solution_τ²z = solve(prob_τ²z, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
+    solution_τ²z = solve(prob_τ²z, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
     return solution_τ²z
 end
 
 """
-    solving_odesystem_r(col::Column, prog::Program, sub::Substance, opt::Options)
+    solving_odesystem_r(col::Column, prog::Program, sub::Substance, opt::Options; kwargs...)
 
 Solve the migration ``t(z)`` and peak variance development ``τ²(z)`` of solute `sub` in the GC Column `col` with
-the program `prog` and the options `opt` as a system of ODEs.
+the program `prog` and the options `opt` as a system of ODEs. `kwargs...` to pass additional options to the ODE solve function as named tuples.
 
 Note: The result is the solution structure from
 DifferentialEquations.jl.
 
 See also: [`odesystem_r!`](@ref)
 """
-function solving_odesystem_r(col::Column, prog::Program, sub::Substance, opt::Options)
+function solving_odesystem_r(col::Column, prog::Program, sub::Substance, opt::Options; kwargs...)
     t₀ = [sub.t₀; sub.τ₀^2]
     zspan = (0.0,col.L)
 	p = (col, prog, sub, opt)
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
 
-    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
+    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
 
     if solution.t[end]<col.L
-        solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol, dt=col.L/1000000)
+        solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=col.L/1000000)
     end
     return solution
 end
 
-function solving_odesystem_r(L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt::GasChromatographySimulator.Options)
+function solving_odesystem_r(L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt::GasChromatographySimulator.Options; kwargs...)
     t₀ = [sub.t₀; sub.τ₀^2]
     zspan = (0.0,col.L)
 	p = (L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
 
-    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol)
+    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
 
     #if solution.t[end]<col.L
     #    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol, dt=col.L/1000000)
