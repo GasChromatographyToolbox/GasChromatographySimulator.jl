@@ -4,9 +4,9 @@
 
 Calculate the chromatogram as a sum of gaussian peaks over the time `t` for peaks centered at retention times `tR` and with peak width `τR`.    
 """
-function chromatogram(t::Array{Float64,1}, tR::Array{Float64,1}, τR::Array{Float64,1})
+function chromatogram(t::Array{Real,1}, tR::Array{Real,1}, τR::Array{Real,1})
 	g(t,tR,τR) = 1/sqrt(2*π*τR^2)*exp(-(t-tR)^2/(2*τR^2))
-	chromatograms = Array{Array{Float64,1}}(undef, length(tR))
+	chromatograms = Array{Array{Real,1}}(undef, length(tR))
 	for j=1:length(tR)
 		chromatograms[j] = g.(t, tR[j], τR[j])
 	end
