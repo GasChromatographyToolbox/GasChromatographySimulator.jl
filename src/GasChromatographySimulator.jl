@@ -1331,7 +1331,7 @@ end
 
 function solving_odesystem_r(L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, gas, opt::GasChromatographySimulator.Options; kwargs...)
     t₀ = [t₀; τ₀^2]
-    zspan = (0.0,col.L)
+    zspan = (0.0,L)
 	p = (L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
 
