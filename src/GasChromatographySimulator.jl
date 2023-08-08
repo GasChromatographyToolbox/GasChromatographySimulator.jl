@@ -1178,7 +1178,7 @@ function solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, 
 	n = length(Tchar_)
 	sol = Array{Any}(undef, n)
 	Threads.@threads for i=1:n
-		sol[i] = solving_odesystem_r(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], t₀_[i], τ₀_[i], gas, opt; kwargs...)
+		sol[i] = solving_odesystem_r(L, d, df, T_itp, Fpin_itp, pout_itp, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], t₀_[i], τ₀_[i], gas, opt; kwargs...)
 	end
 	return sol
 end
