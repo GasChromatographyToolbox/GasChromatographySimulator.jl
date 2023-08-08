@@ -1476,7 +1476,7 @@ julia> pl = peaklist(sol, par)
 ...
 ```    
 """
-function peaklist_thread(sol, par; thread=true)
+function peaklist(sol, par; thread=true)
     if thread == true
         pl = peaklist_thread(sol, par)
     else
