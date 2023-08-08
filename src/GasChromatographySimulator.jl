@@ -1138,9 +1138,9 @@ function simulate(par; kwargs...)
 	end
 end
 
-function simulate(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt; kwargs...)
+function simulate(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, t₀_, τ₀_, gas, opt; kwargs...)
     if opt.odesys==true
-        sol = solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt; kwargs...)
+        sol = solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, t₀_, τ₀_, gas, opt; kwargs...)
     	pl = GasChromatographySimulator.peaklist(sol, par) #!!!!
         return pl, sol
 	else
@@ -1174,11 +1174,11 @@ function solve_system_multithreads(par; kwargs...)
 	return sol
 end
 
-function solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt; kwargs...)
+function solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, t₀_, τ₀_, gas, opt; kwargs...)
 	n = length(Tchar_)
 	sol = Array{Any}(undef, n)
 	Threads.@threads for i=1:n
-		sol[i] = solving_odesystem_r(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], gas, opt; kwargs...)
+		sol[i] = solving_odesystem_r(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], t₀_[i], τ₀_[i], gas, opt; kwargs...)
 	end
 	return sol
 end
@@ -1329,8 +1329,8 @@ function solving_odesystem_r(col::Column, prog::Program, sub::Substance, opt::Op
     return solution
 end
 
-function solving_odesystem_r(L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt::GasChromatographySimulator.Options; kwargs...)
-    t₀ = [sub.t₀; sub.τ₀^2]
+function solving_odesystem_r(L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, gas, opt::GasChromatographySimulator.Options; kwargs...)
+    t₀ = [t₀; τ₀^2]
     zspan = (0.0,col.L)
 	p = (L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
