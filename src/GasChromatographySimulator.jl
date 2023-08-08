@@ -1476,7 +1476,16 @@ julia> pl = peaklist(sol, par)
 ...
 ```    
 """
-function peaklist(sol, par)
+function peaklist_thread(sol, par; thread=true)
+    if thread == true
+        pl = peaklist_thread(sol, par)
+    else
+        pl = peaklist_unthread(sol, par)
+    end
+    return pl
+end
+
+function peaklist_thread(sol, par)
 	n = length(par.sub)
     # sol is solution from ODE system
     No = Array{Union{Missing, Int64}}(undef, n)
@@ -1492,6 +1501,65 @@ function peaklist(sol, par)
     Δs = fill(NaN, n)
     Annotations = Array{String}(undef, n)
     Threads.@threads for i=1:n
+        Name[i] = par.sub[i].name
+        CAS[i] = par.sub[i].CAS
+        if sol[i].t[end]==par.col.L
+            tR[i] = sol[i].u[end][1]
+            TR[i] = par.prog.T_itp(par.col.L, tR[i]) - 273.15 
+            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis, control=par.opt.control, k_th=par.opt.k_th)
+            τR[i] = sqrt(sol[i].u[end][2])
+            σR[i] = τR[i]*uR[i]
+            kR[i] = retention_factor(par.col.L, tR[i], par.prog.T_itp, par.col.d, par.col.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; k_th=par.opt.k_th)
+        else
+            tR[i] = NaN
+            TR[i] = NaN
+            uR[i] = NaN
+            τR[i] = NaN
+            σR[i] = NaN
+            kR[i] = NaN
+        end
+        No[i] = try
+            parse(Int,split(par.sub[i].ann, ", ")[end])
+        catch
+            try 
+                parse(Int,split(par.sub[i].ann, ", No: ")[end])
+            catch
+                missing
+            end
+        end
+        #if ismissing(No[i])
+            Annotations[i] = par.sub[i].ann
+        #else
+        #    Annotations[i] = join(split(par.sub[i].ann, ", ")[1:end-1], ", ")
+        #end
+    end  
+    df = sort!(DataFrame(No = No, Name = Name, CAS = CAS, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, Annotations = Annotations, ), [:tR])
+    Threads.@threads for i=1:n-1
+        Res[i] = (df.tR[i+1] - df.tR[i])/(2*(df.τR[i+1] + df.τR[i]))
+        Δs[i] = (df.tR[i+1] - df.tR[i])/(df.τR[i+1] - df.τR[i]) * log(df.τR[i+1]/df.τR[i])
+    end
+    df[!, :Res] = Res
+    df[!, :Δs] = Δs 
+    
+    return select(df, [:No, :Name, :CAS, :tR, :τR, :TR, :σR, :uR, :kR, :Res, :Δs, :Annotations])
+end
+
+function peaklist_unthread(sol, par)
+	n = length(par.sub)
+    # sol is solution from ODE system
+    No = Array{Union{Missing, Int64}}(undef, n)
+    Name = Array{String}(undef, n)
+    CAS = Array{String}(undef, n)
+    tR = Array{Float64}(undef, n)
+    TR = Array{Float64}(undef, n)
+    σR = Array{Float64}(undef, n)
+    uR = Array{Float64}(undef, n)
+    τR = Array{Float64}(undef, n)
+    kR = Array{Float64}(undef, n)
+    Res = fill(NaN, n)
+    Δs = fill(NaN, n)
+    Annotations = Array{String}(undef, n)
+    for i=1:n
         Name[i] = par.sub[i].name
         CAS[i] = par.sub[i].CAS
         if sol[i].t[end]==par.col.L
