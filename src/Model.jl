@@ -1038,8 +1038,16 @@ Cross Sections, The Journal of Physical Chemistry, Volume 73, Issue 11,
 * `Rn`: number of rings of the solute.
 """
 function molecular_diffusion_volume(formula, Rn) 
-    C = formula["C"]
-    H = formula["H"]
+    if haskey(formula, "C")
+        C = formula["C"]
+    else
+        C = 0
+    end
+    if haskey(formula, "H")
+        H = formula["H"]
+    else
+        H = 0
+    end
     if haskey(formula, "O")
         O = formula["O"]
     else
