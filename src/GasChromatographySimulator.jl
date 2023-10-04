@@ -904,7 +904,7 @@ function load_solute_database(db_path::String, db::String, sp::String, gas::Stri
 	# solutes ... Names of the solutes for which the informations should be used
     # τ₀ ... initial values of the peak width for the solutes
     # t₀ ... initial values of the time for the solutes
-	db_dataframe = DataFrame(CSV.File(string(db_path,"/",db), header=1, silencewarnings=true))
+	db_dataframe = DataFrame(CSV.File(string(db_path,"/",db), header=1, silencewarnings=true, stringtype=String))
     insertcols!(db_dataframe, 1, :No => collect(1:length(db_dataframe.Name)))
     sub = load_solute_database(db_dataframe, sp, gas, solutes, t₀, τ₀)
 	return sub
