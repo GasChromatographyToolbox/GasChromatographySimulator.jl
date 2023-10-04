@@ -87,7 +87,7 @@ if typeof(db_file_1) == Nothing
 	**Select a 1st database.**
 	"""
 else
-	db_1 = DataFrame(CSV.File(db_file_1["data"], silencewarnings=true))
+	db_1 = DataFrame(CSV.File(db_file_1["data"], silencewarnings=true, stringtype=String))
 	#insertcols!(db_1, 1, :No => collect(1:length(db_1.Name)))
 	md"""
 	1st File: $(db_file_1["name"])
@@ -102,7 +102,7 @@ if typeof(db_file_2) == Nothing
 	**Select a 2nd database.**
 	"""
 else
-	db_2 = DataFrame(CSV.File(db_file_2["data"], silencewarnings=true))
+	db_2 = DataFrame(CSV.File(db_file_2["data"], silencewarnings=true,  stringtype=String))
 	#insertcols!(db_2, 1, :No => collect(1:length(db_2.Name)))
 	md"""
 	2nd File: $(db_file_2["name"])
@@ -523,7 +523,7 @@ begin
 end
 
 # ╔═╡ Cell order:
-# ╠═115b320f-be42-4116-a40a-9cf1b55d39b5
+# ╟─115b320f-be42-4116-a40a-9cf1b55d39b5
 # ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470

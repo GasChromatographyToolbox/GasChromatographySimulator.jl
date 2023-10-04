@@ -89,7 +89,7 @@ begin
 	if own_db == false
 		db = DataFrame(urldownload("https://raw.githubusercontent.com/JanLeppert/RetentionData/main/Databases/GCSim_database_nonflag.csv"))
 	else
-		db = DataFrame(CSV.File(db_file["data"], silencewarnings=true))
+		db = DataFrame(CSV.File(db_file["data"], silencewarnings=true, stringtype=String))
 	end
 	insertcols!(db, 1, :No => collect(1:length(db.Name)))
 	sp = unique(db.Phase)
@@ -350,7 +350,7 @@ $(DownloadButton(export_str_, result_filename))
 """
 
 # ╔═╡ Cell order:
-# ╠═115b320f-be42-4116-a40a-9cf1b55d39b5
+# ╟─115b320f-be42-4116-a40a-9cf1b55d39b5
 # ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
