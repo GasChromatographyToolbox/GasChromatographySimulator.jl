@@ -849,7 +849,7 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
 	end
     sub = Array{GasChromatographySimulator.Substance}(undef, length(Name))
     for i=1:length(Name)
-        Cag = GasChromatographySimulator.diffusivity(id[indices[i]], gas)
+        Cag = GasChromatographySimulator.diffusivity(id[findfirst(Name[i].==id_df.Name)], gas)
         sub[i] = GasChromatographySimulator.Substance(Name[i],
                             CAS[i],
                             Tchar[i], 
@@ -858,8 +858,8 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
                             φ₀[i],
                             Annotation[i],
                             Cag, 
-                            t₀_[i],
-                            τ₀_[i])
+                            t₀_[findfirst(Name[i].==id_df.Name)],
+                            τ₀_[findfirst(Name[i].==id_df.Name)])
     end
 	# warning for not found solutes
 	found_cas = [sub[i].CAS for i in 1:length(sub)]
