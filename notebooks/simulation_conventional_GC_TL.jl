@@ -18,12 +18,13 @@ end
 begin 
 	# online version
 	import Pkg
-	version = "0.4.2"
+	version = "0.4.3"
 	Pkg.activate(mktempdir())
 	Pkg.add([
 		Pkg.PackageSpec(name="CSV"),
 		Pkg.PackageSpec(name="DataFrames"),
 		Pkg.PackageSpec(name="GasChromatographySimulator", version=version),
+		#Pkg.PackageSpec(name="GasChromatographySimulator", rev="fix_load_solute_database"),
         Pkg.PackageSpec(name="HypertextLiteral"),
 		Pkg.PackageSpec(name="Plots"),
 		Pkg.PackageSpec(name="PlutoUI"),
@@ -473,7 +474,7 @@ $(DownloadButton(export_str_, result_filename))
 """
 
 # ╔═╡ Cell order:
-# ╟─115b320f-be42-4116-a40a-9cf1b55d39b5
+# ╠═115b320f-be42-4116-a40a-9cf1b55d39b5
 # ╟─9c54bef9-5b70-4cf7-b110-a2f48f5db066
 # ╟─c9246396-3c01-4a36-bc9c-4ed72fd9e325
 # ╟─8b3011fd-f3df-4ab0-b611-b943d5f3d470
