@@ -774,7 +774,10 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
 	
 	
 	
-    id = GasChromatographySimulator.CAS_identification.(solutes)
+    id_ = GasChromatographySimulator.CAS_identification.(solutes)
+    id_df_ = DataFrame(id_)
+    # ignore id where the CAS is not included in the database
+    id = id_[findall([id_[x].CAS in db.CAS for x=1:length(id_)])]
     id_df = DataFrame(id)
 
     if sp == "" # no stationary phase is selected, like for transferlines
@@ -841,15 +844,15 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
 			end
         end
         # correct assignment of the t₀ and τ₀ values to the correct values from the input
-		indices_cas = findall(in(db_filtered_1.CAS).(id_df.CAS))
-		indices_name = findall(in(string.(db_filtered_1.Name, "_ph")).(id_df.Name))
+		indices_cas = findall(in(db_filtered_1.CAS).(id_df_.CAS))
+		indices_name = findall(in(string.(db_filtered_1.Name, "_ph")).(id_df_.Name))
         indices = union(indices_cas, indices_name)
         t₀_ = t₀[indices]
         τ₀_ = τ₀[indices]  
 	end
     sub = Array{GasChromatographySimulator.Substance}(undef, length(Name))
     for i=1:length(Name)
-        Cag = GasChromatographySimulator.diffusivity(id[indices[i]], gas)
+        Cag = GasChromatographySimulator.diffusivity(id[findfirst(CAS[i].==id_df.CAS)], gas)
         sub[i] = GasChromatographySimulator.Substance(Name[i],
                             CAS[i],
                             Tchar[i], 
@@ -858,8 +861,8 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
                             φ₀[i],
                             Annotation[i],
                             Cag, 
-                            t₀_[i],
-                            τ₀_[i])
+                            t₀_[findfirst(CAS[i].==id_df.CAS)],
+                            τ₀_[findfirst(CAS[i].==id_df.CAS)])
     end
 	# warning for not found solutes
 	found_cas = [sub[i].CAS for i in 1:length(sub)]

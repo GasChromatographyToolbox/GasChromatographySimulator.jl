@@ -111,7 +111,7 @@ end
     # Substance from the load-function-> 1st test
     db_path = string(@__DIR__, "/data")
     db = "Database_test.csv"
-    solutes = ["C10", "C11", "Glyceryl trioctanoate"]
+    solutes = ["C10", "C11", "Glyceryl trioctanoate", "AAA"]
     init_t = zeros(length(solutes))
     init_τ = zeros(length(solutes))
     sub = GasChromatographySimulator.load_solute_database(db_path, db, col.sp, col.gas, solutes, init_t, init_τ)
