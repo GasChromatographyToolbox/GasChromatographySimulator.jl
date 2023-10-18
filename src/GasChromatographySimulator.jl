@@ -774,24 +774,32 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
 	
 	
 	
-    id_ = GasChromatographySimulator.CAS_identification.(solutes)
-    id_df_ = DataFrame(id_)
+    id = GasChromatographySimulator.CAS_identification.(solutes)
+    #id_df_ = DataFrame(id_)
     # ignore id where the CAS is not included in the database
-    id = id_[findall([id_[x].CAS in db.CAS for x=1:length(id_)])]
+   	#id = id_#[findall([id_[x].CAS in db.CAS for x=1:length(id_)])]
     id_df = DataFrame(id)
 
+    # indices of placeholders are used in id results:
+    i_ph = findall(occursin.("_ph", id_df.Name))
+
     if sp == "" # no stationary phase is selected, like for transferlines
-        Name = id_df.Name
-        CAS = id_df.CAS
+        if "No" in names(db) && typeof(solutes_) == Vector{Int}
+	        db_filtered=db[in(solutes_).(db.No),:]
+	    else
+	        db_filtered=db[filter(x -> !isnothing(x), [findfirst(id_df.CAS[i] .== db.CAS) for i=1:length(id_df.CAS)]),:]
+	    end
+        Name = db_filtered.Name
+        CAS = db_filtered.CAS
         # use placeholder values
         Tchar = ones(length(Name))
         θchar = ones(length(Name))
         ΔCp = ones(length(Name))
         φ₀ = ones(length(Name))
         Annotation = fill("no sp", length(Name))
-        t₀_ = t₀
-        τ₀_ = τ₀ 
-        indices = 1:length(Name)
+        #t₀_ = t₀
+        #τ₀_ = τ₀ 
+        #indices = 1:length(Name)
     elseif size(db)[2]>14 && "No" ∉ names(db)
         error("Data format not supported. Use the appended database structure.")
     elseif size(db)[2]>15 && "No" ∈ names(db)
@@ -807,11 +815,10 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
 		else
 			db_filtered_1=db_filtered[in(id_df.CAS).(db_filtered.CAS),:]
 		end
-		# if placeholders are used in id results:
-		i_ph = findall(occursin.("_ph", id_df.Name))
-		if isempty(i_ph) == false
-			append!(db_filtered_1, db_filtered[in([split(x, "_ph")[1] for x in id_df.Name[i_ph]]).(db_filtered.Name),:])
-		end
+		
+		#if isempty(i_ph) == false
+		#	append!(db_filtered_1, db_filtered[in([split(x, "_ph")[1] for x in id_df.Name[i_ph]]).(db_filtered.Name),:])
+		#end
         # values
         Name = db_filtered_1.Name
         CAS = db_filtered_1.CAS
@@ -844,15 +851,20 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
 			end
         end
         # correct assignment of the t₀ and τ₀ values to the correct values from the input
-		indices_cas = findall(in(db_filtered_1.CAS).(id_df_.CAS))
-		indices_name = findall(in(string.(db_filtered_1.Name, "_ph")).(id_df_.Name))
-        indices = union(indices_cas, indices_name)
-        t₀_ = t₀[indices]
-        τ₀_ = τ₀[indices]  
+#		indices_cas = findall(in(db_filtered_1.CAS).(id_df_.CAS))
+#		indices_name = findall(in(string.(db_filtered_1.Name, "_ph")).(id_df_.Name))
+#        indices = union(indices_cas, indices_name)
+#        t₀_ = t₀[indices]
+#        τ₀_ = τ₀[indices]  
+		# ??? is this still correct ???
 	end
     sub = Array{GasChromatographySimulator.Substance}(undef, length(Name))
     for i=1:length(Name)
-        Cag = GasChromatographySimulator.diffusivity(id[findfirst(CAS[i].==id_df.CAS)], gas)
+        i_ind = if i in i_ph
+			findfirst(string(Name[i], "_ph").==id_df.Name)
+        else
+            findfirst(CAS[i].==id_df.CAS)
+		end
         sub[i] = GasChromatographySimulator.Substance(Name[i],
                             CAS[i],
                             Tchar[i], 
@@ -860,9 +872,9 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
                             ΔCp[i], 
                             φ₀[i],
                             Annotation[i],
-                            Cag, 
-                            t₀_[findfirst(CAS[i].==id_df.CAS)],
-                            τ₀_[findfirst(CAS[i].==id_df.CAS)])
+                            GasChromatographySimulator.diffusivity(id[i_ind], gas), 
+                            t₀[i_ind],
+                            τ₀[i_ind])
     end
 	# warning for not found solutes
 	found_cas = [sub[i].CAS for i in 1:length(sub)]
@@ -1509,7 +1521,7 @@ function peaklist_thread(sol, par)
         if sol[i].t[end]==par.col.L
             tR[i] = sol[i].u[end][1]
             TR[i] = par.prog.T_itp(par.col.L, tR[i]) - 273.15 
-            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis, control=par.opt.control, k_th=par.opt.k_th)
+            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control, k_th=par.opt.k_th)
             τR[i] = sqrt(sol[i].u[end][2])
             σR[i] = τR[i]*uR[i]
             kR[i] = retention_factor(par.col.L, tR[i], par.prog.T_itp, par.col.d, par.col.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; k_th=par.opt.k_th)
@@ -1568,7 +1580,7 @@ function peaklist_unthread(sol, par)
         if sol[i].t[end]==par.col.L
             tR[i] = sol[i].u[end][1]
             TR[i] = par.prog.T_itp(par.col.L, tR[i]) - 273.15 
-            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis, control=par.opt.control, k_th=par.opt.k_th)
+            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control, k_th=par.opt.k_th)
             τR[i] = sqrt(sol[i].u[end][2])
             σR[i] = τR[i]*uR[i]
             kR[i] = retention_factor(par.col.L, tR[i], par.prog.T_itp, par.col.d, par.col.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; k_th=par.opt.k_th)
@@ -1596,7 +1608,7 @@ function peaklist_unthread(sol, par)
         #end
     end  
     df = sort!(DataFrame(No = No, Name = Name, CAS = CAS, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, Annotations = Annotations, ), [:tR])
-    Threads.@threads for i=1:n-1
+    for i=1:n-1
         Res[i] = (df.tR[i+1] - df.tR[i])/(2*(df.τR[i+1] + df.τR[i]))
         Δs[i] = (df.tR[i+1] - df.tR[i])/(df.τR[i+1] - df.τR[i]) * log(df.τR[i+1]/df.τR[i])
     end
@@ -1654,7 +1666,7 @@ function peaklist(sol, peak, par)
         if sol[i].t[end]==par.col.L
             tR[i] = sol[i].u[end]
             TR[i] = par.prog.T_itp(par.col.L, tR[i]) - 273.15 
-            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; vis=par.opt.vis, control=par.opt.control, k_th=par.opt.k_th)
+            uR[i] = 1/residency(par.col.L, tR[i], par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control, k_th=par.opt.k_th)
             τR[i] = sqrt(peak[i].u[end])
             σR[i] = τR[i]*uR[i]
             kR[i] = retention_factor(par.col.L, tR[i], par.prog.T_itp, par.col.d, par.col.df, par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀; k_th=par.opt.k_th)
