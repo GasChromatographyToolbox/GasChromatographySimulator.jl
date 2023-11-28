@@ -1491,7 +1491,7 @@ julia> pl = peaklist(sol, par)
 ...
 ```    
 """
-function peaklist(sol, par; thread=true)
+function peaklist(sol, par; thread=false)
     if thread == true
         pl = peaklist_thread(sol, par)
     else
@@ -1660,7 +1660,8 @@ function peaklist(sol, peak, par)
     Res = fill(NaN, n)
     Δs = fill(NaN, n)
     Annotations = Array{String}(undef, n)
-    Threads.@threads for i=1:n
+    #Threads.@threads for i=1:n
+    for i=1:n
         Name[i] = par.sub[i].name
         CAS[i] = par.sub[i].CAS
         if sol[i].t[end]==par.col.L
@@ -1690,7 +1691,8 @@ function peaklist(sol, peak, par)
         end
     end  
     df = sort!(DataFrame(No = No, Name = Name, CAS = CAS, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, Annotations = Annotations, ), [:tR])
-    Threads.@threads for i=1:n-1
+    #Threads.@threads for i=1:n-1
+    for i=1:n-1
         Res[i] = (df.tR[i+1] - df.tR[i])/(2*(df.τR[i+1] + df.τR[i]))
         Δs[i] = (df.tR[i+1] - df.tR[i])/(df.τR[i+1] - df.τR[i]) * log(df.τR[i+1]/df.τR[i])
     end
