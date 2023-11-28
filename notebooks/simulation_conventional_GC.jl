@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.26
+# v0.19.31
 
 using Markdown
 using InteractiveUtils
@@ -182,36 +182,6 @@ end
 # ╔═╡ 115fa61e-8e82-42b2-8eea-9c7e21d97ea8
 opt = GasChromatographySimulator.Options(;abstol=1e-8, reltol=1e-5, ng=true, vis=opt_values[1], control=opt_values[2]);
 
-# ╔═╡ c26c1ea7-575f-495d-86bc-987aca991664
-function UI_TP(n_ramp)
-	PlutoUI.combine() do Child
-		@htl("""
-		<table>
-			<tr>
-				<th>ramp [°C/min]</th>
-				<th>T [°C]</th>
-				<th>hold [min]</th>
-			</tr>
-			<tr>
-				<td></td>
-				<td><center>$(Child(NumberField(0.0:0.1:400.0; default=40.0)))</center></td>
-				<td><center>$(Child(NumberField(0.0:0.1:100.0; default=1.0)))</center></td>
-			</tr>
-			$([
-				@htl("
-					<tr>
-						<td><center>$(Child(NumberField(0.0:0.1:100.0; default=5.0)))</center></td>
-						<td><center>$(Child(NumberField(0.0:0.1:400.0; default=((i+1)*100.0))))</center></td>
-						<td><center>$(Child(NumberField(0.0:0.1:100.0; default=1.0)))</center></td>
-					</tr>
-				")
-				for i=1:n_ramp
-			])
-		</table>
-		""")
-	end
-end
-
 # ╔═╡ 50f1bd7f-a479-453d-a8ea-57c37a4e330c
 function UI_Program(n_ramp, opt)
 	if opt.control == "Pressure"
@@ -334,6 +304,36 @@ begin
 	GasChromatographySimulator.local_plots(xx, yy, solution, par)
 end
 
+# ╔═╡ c26c1ea7-575f-495d-86bc-987aca991664
+function UI_TP(n_ramp)
+	PlutoUI.combine() do Child
+		@htl("""
+		<table>
+			<tr>
+				<th>ramp [°C/min]</th>
+				<th>T [°C]</th>
+				<th>hold [min]</th>
+			</tr>
+			<tr>
+				<td></td>
+				<td><center>$(Child(NumberField(0.0:0.1:400.0; default=40.0)))</center></td>
+				<td><center>$(Child(NumberField(0.0:0.1:100.0; default=1.0)))</center></td>
+			</tr>
+			$([
+				@htl("
+					<tr>
+						<td><center>$(Child(NumberField(0.0:0.1:100.0; default=5.0)))</center></td>
+						<td><center>$(Child(NumberField(0.0:0.1:400.0; default=((i+1)*100.0))))</center></td>
+						<td><center>$(Child(NumberField(0.0:0.1:100.0; default=1.0)))</center></td>
+					</tr>
+				")
+				for i=1:n_ramp
+			])
+		</table>
+		""")
+	end
+end
+
 # ╔═╡ 69cf18dd-a7b5-4f29-a8d2-e35420242db9
 function export_str(opt_values, col_values, prog_values, pl)
 	opt_str_array = ["viscosity = $(opt_values[1])", "control = $(opt_values[2])"]
@@ -397,8 +397,8 @@ $(DownloadButton(export_str_, result_filename))
 # ╟─a2287fe8-5aa2-4259-bf7c-f715cc866243
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
 # ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
-# ╟─e8f84397-bd60-41a2-98c7-494873f6faf4
-# ╟─8cea4027-0987-4147-ac60-3b6bacb551ca
+# ╠═e8f84397-bd60-41a2-98c7-494873f6faf4
+# ╠═8cea4027-0987-4147-ac60-3b6bacb551ca
 # ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
 # ╟─115fa61e-8e82-42b2-8eea-9c7e21d97ea8
 # ╟─f7f06be1-c8fa-4eee-953f-0d5ea26fafbf
