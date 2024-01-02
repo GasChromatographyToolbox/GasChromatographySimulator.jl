@@ -32,8 +32,8 @@ function compare_peaklist(pl_1, pl_2)
 	name = pl_1.Name
 	tR1 = pl_1.tR
 	τR1 = pl_1.τR
-	tR2 = Array{Float64}(undef, size(pl_1)[1])
-	τR2 = Array{Float64}(undef, size(pl_1)[1])
+	tR2 = Array{Real}(undef, size(pl_1)[1])
+	τR2 = Array{Real}(undef, size(pl_1)[1])
 	for i=1:size(pl_1)[1]
 		i2 = findfirst(name[i].==pl_2.Name)
 		tR2[i] = pl_2.tR[i2]
@@ -65,7 +65,7 @@ and the relative difference (in %).
 function compare_measurement_simulation(meas, peaklist)
 	name = meas.Name
 	tRm = meas.RT
-	tRs = Array{Float64}(undef, size(meas)[1])
+	tRs = Array{Real}(undef, size(meas)[1])
 	for i=1:size(meas)[1]
 		i2 = findfirst(name[i].==peaklist.Name)
 		if typeof(i2) == Nothing
