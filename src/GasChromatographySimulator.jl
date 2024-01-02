@@ -42,9 +42,9 @@ Structure describing the GC Column.
 struct Column
     L                       # column length in m
     d                       # column internal diameter in m as function of x or a number
-    a_d::Array{Float64,1}   # parameters of the diameters function d(x)
+    a_d::Array{<:Real,1}   # parameters of the diameters function d(x)
     df                      # column film thickness in m as function of x or a number
-    a_df::Array{Float64}    # parameters of the film thickness function df(x)
+    a_df::Array{<:Real}    # parameters of the film thickness function df(x)
     sp::String              # stationary phase of the column
     gas::String             # gas of the mobile phase ["He", "H2", "N2"]
     Column(L, d, a_d, df, a_df, sp, gas) = (gas!="He" && gas!="H2" && gas!="N2") ? error("Wrong selection for 'gas'. Choose 'He', 'H2' or 'N2'.") : new(L, d, a_d, df, a_df, sp, gas)
@@ -317,9 +317,9 @@ The arguments `Tcontrol` and `L` are used to construct the thermal gradient
 function `gf(x)` and the temperature interpolation `T_itp(x,t)`.
 
 """
-function Program(TP::Array{<:Real, 1}, FpinP::Array{<:Real, 1}, poutP::Array{<:Real, 1}, ΔTP::Array{<:Real, 1}, x₀P::Array{<:Real, 1}, L₀P::Array{<:Real, 1}, αP::Array{<:Real, 1}, Tcontrol::String, L::Float64; time_unit="min")
+function Program(TP::Array{<:Real, 1}, FpinP::Array{<:Real, 1}, poutP::Array{<:Real, 1}, ΔTP::Array{<:Real, 1}, x₀P::Array{<:Real, 1}, L₀P::Array{<:Real, 1}, αP::Array{<:Real, 1}, Tcontrol::String, L::Real; time_unit="min")
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)
-    ts = Array{Array{Float64,1}}(undef, 7)
+    ts = Array{Array{Real,1}}(undef, 7)
     ts[1], Ts = GasChromatographySimulator.conventional_program(TP; time_unit=time_unit)
     ts[2], Fps = GasChromatographySimulator.conventional_program(FpinP; time_unit=time_unit)
     ts[3], pouts = GasChromatographySimulator.conventional_program(poutP; time_unit=time_unit)
@@ -327,7 +327,7 @@ function Program(TP::Array{<:Real, 1}, FpinP::Array{<:Real, 1}, poutP::Array{<:R
     ts[5], x₀s = GasChromatographySimulator.conventional_program(x₀P; time_unit=time_unit)
     ts[6], L₀s = GasChromatographySimulator.conventional_program(L₀P; time_unit=time_unit)
     ts[7], αs = GasChromatographySimulator.conventional_program(αP; time_unit=time_unit)
-    time_steps = Float64[]
+    time_steps = Real[]
     for i=1:7
         time_steps = GasChromatographySimulator.common_time_steps(time_steps, ts[i])
     end
@@ -598,7 +598,7 @@ function gradient(x, a; Tcontrol="inlet")
                 x₀ = a[:,2] # shift in x (e.g. to correct for the real position of IR-sensors)
                 L₀ = a[:,3] # length of the linear segment
                 α  = a[:,4] # exponential factor, α=0 -> linear
-                f = Array{Float64}(undef, length(α))
+                f = Array{Real}(undef, length(α))
                 for i=1:length(α)
                     if α[i]<=0 # concave function, weak change at beginning and strong change at end of column
                         if Tcontrol=="inlet"
@@ -631,7 +631,7 @@ time `t`.
 * `time_steps::Array{<:Real,1}`: Time steps in s (seconds). 
 * `temp_steps::Array{<:Real,1}`: Temperature steps in °C (degree celsius).
 * `gf::Function`: Gradient function `gf(x, a_gf)`, describes the thermal gradient.
-* `L::Float64`: Length of the capillary measured in m (meter).
+* `L`: Length of the capillary measured in m (meter).
 
 For the spatial dependency of the interpolated temperature `T_ipt(x,t)` the
 gradient function `gf` is calculated every 1e-3 m (1 mm). Positions
@@ -644,11 +644,15 @@ interpolated over time `t`.
 julia> T_itp = temperature_interpolation([0.0, 60.0, 300.0, 120.0], [40.0, 40.0, 320.0, 320.0], gf, 10.0)
 ```
 """
-function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Array{<:Real,1}, gradient_function::Function, L)
+function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Array{<:Real,1}, gradient_function::Function, L; ng=false, dx=1e-3)
 	T(x) = temp_steps .+ gradient_function(x) 
-	nx = 0.0:1e-3:L # mm exact
+    if ng == false
+	    nx = 0.0:dx:L # mm exact
+    else
+        nx = [0.0, L]
+    end
 	nt = cumsum(time_steps)
-	Tmat = Array{Float64}(undef, length(nx), length(nt))
+	Tmat = Array{Real}(undef, length(nx), length(nt))
 	for j=1:length(nt)
 		for i=1:length(nx)
 			Tmat[i,j] = T(nx[i])[j] + 273.15
@@ -739,8 +743,8 @@ phase `gas` from the database `db` into an array of the structure `Substance`.
 * `sp::String`: Name of the stationary phase.
 * `gas::String`: Name of the mobile phase.
 * `solutes`: Name of the solutes or the id number of the solutes (array of Integers). If id numbers are used, the dataframe of the database must include a column "No" with the id numbers.
-* `t₀::Array{Float64,1}`: Initial start times of the solutes.
-* `τ₀::Array{Float64,1}`: Initial peak widths of the solutes. 
+* `t₀`: Initial start times of the solutes.
+* `τ₀`: Initial peak widths of the solutes. 
 
 # Examples
 ```julia
@@ -900,15 +904,15 @@ of the structure `Substance`. THe row number of the selected solutes in the load
 * `sp::String`: Name of the stationary phase.
 * `gas::String`: Name of the mobile phase.
 * `solutes::Array{<:AbstractString,1}`: Name of the solutes.
-* `t₀::Array{Float64,1}`: Initial start times of the solutes.
-* `τ₀::Array{Float64,1}`: Initial peak widths of the solutes. 
+* `t₀::Array{<:Real,1}`: Initial start times of the solutes.
+* `τ₀::Array{<:Real,1}`: Initial peak widths of the solutes. 
 
 # Examples
 ```julia
 julia> sub = load_solute_database("path/to/the/file", "db.csv", "DB5", "He", ["C10", "C11"], [0.0, 0.0], [0.5, 0.5])
 ```
 """
-function load_solute_database(db_path::String, db::String, sp::String, gas::String, solutes::Array{<:AbstractString,1}, t₀::Array{Float64,1}, τ₀::Array{Float64,1})
+function load_solute_database(db_path::String, db::String, sp::String, gas::String, solutes::Array{<:AbstractString,1}, t₀::Array{<:Real,1}, τ₀::Array{<:Real,1})
 	# load the information about a solute from a data base and collecting these informations in the 
     # structure Substance
     # 
@@ -974,20 +978,20 @@ function conventional_program(CP; time_unit="min")
     elseif time_unit == "s"
         c = 1.0
     end
-    value_steps = Float64[]
+    value_steps = Real[]
     for i=1:3:length(CP) # every third CP-entry starting from 1 is a value step
         push!(value_steps, CP[i])
         push!(value_steps, CP[i])
     end
-    hold_times = Float64[]
+    hold_times = Real[]
     for i=2:3:length(CP)
         push!(hold_times, CP[i])
     end
-    heating_rates = Float64[]
+    heating_rates = Real[]
     for i=3:3:length(CP)
         push!(heating_rates, CP[i])
     end
-    time_steps = Array{Float64}(undef, length(value_steps))
+    time_steps = Array{Real}(undef, length(value_steps))
     time_steps[1] = 0.0
     for i=2:2:length(value_steps)
         time_steps[i] = hold_times[Int(i/2)] * c
@@ -1037,7 +1041,7 @@ function temperature_program(time_steps, value_steps; time_unit="min")
     values = value_steps[sort([index_pair; index_single])]
     # every (1+(i-1)*3)th element of VP is a value element of `values`
     
-    thold = Array{Float64}(undef, length(values))
+    thold = Array{Real}(undef, length(values))
     a = sort([index_pair.+1; index_single])
     for i=1:length(values)
         if a[i] in index_single # holding time is zero for single entrys
@@ -1048,13 +1052,13 @@ function temperature_program(time_steps, value_steps; time_unit="min")
     end 
     # every (2+(i-1)*3)th element of VP is a holding time
 
-    rate = Array{Float64}(undef, length(values)-1)
+    rate = Array{Real}(undef, length(values)-1)
     theat = time_steps[sort([index_pair; index_single])[2:end]]
     for i=1:(length(values)-1)
         rate[i] = (values[i+1] - values[i])/theat[i] * c
     end
 
-    VP = Array{Float64}(undef, 2 + (length(values)-1)*3)
+    VP = Array{Real}(undef, 2 + (length(values)-1)*3)
     for i=1:length(values)
         VP[1+(i-1)*3] = values[i]
     end
@@ -1074,7 +1078,7 @@ Estimate a new set of time steps, which represents the combination of `time_step
 """
 function common_time_steps(time_steps_1, time_steps_2)
 	# constructs the new timesteps common for all moduls
-	ctselements = Float64[]
+	ctselements = Real[]
     for j=1:length(time_steps_1)
         push!(ctselements, cumsum(time_steps_1)[j])
     end
@@ -1091,7 +1095,7 @@ end
 Estimate the new value steps at the `new_time_steps` from the original set of `value_steps` over `time_steps`. The new values at new time steps are calculated from a linear change of the value between the original time steps.
 """ 
 function new_value_steps(value_steps, time_steps, new_time_steps)
-    new_values = Array{Float64}(undef, length(new_time_steps))
+    new_values = Array{Real}(undef, length(new_time_steps))
     index_calc = Int[]
     index_old = Int[]
     for i=1:length(new_time_steps)
@@ -1651,12 +1655,12 @@ function peaklist(sol, peak, par)
     No = Array{Union{Missing, Int64}}(undef, n)
     Name = Array{String}(undef, n)
     CAS = Array{String}(undef, n)
-    tR = Array{Float64}(undef, n)
-    TR = Array{Float64}(undef, n)
-    σR = Array{Float64}(undef, n)
-    uR = Array{Float64}(undef, n)
-    τR = Array{Float64}(undef, n)
-    kR = Array{Float64}(undef, n)
+    tR = Array{Real}(undef, n)
+    TR = Array{Real}(undef, n)
+    σR = Array{Real}(undef, n)
+    uR = Array{Real}(undef, n)
+    τR = Array{Real}(undef, n)
+    kR = Array{Real}(undef, n)
     Res = fill(NaN, n)
     Δs = fill(NaN, n)
     Annotations = Array{String}(undef, n)
@@ -1725,8 +1729,8 @@ function sol_extraction(sol, par)
     solutes = Array{String}(undef, n)
     for i=1:n
         sol_z[i] = sol[i].t
-        temp_t = Array{Float64}(undef, length(sol[i].t))
-        temp_τ² = Array{Float64}(undef, length(sol[i].t))
+        temp_t = Array{Real}(undef, length(sol[i].t))
+        temp_τ² = Array{Real}(undef, length(sol[i].t))
         for j=1:length(sol[i].t)
                 temp_t[j] = sol[i].u[j][1]
                 temp_τ²[j] = sol[i].u[j][2]

@@ -220,7 +220,7 @@ mobile phase gas [1].
 [1] Blumberg, Leonid M., Temperature-Programmed Gas Chromatography,
 Wiley-VCH, 2010.
 """
-function viscosity(T::Float64, gas::String; vis="Blumberg")
+function viscosity(T, gas::String; vis="Blumberg")
     if vis == "Blumberg"
         if gas=="He"
             ηst = 18.63e-6
