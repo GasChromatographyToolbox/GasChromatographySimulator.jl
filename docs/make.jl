@@ -17,6 +17,6 @@ makedocs(
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
 deploydocs(
-    repo = "github.com/JanLeppert/GasChromatographySimulator.jl",
+    repo = "github.com/GasChromatographyToolbox/GasChromatographySimulator.jl",
     devbranch = "main"
 )
