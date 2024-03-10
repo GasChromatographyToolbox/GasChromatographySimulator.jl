@@ -2,7 +2,7 @@
 
 ## Notebooks
 
-In the folder [notebooks](https://github.com/JanLeppert/GasChromatographySimulator.jl/tree/main/notebooks) several notebooks, using [Pluto.jl](https://github.com/fonsp/Pluto.jl), for the simulation of GC-systems are available. 
+In the folder [notebooks](https://github.com/GasChromatographyToolbox/GasChromatographySimulator.jl/tree/main/notebooks) several notebooks, using [Pluto.jl](https://github.com/fonsp/Pluto.jl), for the simulation of GC-systems are available. 
 
 To use these notebooks [Julia, v1.6 or above,](https://julialang.org/downloads/#current_stable_release) must be installed and **Pluto** must be added:
 
@@ -30,11 +30,11 @@ Pluto will open your browser. In the field `Open from file` the URL of a noteboo
 
 ## Simulation of measurements
 
-Two measurements from [`[8]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References) will be simulated and compared to the measured chromatograms. The n-alkanes from n-nonane (C9) to n-triacontane (C30) are separated in a conventional GC and a thermal gradient GC . The database with the thermodynamic parameters is [`Database_Leppert2020b.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Database_Leppert2020b.csv).
+Two measurements from [`[8]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References) will be simulated and compared to the measured chromatograms. The n-alkanes from n-nonane (C9) to n-triacontane (C30) are separated in a conventional GC and a thermal gradient GC . The database with the thermodynamic parameters is [`Database_Leppert2020b.csv`](https://github.com/GasChromatographyToolbox/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Database_Leppert2020b.csv).
 
 ### Conventional GC
 
-The conventional GC program simulated here is `Prog. D` from [`[8]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References), a temperature program with two heating ramps, constant inlet pressure and a flame ionization detector (FID, atmospheric outlet pressure). 
+The conventional GC program simulated here is `Prog. D` from [`[8]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References), a temperature program with two heating ramps, constant inlet pressure and a flame ionization detector (FID, atmospheric outlet pressure). 
 
 The standard options are used, beside the option `ng` (non-gradient) is changed to `true`. Because the conventional GC does not use non-uniform temperature, diameter or film thickness, the model can be simplified and the calculation of the separation is faster.
 ```@example ex_meas
@@ -54,7 +54,7 @@ The temperature program starts at 40°C, which is hold for 1 min. The column is 
 prog_D = GasChromatographySimulator.Program([0.0, 60.0, 1680.0, 60.0, 360.0, 60.0], [40.0, 40.0, 180.0, 180.0, 300.0, 300.0], 411564.0*ones(6), 101300.0.*ones(6), col.L);
 ```
 
-We want to use all solutes for the stationary phase `FS5ms`, which are in the database [`Database_Leppert2020b.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Database_Leppert2020b.csv). We load the database into a dataframe:
+We want to use all solutes for the stationary phase `FS5ms`, which are in the database [`Database_Leppert2020b.csv`](https://github.com/GasChromatographyToolbox/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Database_Leppert2020b.csv). We load the database into a dataframe:
 ```@example ex_meas
 db_dataframe = DataFrame(CSV.File("../../data/Leppert2020b/Database_Leppert2020b.csv", header=1, silencewarnings=true));
 ```
@@ -88,7 +88,7 @@ Finally, the simulation is executed:
 ```@example ex_meas
 peaklist, sol = GasChromatographySimulator.simulate(par);
 ```
-We know can compare the simulation results with the measured chromatogram. The file [`Leppert2020b_measured_RT_progD.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Leppert2020b_measured_RT_progD.csv) contains the retention times and peak widths (as standard deviations) from the measurement.
+We know can compare the simulation results with the measured chromatogram. The file [`Leppert2020b_measured_RT_progD.csv`](https://github.com/GasChromatographyToolbox/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Leppert2020b_measured_RT_progD.csv) contains the retention times and peak widths (as standard deviations) from the measurement.
 ```@example ex_meas
 measurement_D = DataFrame(CSV.File("../../data/Leppert2020b/Leppert2020b_measured_RT_progD.csv", header=1, silencewarnings=true));
 measurement_D[!, 2] = measurement_D[!, 2] .* 60.0; # conversion from min -> s
@@ -114,7 +114,7 @@ The measured chromatogram is plotted in orange, while the simulated chromatogram
 
 ### Thermal gradient GC
 
-The following example of a thermal gradient GC is the example `medium gradient` from [`[8]`](https://janleppert.github.io/GasChromatographySimulator.jl/dev/references/#References). 
+The following example of a thermal gradient GC is the example `medium gradient` from [`[8]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References). 
 
 Standard options are used (here the option `ng` has to be `false`):
 ```@example ex_meas
@@ -126,7 +126,7 @@ And the column is 2.05 m long and has the same diameter, film thickness and stat
 col_tg = GasChromatographySimulator.Column(2.05, 0.104e-3, 0.104e-6, "FS5ms", "He");
 ```
 
-The program is taken from the measured temperatures and pressures during the GC run, stored in the file [`Leppert2020b_prog_settings_med_gradient_x90.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Leppert2020b_prog_settings_med_gradient_x90.csv).
+The program is taken from the measured temperatures and pressures during the GC run, stored in the file [`Leppert2020b_prog_settings_med_gradient_x90.csv`](https://github.com/GasChromatographyToolbox/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Leppert2020b_prog_settings_med_gradient_x90.csv).
 ```@example ex_meas
 prog_settings = DataFrame(CSV.File("../../data/Leppert2020b/Leppert2020b_prog_settings_med_gradient_x90.csv", header=1, silencewarnings=true));
 ```
@@ -171,7 +171,7 @@ Finally the simulation is run by:
 peaklist_tg, sol_tg = GasChromatographySimulator.simulate(par_tg);
 ```
 
-The file [`Leppert2020b_measured_RT_med_gradient.csv`](https://github.com/JanLeppert/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Leppert2020b_measured_RT_med_gradient.csv) contains the retention times and peak widths (as standard deviations) from the measured chromatogram.
+The file [`Leppert2020b_measured_RT_med_gradient.csv`](https://github.com/GasChromatographyToolbox/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Leppert2020b_measured_RT_med_gradient.csv) contains the retention times and peak widths (as standard deviations) from the measured chromatogram.
 ```@example ex_meas
 measurement_tg = DataFrame(CSV.File("../../data/Leppert2020b/Leppert2020b_measured_RT_med_gradient.csv", header=1, silencewarnings=true));
 measurement_tg[!, 3] = measurement_tg[!, 3] ./ 1000.0; # conversion from ms -> s
