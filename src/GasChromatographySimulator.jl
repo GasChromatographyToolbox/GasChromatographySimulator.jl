@@ -1140,6 +1140,9 @@ end
 
 Simulate the GC system defined by the structure `par`.
 
+Alternative call:
+`simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)`
+
 Note: Based on the option for `odesys` the result is different. For `odesys =
 true` the result is a dataframe (the peaklist) and the solution of the ODEs
 as a system (solution structure from DifferentialEquations.jl). If `odesys =
@@ -1158,14 +1161,14 @@ function simulate(par; kwargs...)
 	end
 end
 
-function simulate(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, t₀_, τ₀_, gas, opt; kwargs...)
+function simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
     if opt.odesys==true
-        sol = solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, t₀_, τ₀_, gas, opt; kwargs...)
-    	pl = GasChromatographySimulator.peaklist(sol, par) #!!!!
+        sol = solve_system_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
+    	pl = GasChromatographySimulator.peaklist(sol, par)
         return pl, sol
 	else
-		sol, peak = solve_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt; kwargs...)
-    	pl = GasChromatographySimulator.peaklist(sol, peak, par) #!!!!
+		sol, peak = solve_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
+    	pl = GasChromatographySimulator.peaklist(sol, peak, par)
         return pl, sol, peak
 	end
 end
@@ -1178,6 +1181,10 @@ ODEs for ``t(z)`` and ``τ²(z)`` together as a system of ODEs using multiple
 threads (parallel computing) for the simulation of different solutes. `kwargs...` to pass additional options to the ODE solve function as named tuples. 
 
 Note: The result is an array of the solution structure from DifferentialEquations.jl.
+
+Alternative call:
+`solve_system_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)`
+with the substance realted quantitites beeing vectors.
 
 # Examples
 
@@ -1194,11 +1201,11 @@ function solve_system_multithreads(par; kwargs...)
 	return sol
 end
 
-function solve_system_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, t₀_, τ₀_, gas, opt; kwargs...)
+function solve_system_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
 	n = length(Tchar_)
 	sol = Array{Any}(undef, n)
 	Threads.@threads for i=1:n
-		sol[i] = solving_odesystem_r(L, d, df, T_itp, Fpin_itp, pout_itp, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], t₀_[i], τ₀_[i], gas, opt; kwargs...)
+		sol[i] = solving_odesystem_r(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], t₀[i], τ₀[i], opt; kwargs...)
 	end
 	return sol
 end
@@ -1213,6 +1220,10 @@ simulation of different solutes. `kwargs...` to pass additional options to the O
 
 Note: The result are two arrays of the solution structure from
 DifferentialEquations.jl.
+
+Alternative call:
+`solve_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)`
+with the substance realted quantitites beeing vectors.
 
 # Examples
 
@@ -1290,7 +1301,7 @@ end
 function solving_peakvariance(solution_tz, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, τ₀, opt; kwargs...)
     # this version should be autodiffable for quantities in `p`
     t(z) = solution_tz(z)
-    p = (T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
+    p = (L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)
     f_τ²z(τ²,p,z) = peakode(z, t(z), τ², p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13])
     τ²₀ = τ₀^2
     zspan = (0.0, L)
@@ -1311,22 +1322,15 @@ DifferentialEquations.jl.
 See also: [`odesystem_r!`](@ref)
 """
 function solving_odesystem_r(col::Column, prog::Program, sub::Substance, opt::Options; kwargs...)
-    t₀ = [sub.t₀; sub.τ₀^2]
-    zspan = (0.0,col.L)
-	p = (col, prog, sub, opt)
-    prob = ODEProblem(odesystem_r!, t₀, zspan, p)
-    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
-    #if solution.t[end]<col.L
-    #    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=col.L/1000000)
-    #end
+    solution = solving_odesystem_r(col.L, col.d, col.df, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag, sub.t₀, sub.τ₀, opt::GasChromatographySimulator.Options; kwargs...)
     return solution
 end
 
-function solving_odesystem_r(L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, gas, opt::GasChromatographySimulator.Options; kwargs...)
+function solving_odesystem_r(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt::GasChromatographySimulator.Options; kwargs...)
     # this version should be autodiffable for quantities in `p`
     t₀ = [t₀; τ₀^2]
     zspan = (0.0,L)
-	p = (L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
+	p = (L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
     solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
     #if solution.t[end]<col.L
@@ -1349,32 +1353,21 @@ The ODE system for migration ``t(z)`` and peak variance development
 See also: [`solving_odesystem_r`](@ref), [`peakode`](@ref)
 """
 function odesystem_r!(dt, t, p, z)
-    # t[1] ... t time
-    # t[2] ... τ² band variance
-    if length(p) == 4
-        col = p[1]
-        prog = p[2]
-        sub = p[3]
-        opt = p[4]
-        dt[1] = residency(z, t[1], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
-        dt[2] = peakode(z, t[1], t[2], col, prog, sub, opt)
-    else
-        L = p[1]
-        d = p[2]
-        df = p[3]
-        T_itp = p[4]
-        Fpin_itp = p[5]
-        pout_itp = p[6]
-        Tchar = p[7]
-        θchar = p[8]
-        ΔCp = p[9]
-        φ₀ = p[10]
-        Cag = p[11]
-        gas = p[12]
-        opt = p[13]
-        dt[1] = residency(z, t[1], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
-        dt[2] = peakode(z, t[1], t[2], T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
-    end
+    L = p[1]
+    d = p[2]
+    df = p[3]
+    gas = p[4]
+    T_itp = p[5]
+    Fpin_itp = p[6]
+    pout_itp = p[7]
+    Tchar = p[8]
+    θchar = p[9]
+    ΔCp = p[10]
+    φ₀ = p[11]
+    Cag = p[12]
+    opt = p[13]
+    dt[1] = residency(z, t[1], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+    dt[2] = peakode(z, t[1], t[2], L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)
 end
 
 """
@@ -1389,21 +1382,10 @@ development ``τ²(z)``, using automatic differentiation.
 See also: [`solving_odesystem_r`](@ref), [`odesystem_r!`](@ref)
 """
 function peakode(z, t, τ², col, prog, sub, opt)
-    if opt.ng==true
-        r_ng(zt) = residency(zt[1], zt[2], prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=true, vis=opt.vis, control=opt.control, k_th=opt.k_th)
-        H_ng(z,t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; ng=true, vis=opt.vis, control=opt.control, k_th=opt.k_th)
-        ∂r∂t_ng(z,t) = ForwardDiff.gradient(r_ng, [z, t])[2]
-        return H_ng(z,t)*r_ng([z,t])^2 + 2*τ²*∂r∂t_ng(z,t)
-    else
-        r(z, t) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; vis=opt.vis, control=opt.control, k_th=opt.k_th)
-        rz(t) = r(z, t)
-        H(z, t) = plate_height(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; vis=opt.vis, control=opt.control, k_th=opt.k_th)
-        ∂rz∂t(t) = ForwardDiff.derivative(rz, t)
-        return H(z,t)*r(z,t)^2 + 2*τ²*∂rz∂t(t)
-    end
+    return peakode(z, t, τ², col.L, col.d, col.df, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag, opt)
 end
 
-function peakode(z, t, τ², T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
+function peakode(z, t, τ², L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)
     if opt.ng==true
         r_ng(zt) = residency(zt[1], zt[2], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=true, vis=opt.vis, control=opt.control, k_th=opt.k_th)
         H_ng(z,t) = plate_height(z, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=true, vis=opt.vis, control=opt.control, k_th=opt.k_th)
