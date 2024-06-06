@@ -5,6 +5,7 @@ using Interpolations
 using Integrals
 @reexport using OrdinaryDiffEq: OwrenZen3, OwrenZen4, OwrenZen5
 using ForwardDiff
+using ForwardDiffOverMeasurements
 using DataFrames
 using CSV
 using Plots
@@ -1230,13 +1231,13 @@ function solve_multithreads(par; kwargs...)
     return sol, peak
 end
 
-function solve_multithreads(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_, θchar_, ΔCp_, φ₀_, Cag_, gas, opt; kwargs...)
+function solve_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
     n = length(Tchar_)
     sol = Array{Any}(undef, n)
     peak = Array{Any}(undef, n)
     Threads.@threads for i=1:n
-        sol[i] = solving_migration(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], gas, opt; kwargs...)
-        peak[i] = solving_peakvariance(sol[i], T_itp, Fpin_itp, pout_itp, L, d, df, Tchar_[i], θchar_[i], ΔCp_[i], φ₀_[i], Cag_[i], gas, opt; kwargs...)
+        sol[i] = solving_migration(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], t₀[i], opt; kwargs...)
+        peak[i] = solving_peakvariance(sol[i], L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], τ₀[i], opt; kwargs...)
     end
     return sol, peak
 end
@@ -1247,47 +1248,25 @@ end
 Solve for the migration ``t(z)`` of solute `sub` in the GC Column `col` with
 the program `prog` and the options `opt`. `kwargs...` to pass additional options to the ODE solve function as named tuples.
 
+Alternative call:
+`solving_migration(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, t₀, opt; kwargs...)`
+
 Note: The result is the solution structure from
 DifferentialEquations.jl.
 """
 function solving_migration(col::Column, prog::Program, sub::Substance, opt::Options; kwargs...)
-	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
-    t₀ = sub.t₀
-    zspan = (0.0,col.L)
-    prob_tz = ODEProblem(f_tz, t₀, zspan)
-    solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
+    solution_tz = solving_migration(col.L, col.d, col.df, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.t₀, opt; kwargs...)
     return solution_tz
 end
 
-"""
-    solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas; kwargs...)
-
-Solve for the migration ``t(z)`` of solute with retention parameters `Tchar` `θchar` and `ΔCp` estimated for a dimensionless
-film thickness `φ₀` in a GC Column with length `L`, internal diameter `d` and film thickness `df` for a GC program `prog`, 
-options `opt` and mobile phase `gas`. `kwargs...` to pass additional options to the ODE solve function as named tuples.
-    
-Note: The result is the solution structure from
-DifferentialEquations.jl.    
-"""
-function solving_migration(Tchar, θchar, ΔCp, φ₀, L, d, df, prog, opt, gas; kwargs...)
-	f_tz(t,p,z) = residency(z, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, p[5], p[6], p[7], gas, p[1], p[2], p[3], p[4]; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
-	t₀ = 0.0
-	zspan = (0.0, L)
-	p = (Tchar, θchar, ΔCp, φ₀, L, d, df)
-	prob_tz = ODEProblem(f_tz, t₀, zspan, p)
-	solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol, reltol=opt.reltol; kwargs...)
-	#tR = solution.u[end]
-	return solution_tz
-end
-
-function solving_migration(T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt; kwargs...)
-	p = (T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
-	f_tz(t,p,z) = residency(z, t, p[1], p[2], p[3], p[4], p[5], p[6], p[12], p[7], p[8], p[9], p[10]; ng=p[13].ng, vis=p[13].vis, control=p[13].control, k_th=p[13].k_th)
-	t₀ = 0.0
+function solving_migration(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, t₀, opt; kwargs...)
+	# this version should be autodiffable for quantities in `p`
+    p = (T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, gas, opt) # should be autodiffable for all these parameters
+	f_tz(t,p,z) = residency(z, t, p[1], p[2], p[3], p[4], p[5], p[6], p[11], p[7], p[8], p[9], p[10]; ng=p[12].ng, vis=p[12].vis, control=p[12].control, k_th=p[12].k_th)
+	t₀ = t₀
 	zspan = (0.0, L)
 	prob_tz = ODEProblem(f_tz, t₀, zspan, p)
 	solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol, reltol=opt.reltol; kwargs...)
-	#tR = solution.u[end]
 	return solution_tz
 end
 
@@ -1297,27 +1276,24 @@ end
 Solve for the development of the peak variance ``τ²(z)`` of solute `sub` in the GC Column `col` with
 the program `prog` and the options `opt` during its migration defined by `solution_tz`. `kwargs...` to pass additional options to the ODE solve function as named tuples.
 
+Alternative call:
+`solving_peakvariance(solution_tz, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, τ₀, opt; kwargs...)`
+
 Note: The result is the solution structure from
 DifferentialEquations.jl.
 """
 function solving_peakvariance(solution_tz, col, prog, sub, opt; kwargs...)
-    t(z) = solution_tz(z)
-    p = (col, prog, sub, opt)
-    f_τ²z(τ²,p,z) = peakode(z, t(z), τ², col, prog, sub, opt)
-    τ²₀ = sub.τ₀^2
-    zspan = (0.0, col.L)
-    prob_τ²z = ODEProblem(f_τ²z, τ²₀, zspan, p)
-    solution_τ²z = solve(prob_τ²z, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
+    solution_τ²z = solving_peakvariance(solution_tz, col.L, col.d, col.df, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag, sub.τ₀, opt; kwargs...)
     return solution_τ²z
 end
 
-function solving_peakvariance(solution_tz, T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt; kwargs...)
+function solving_peakvariance(solution_tz, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, τ₀, opt; kwargs...)
+    # this version should be autodiffable for quantities in `p`
     t(z) = solution_tz(z)
     p = (T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
-    #f_τ²z(τ²,p,z) = peakode(z, t(z), τ², T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
-	f_τ²z(τ²,p,z) = peakode(z, t(z), τ², p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13])
-    τ²₀ = sub.τ₀^2
-    zspan = (0.0, col.L)
+    f_τ²z(τ²,p,z) = peakode(z, t(z), τ², p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13])
+    τ²₀ = τ₀^2
+    zspan = (0.0, L)
     prob_τ²z = ODEProblem(f_τ²z, τ²₀, zspan, p)
     solution_τ²z = solve(prob_τ²z, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
     return solution_τ²z
@@ -1339,25 +1315,22 @@ function solving_odesystem_r(col::Column, prog::Program, sub::Substance, opt::Op
     zspan = (0.0,col.L)
 	p = (col, prog, sub, opt)
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
-
     solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
-
-    if solution.t[end]<col.L
-        solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=col.L/1000000)
-    end
+    #if solution.t[end]<col.L
+    #    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=col.L/1000000)
+    #end
     return solution
 end
 
 function solving_odesystem_r(L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, gas, opt::GasChromatographySimulator.Options; kwargs...)
+    # this version should be autodiffable for quantities in `p`
     t₀ = [t₀; τ₀^2]
     zspan = (0.0,L)
 	p = (L, d, df, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
-
     solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
-
     #if solution.t[end]<col.L
-    #    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol, dt=col.L/1000000)
+    #    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=col.L/1000000)
     #end
     return solution
 end
@@ -1387,42 +1360,22 @@ function odesystem_r!(dt, t, p, z)
         dt[2] = peakode(z, t[1], t[2], col, prog, sub, opt)
     else
         L = p[1]
-    d = p[2]
-    df = p[3]
-	T_itp = p[4]
-    Fpin_itp = p[5]
-    pout_itp = p[6]
-	Tchar = p[7]
-    θchar = p[8]
-    ΔCp = p[9]
-    φ₀ = p[10]
-    Cag = p[11]
-    gas = p[12]
-	opt = p[13]
-    dt[1] = residency(z, t[1], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
-    dt[2] = peakode(z, t[1], t[2], T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
+        d = p[2]
+        df = p[3]
+        T_itp = p[4]
+        Fpin_itp = p[5]
+        pout_itp = p[6]
+        Tchar = p[7]
+        θchar = p[8]
+        ΔCp = p[9]
+        φ₀ = p[10]
+        Cag = p[11]
+        gas = p[12]
+        opt = p[13]
+        dt[1] = residency(z, t[1], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+        dt[2] = peakode(z, t[1], t[2], T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
     end
 end
-
-#=function odesystem_r!(dt, t, p, z)
-    # t[1] ... t time
-    # t[2] ... τ² band variance
-	L = p[1]
-    d = p[2]
-    df = p[3]
-	T_itp = p[4]
-    Fpin_itp = p[5]
-    pout_itp = p[6]
-	Tchar = p[7]
-    θchar = p[8]
-    ΔCp = p[9]
-    φ₀ = p[10]
-    Cag = p[11]
-    gas = p[12]
-	opt = p[13]
-    dt[1] = residency(z, t[1], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
-    dt[2] = peakode(z, t[1], t[2], T_itp, Fpin_itp, pout_itp, L, d, df, Tchar, θchar, ΔCp, φ₀, Cag, gas, opt)
-end=#
 
 """
     peakode(z, t, τ², col, prog, sub, opt)
