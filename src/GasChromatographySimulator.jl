@@ -1155,7 +1155,7 @@ function simulate(par; kwargs...)
     	pl = GasChromatographySimulator.peaklist(sol, par)
         return pl, sol
 	else
-		sol, peak = solve_multithreads(par; kwargs...)
+		sol, peak = solve_separate_multithreads(par; kwargs...)
     	pl = GasChromatographySimulator.peaklist(sol, peak, par)
         return pl, sol, peak
 	end
@@ -1167,7 +1167,7 @@ function simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp,
     	pl = GasChromatographySimulator.peaklist(sol, par)
         return pl, sol
 	else
-		sol, peak = solve_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
+		sol, peak = solve_separate_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
     	pl = GasChromatographySimulator.peaklist(sol, peak, par)
         return pl, sol, peak
 	end
@@ -1211,7 +1211,7 @@ function solve_system_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tch
 end
 
 """
-    solve_multithreads(par::Parameters, kwargs...)
+    solve_separate_multithreads(par::Parameters, kwargs...)
 
 Simulate the GC system defined by the structure `par` by solving the
 ODEs for ``t(z)`` and ``τ²(z)`` separatly (solving ``t(z)`` and using this result
@@ -1222,16 +1222,16 @@ Note: The result are two arrays of the solution structure from
 DifferentialEquations.jl.
 
 Alternative call:
-`solve_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)`
+`solve_separate_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)`
 with the substance realted quantitites beeing vectors.
 
 # Examples
 
 ```julia
-julia> sol, peak = solve_multithreads(par)
+julia> sol, peak = solve_separate_multithreads(par)
 ```
 """
-function solve_multithreads(par; kwargs...)
+function solve_separate_multithreads(par; kwargs...)
     n = length(par.sub)
     sol = Array{Any}(undef, n)
     peak = Array{Any}(undef, n)
@@ -1242,11 +1242,91 @@ function solve_multithreads(par; kwargs...)
     return sol, peak
 end
 
-function solve_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
+function solve_separate_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
     n = length(Tchar_)
     sol = Array{Any}(undef, n)
     peak = Array{Any}(undef, n)
     Threads.@threads for i=1:n
+        sol[i] = solving_migration(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], t₀[i], opt; kwargs...)
+        peak[i] = solving_peakvariance(sol[i], L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], τ₀[i], opt; kwargs...)
+    end
+    return sol, peak
+end
+
+"""
+    solve_system(par::Parameters, kwargs...)
+
+Simulate the GC system defined by the structure `par` by solving the
+ODEs for ``t(z)`` and ``τ²(z)`` together as a system of ODEs using multiple
+threads (parallel computing) for the simulation of different solutes. `kwargs...` to pass additional options to the ODE solve function as named tuples. . No multi-threads are used.
+
+Note: The result is an array of the solution structure from DifferentialEquations.jl.
+
+Alternative call:
+`solve_system(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)`
+with the substance realted quantitites beeing vectors.
+
+# Examples
+
+```julia
+julia> sol = solve_system(par)
+```
+"""
+function solve_system(par; kwargs...)
+	n = length(par.sub)
+	sol = Array{Any}(undef, n)
+	for i=1:n
+		sol[i] = solving_odesystem_r(par.col, par.prog, par.sub[i], par.opt; kwargs...)
+	end
+	return sol
+end
+
+function solve_system(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
+	n = length(Tchar_)
+	sol = Array{Any}(undef, n)
+	for i=1:n
+		sol[i] = solving_odesystem_r(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], t₀[i], τ₀[i], opt; kwargs...)
+	end
+	return sol
+end
+
+"""
+    solve_separate(par::Parameters, kwargs...)
+
+Simulate the GC system defined by the structure `par` by solving the
+ODEs for ``t(z)`` and ``τ²(z)`` separatly (solving ``t(z)`` and using this result
+to solve for ``τ²(z)``) using multiple threads (parallel computing) for the
+simulation of different solutes. `kwargs...` to pass additional options to the ODE solve function as named tuples. No multi-threads are used.
+
+Note: The result are two arrays of the solution structure from
+DifferentialEquations.jl.
+
+Alternative call:
+`solve_separate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)`
+with the substance realted quantitites beeing vectors.
+
+# Examples
+
+```julia
+julia> sol, peak = solve_separate(par)
+```
+"""
+function solve_separate(par; kwargs...)
+    n = length(par.sub)
+    sol = Array{Any}(undef, n)
+    peak = Array{Any}(undef, n)
+    for i=1:n
+        sol[i] = solving_migration(par.col, par.prog, par.sub[i], par.opt; kwargs...)
+        peak[i] = solving_peakvariance(sol[i], par.col, par.prog, par.sub[i], par.opt; kwargs...)
+    end
+    return sol, peak
+end
+
+function solve_separate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
+    n = length(Tchar_)
+    sol = Array{Any}(undef, n)
+    peak = Array{Any}(undef, n)
+    for i=1:n
         sol[i] = solving_migration(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], t₀[i], opt; kwargs...)
         peak[i] = solving_peakvariance(sol[i], L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], τ₀[i], opt; kwargs...)
     end
