@@ -111,7 +111,7 @@ function solve_separate_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, T
     sol = Array{Any}(undef, n)
     peak = Array{Any}(undef, n)
     Threads.@threads for i=1:n
-        sol[i] = solving_migration(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], t₀[i], opt; kwargs...)
+        sol[i] = solving_migration(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], t₀[i], opt; kwargs...)
         peak[i] = solving_peakvariance(sol[i], L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], τ₀[i], opt; kwargs...)
     end
     return sol, peak
@@ -191,7 +191,7 @@ function solve_separate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar,
     sol = Array{Any}(undef, n)
     peak = Array{Any}(undef, n)
     for i=1:n
-        sol[i] = solving_migration(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], t₀[i], opt; kwargs...)
+        sol[i] = solving_migration(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], t₀[i], opt; kwargs...)
         peak[i] = solving_peakvariance(sol[i], L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], τ₀[i], opt; kwargs...)
     end
     return sol, peak
