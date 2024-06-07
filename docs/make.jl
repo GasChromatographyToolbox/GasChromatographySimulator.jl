@@ -8,6 +8,7 @@ makedocs(
                 "Installation" => "installation.md",
                 "Usage" => "usage.md",
                 "Examples" => "examples.md",
+                "Additional features" => "additional.md",
                 "Functions" => "functions.md",
                 "References" => "references.md"
             ]
