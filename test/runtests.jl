@@ -132,12 +132,12 @@ end
     @test round(sub_0[1].Cag; sigdigits=5) == 2.5268e-5
     # test for error-cases of GasChromatographySimulator.load_solute_database
 
-    # test for old database format
-    db_old = "Database_test_old_format.csv"
-    sub_new = GasChromatographySimulator.load_solute_database(db_path, db, "Wax", "He", ["C14", "Decyl acetate", "Hexadecane", "C15", "Methyl myristate"], [1.0, 2.0, 3.0, 4.0, 5.0], [0.1, 0.2, 0.3, 0.4, 0.5])
-    sub_old = GasChromatographySimulator.load_solute_database(db_path, db_old, "Wax", "He", ["C14", "Decyl acetate", "Hexadecane", "C15", "Methyl myristate"], [1.0, 2.0, 3.0, 4.0, 5.0], [0.1, 0.2, 0.3, 0.4, 0.5])
-    @test sub_new[1].CAS == sub_old[1].CAS
-    @test sub_new[2].t₀ == 4.0
+    # test for old database format -> not supported any more
+    #db_old = "Database_test_old_format.csv"
+    #sub_new = GasChromatographySimulator.load_solute_database(db_path, db, "Wax", "He", ["C14", "Decyl acetate", "Hexadecane", "C15", "Methyl myristate"], [1.0, 2.0, 3.0, 4.0, 5.0], [0.1, 0.2, 0.3, 0.4, 0.5])
+    #sub_old = GasChromatographySimulator.load_solute_database(db_path, db_old, "Wax", "He", ["C14", "Decyl acetate", "Hexadecane", "C15", "Methyl myristate"], [1.0, 2.0, 3.0, 4.0, 5.0], [0.1, 0.2, 0.3, 0.4, 0.5])
+    #@test sub_new[1].CAS == sub_old[1].CAS
+    #@test sub_new[2].t₀ == 4.0
 
     # parameters
     par = GasChromatographySimulator.Parameters(col, prog, sub, opt)
