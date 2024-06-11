@@ -733,7 +733,8 @@ end
 #	return id
 #end
 
-"""
+# old version
+#="""
     load_solute_database(db, sp, gas, solutes, t₀, τ₀)
 
 Load the data of `solutes` for the stationary phase `sp` and the mobile
@@ -890,7 +891,8 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
 		@warn "Some solutes could not be found: $(solutes[intersect(i_notfound, i_notfound_name)])."
 	end
 	return unique(sub) # remove duplicates
-end
+end=#
+# old version
 
 """
     load_solute_database(db_path, db, sp, gas, solutes, t₀, τ₀) 
@@ -928,6 +930,213 @@ function load_solute_database(db_path::String, db::String, sp::String, gas::Stri
     insertcols!(db_dataframe, 1, :No => collect(1:length(db_dataframe.Name)))
     sub = load_solute_database(db_dataframe, sp, gas, solutes, t₀, τ₀)
 	return sub
+end
+
+"""
+	find_index_in_database(solutes, db)
+
+Find the index of the substances `solutes` in the database `db`. Herby `solutes` can be a 
+* vector of integers with the number `No` of the substances in the database.
+* vector of strings containing substance names.
+* vector of strings in the CAS number format.
+
+The index of the found substance in the database `db` and the index of the not found substances in the `solutes` vector will be returned.
+"""
+function find_index_in_database(solutes, db)
+	# find the index in the database
+	# three cases
+	# 1. number No
+	# 2. CAS number
+	# 3. name
+	regex_CAS = r"([0-9]{2,8}-[0-9]{2}-[0-9]{1})"
+	if isa(solutes, Array{Int, 1}) # number No
+		colname = :No
+	elseif isa(solutes, Array{String, 1}) #  name
+		if all(occursin.(regex_CAS, solutes)) # CAS number
+			colname = :CAS
+		else
+			colname = :CAS # if name in solutes is different from db it will not find it -> go with CAS number
+			id = GasChromatographySimulator.CAS_identification.(solutes)
+			solutes = [id[x].CAS for x in 1:length(id)]
+		end
+	else
+		error("selected substances should be either a vector of integers (number No. of the substance in the database), a vector of strings in the CAS-number format or a vector of strings containing substance names.")
+	end
+	# all indices of the solutes in the database:
+	index = [findall(solutes[x].==db[!, colname]) for x in 1:length(solutes)]
+	# transform to vector:
+	i_db = filter(isinteger, reduce(vcat, index))
+	# indices of the solutes in the solutes-vector, which are not found in the database:
+	i_solutes_not_found = findall(isempty.(index))
+	# indices of the solutes in the solutes-vector of the found database indices:
+	i_db_i_solutes = reduce(vcat,[findall(db[!, colname][reduce(vcat, index)][x].==solutes) for x in 1:length(reduce(vcat, index))])
+return i_db, i_solutes_not_found, i_db_i_solutes
+end
+
+"""
+	annotations(db)
+
+Extracts an annotation for every substance from the database `db`. The annotation consists of the entries for:
+* `Source`
+* optional categories `Cat` (all columns with the name starting with "Cat")
+* optional number `No`
+"""
+function annotations(db)
+	i_Catnames = findall(occursin.("Cat", names(db)))
+    nCat = length(i_Catnames)
+    if nCat < 1
+        Annotation = String.(db.Source)
+    else
+        Annotation = String.(db.Source)
+        for i=1:nCat
+        	for j=1:length(Annotation)
+                if typeof(db[j,i_Catnames[i]]) != Missing
+                    Annotation[j] = string(Annotation[j], ", ", db[j,i_Catnames[i]])
+                end
+            end
+        end
+    end
+	if "No" in names(db)
+		Annotation = Annotation.*string.(", No: ", db.No)
+	end
+	return Annotation
+end
+
+# new version
+"""
+	load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
+
+New function to load the data for the substances `solutes_` from the database `db_` for the stationary phase `sp_` and mobile phase `gas_` with initial time `t₀_` and initial peak width `τ₀`. The parameters `solutes_`, `t₀_` and `τ₀` must be vectors of the same length. Acceptable values for `solutes_` are either the substance names, CAS numbers or the number No from the database.
+
+The loaded data is returned as a vector of the GasChromatographySimulator.Substance structure.
+"""
+function load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
+	# check for same size of solutes_, t₀_ and τ₀_:
+	if (length(solutes_) != length(t₀_)) || (length(solutes_) != length(τ₀_))
+		@warn "Number of solutes ($(length(solutes_))), t₀ ($(length(t₀_))) and τ₀ ($(length(τ₀_))) do not match. Missing values of t₀ or τ₀ will be added with value 0.0 s. Additional values of t₀ or τ₀ will be skipped."
+        t₀_ = same_length(t₀_, solutes_)
+        τ₀_ = same_length(τ₀_, solutes_)
+	end	
+    ## remove solutes with missing CAS and give warning
+    if true in ismissing.(db_.CAS) 
+        @warn "Some CAS-numbers are missing. These substances are skipped."
+        db = disallowmissing!(db_[completecases(db_, :CAS), :], :CAS)
+    else
+        db = db_
+    end # is this still needed???
+
+	if sp_ == "" # no stationary phase is selected, like for transferlines
+		# -> at a later point
+		# how to assign name/CAS if No is used? 
+		i_db, i_solutes_not_found, i_db_i_solutes = find_index_in_database(solutes_, db)
+		if isempty(i_solutes_not_found) == false
+			@warn "Some solutes could not be found: $(solutes_[i_solutes_not_found])."
+		end
+       	Name = db.Name[i_db]
+        CAS = db.CAS[i_db]
+        # use placeholder values
+        Tchar = ones(length(Name))
+        θchar = ones(length(Name))
+        ΔCp = ones(length(Name))
+        φ₀ = ones(length(Name))
+        Annotation = fill("no sp", length(Name))
+		# Cag -> reading or calculating
+		i_Cag = findfirst("Cag".==names(db))
+		i_Cag_unc = findfirst(occursin.("Cag_", names(db)))
+		if isa(i_Cag, Int)
+			if isa(i_Cag_unc, Int)
+				Cag = db[i_db, i_Cag] .± db[i_db, i_Cag_unc]
+			else
+				Cag = db[i_db, i_Cag]
+			end
+		else
+			id = GasChromatographySimulator.CAS_identification.(CAS)
+			Cag = GasChromatographySimulator.diffusivity.(id, gas_)
+		end
+       	t₀ = t₀_[i_db_i_solutes]
+        τ₀ = τ₀_[i_db_i_solutes]
+	else
+		# 1. Filter the stationary phase
+        db_filtered = filter([:Phase] => x -> x==sp_, db)
+		if isempty(db_filtered)
+			@warn "No data for selected solutes $(solutes_) for stationary phase $(sp_)."
+			#extracted_db = DataFrame()
+			i_db = Int[]
+			i_solutes_not_found = collect(1:length(solutes_))
+			sub = GasChromatographySimulator.Substance[]
+		else
+			i_db, i_solutes_not_found, i_db_i_solutes = find_index_in_database(solutes_, db_filtered)
+			if isempty(i_solutes_not_found) == false
+				@warn "Some solutes could not be found for stationary phase $(sp_): $(solutes_[i_solutes_not_found])."
+			end
+			
+			# look for the following (optional) columns in the data 
+			# parameter name + "_" indicates the column with uncertainty values of this quantity 
+			i_Tchar_unc = findfirst(occursin.("Tchar_", names(db_filtered)))
+			i_θchar_unc = findfirst(occursin.("thetachar_", names(db_filtered)))
+			i_ΔCp = findfirst("DeltaCp".==names(db_filtered))
+			i_ΔCp_unc = findfirst(occursin.("DeltaCp_", names(db_filtered)))
+			i_Cag = findfirst("Cag".==names(db_filtered))
+			i_Cag_unc = findfirst(occursin.("Cag_", names(db_filtered)))
+			i_φ₀_unc = findfirst(occursin.("phi0_", names(db_filtered)))
+	
+			Name = db_filtered.Name[i_db]
+	        CAS = db_filtered.CAS[i_db]
+			# Tchar
+			Tchar = if isa(i_Tchar_unc, Int)
+				db_filtered.Tchar[i_db] .± db_filtered[i_db, i_Tchar_unc] .+ GasChromatographySimulator.Tst
+			else
+				db_filtered.Tchar[i_db] .+ GasChromatographySimulator.Tst
+			end
+			# θchar
+			θchar = if isa(i_θchar_unc, Int)
+				db_filtered.thetachar[i_db] .± db_filtered[i_db, i_θchar_unc]
+			else
+				db_filtered.thetachar[i_db]
+			end
+			# ΔCp
+	        ΔCp = if isa(i_ΔCp, Int)
+				if isa(i_ΔCp_unc, Int)
+					db_filtered[i_db, i_ΔCp] .± db_filtered[i_db, i_ΔCp_unc]
+				else
+					db_filtered[i_db, i_ΔCp]
+				end
+			else
+				ones(length(i_db))
+			end
+			# phi0
+			φ₀ = if isa(i_φ₀_unc, Int)
+				db_filtered.phi0[i_db] .± db_filtered[i_db, i_φ₀_unc]
+			else
+				db_filtered.phi0[i_db]
+			end
+			# annotations
+	        Annotation = annotations(db[i_db,:]) 
+			# Cag -> reading or calculating
+			Cag = if isa(i_Cag, Int)
+				if isa(i_Cag_unc, Int)
+					db_filtered[i_db, i_Cag] .± db_filtered[i_db, i_Cag_unc]
+				else
+					db_filtered[i_db, i_Cag]
+				end
+			else
+				GasChromatographySimulator.diffusivity.(GasChromatographySimulator.CAS_identification.(CAS), gas_)
+			end
+	        t₀ = [t₀_[i_db_i_solutes[x]] for x in 1:length(i_db_i_solutes)]
+	        τ₀ = [τ₀_[i_db_i_solutes[x]] for x in 1:length(i_db_i_solutes)]
+		end
+	end
+	sub = [GasChromatographySimulator.Substance(Name[x],
+                            CAS[x],
+                            Tchar[x], 
+                            θchar[x], 
+                            ΔCp[x], 
+                            φ₀[x],
+                            Annotation[x],
+                            Cag[x], 
+                            t₀[x],
+                            τ₀[x]) for x in 1:length(i_db)]
+	return unique(sub) # remove duplicates
 end
 
 """
