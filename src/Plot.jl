@@ -166,10 +166,11 @@ end
 
 # functions from GasChromatographyTools.jl:
 """
-	local_plots(xx, yy, sol, par)
+	local_plots(xx, yy, sol, par; uncertainty=true)
 
 Show additional 'local' plots of selected `yy` quantities over selected `xx`
-quantities.
+quantities. If the solutions `sol` contain values with uncertainties, the uncertainty of `yy` will be plotted
+as a ribbon, while uncertainties in `xx` are ignored (if `uncertainty=true`, else all uncertainties are ignored).
 
 # Arguments
 * `xx`: Selected quantity shown on the x-axis. Possible values: "z", "t", "T",
@@ -179,13 +180,20 @@ quantities.
 * `sol`: The solution of the simulation.
 * `par`: The parameters of the simulated GC-system.
 """   
-function local_plots(xx, yy, sol, par)
+function local_plots(xx, yy, sol, par; uncertainty=true)
 	n = size(sol)[1]
 
 	df_sol = GasChromatographySimulator.sol_extraction(sol, par)
-	xvalues = Array{Array{Float64,1}}(undef, n)
-	yvalues = Array{Array{Float64,1}}(undef, n)
-	
+	xvalues = if xx=="z"
+		Array{typeof(df_sol.z[1])}(undef, n)
+	else
+		Array{typeof(df_sol.t[1])}(undef, n)
+	end
+	yvalues = if yy=="z"
+		Array{typeof(df_sol.z[1])}(undef, n)
+	else
+		Array{typeof(df_sol.t[1])}(undef, n)
+	end
 	p_add = plot(legend=false)
 	for i=1:n
 		if xx=="z"
@@ -226,7 +234,11 @@ function local_plots(xx, yy, sol, par)
 			yvalues[i] = velocity(df_sol, i, par)
 			ylabel = "solute velocity in m/s"
 		end
-		plot!(p_add, xvalues[i], yvalues[i], xlabel=xlabel, ylabel=ylabel, label=par.sub[i].name, m=:o)
+		if uncertainty == true
+			plot!(p_add, Measurements.value.(xvalues[i]), Measurements.value.(yvalues[i]), xlabel=xlabel, ylabel=ylabel, label=par.sub[i].name, m=:o, ribbon=Measurements.uncertainty.(yvalues[i]),fillalpha=.33)
+		else
+			plot!(p_add, Measurements.value.(xvalues[i]), Measurements.value.(yvalues[i]), xlabel=xlabel, ylabel=ylabel, label=par.sub[i].name, m=:o)
+		end
 	end
 	return p_add
 end
@@ -240,7 +252,7 @@ GC-system defined by `par`.
 function velocity(df_sol, i, par)
 	x = df_sol.z[i]
 	t = df_sol.t[i]
-	u = Array{Float64}(undef, length(x))
+	u = Array{typeof(t[1])}(undef, length(x))
 	for j=1:length(x)
 		u[j] = 1/GasChromatographySimulator.residency(x[j], t[j], par.col, par.prog, par.sub[i], par.opt)
 	end
