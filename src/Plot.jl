@@ -16,7 +16,7 @@ end
 """
     plot_chromatogram(peaklist, tlims; annotation=true, number=true, mirror=false, offset=0.0)
 
-Plot the chromatogram of the peaks listed in `peaklist` over the time tupel `tlims = (t_start, t_end`). 
+Plot the chromatogram of the peaks listed in `peaklist` over the time tupel `tlims = (t_start, t_end`). If `peaklist` contains values with uncertainties, than only the values of retention time and peak widths without uncertainties are used.
 
 # Arguments
 * `peaklist`: DataFrame with the names, retention times and peak widths of the simulated substances.
@@ -41,21 +41,21 @@ function plot_chromatogram(peaklist, tlims; annotation=true, number=true, mirror
 	else
 		sgn = 1.0
 	end
-	chrom = sgn.*chromatogram(collect(t), peaklist.tR, peaklist.τR) .+ offset
-	chrom_tR = sgn.*chromatogram(peaklist.tR, peaklist.tR, peaklist.τR) .+ offset
+	chrom = sgn.*chromatogram(collect(t), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR)) .+ offset
+	chrom_tR = sgn.*chromatogram(Measurements.value.(peaklist.tR), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR)) .+ offset
 	p_chrom = plot(t, chrom, xlabel="time in s", ylabel="abundance", legend=false)
 	if annotation==true && number==true
-		plot!(p_chrom, annotations = [(peaklist.tR[i], chrom_tR[i], text(i, 10, rotation=0, :center)) for i in 1:length(peaklist.tR)])
+		plot!(p_chrom, annotations = [(Measurements.value(peaklist.tR[i]), chrom_tR[i], text(i, 10, rotation=0, :center)) for i in 1:length(peaklist.tR)])
 	elseif annotation==true && number==false
-		plot!(p_chrom, annotations = [(peaklist.tR[i], chrom_tR[i], text(peaklist.Name[i], 10, rotation=90, :center)) for i in 1:length(peaklist.tR)])
+		plot!(p_chrom, annotations = [(Measurements.value(peaklist.tR[i]), chrom_tR[i], text(peaklist.Name[i], 10, rotation=90, :center)) for i in 1:length(peaklist.tR)])
 	end
 	return p_chrom, t, chrom
 end
 
 """
-    plot_chromatogram!(p_chrom, peaklist, tlims; annotation=true, number=true, mirror=false, offset=0.0)
+    plot_chromatogram!(p_chrom, peaklist, tlims; annotation=true, number=true, mirror=true, offset=0.0)
 
-Add the chromatogram of the peaks listed in `peaklist` over the time tupel `tlims = (t_start, t_end`) to the plot `p_chrom`. 
+Add the chromatogram of the peaks listed in `peaklist` over the time tupel `tlims = (t_start, t_end`) to the plot `p_chrom`. If `peaklist` contains values with uncertainties, than only the values of retention time and peak widths without uncertainties are used. 
 
 # Arguments
 * `p_chrom`: Plot of an existing chromatogram.
@@ -71,7 +71,7 @@ Tupel `(t, chrom)`
 * `t`: Array of time of the chromatogram
 * `chrom`: Array of the abundance values of the chromatogram
 """
-function plot_chromatogram!(p_chrom, peaklist, tlims; t₀=0.0, annotation=true, number=true, mirror=false, offset=0.0)
+function plot_chromatogram!(p_chrom, peaklist, tlims; t₀=0.0, annotation=true, number=true, mirror=true, offset=0.0)
 	t₀ = tlims[1]
 	tMax = tlims[2]
 	t = t₀:tMax/10000:tMax
@@ -80,13 +80,13 @@ function plot_chromatogram!(p_chrom, peaklist, tlims; t₀=0.0, annotation=true,
 	else
 		sgn = 1.0
 	end
-	chrom = sgn.*chromatogram(collect(t), peaklist.tR, peaklist.τR) .+ offset
-	chrom_tR = sgn.*chromatogram(peaklist.tR, peaklist.tR, peaklist.τR) .+ offset
+	chrom = sgn.*chromatogram(collect(t), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR)) .+ offset
+	chrom_tR = sgn.*chromatogram(Measurements.value.(peaklist.tR), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR)) .+ offset
 	plot!(p_chrom, t, chrom)
 	if annotation==true && number==true
-		plot!(p_chrom, annotations = [(peaklist.tR[i], chrom_tR[i], text(i, 10, rotation=0, :center)) for i in 1:length(peaklist.tR)])
+		plot!(p_chrom, annotations = [(Measurements.value(peaklist.tR[i]), chrom_tR[i], text(i, 10, rotation=0, :center)) for i in 1:length(peaklist.tR)])
 	elseif annotation==true && number==false
-		plot!(p_chrom, annotations = [(peaklist.tR[i], chrom_tR[i], text(peaklist.Name[i], 10, rotation=90, :center)) for i in 1:length(peaklist.tR)])
+		plot!(p_chrom, annotations = [(Measurements.value(peaklist.tR[i]), chrom_tR[i], text(peaklist.Name[i], 10, rotation=90, :center)) for i in 1:length(peaklist.tR)])
 	end
 	return t, chrom
 end
