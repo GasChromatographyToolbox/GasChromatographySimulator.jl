@@ -1619,8 +1619,8 @@ function sol_extraction(sol, par)
     solutes = Array{String}(undef, n)
     for i=1:n
         sol_z[i] = sol[i].t
-        temp_t = Array{Real}(undef, length(sol[i].t))
-        temp_τ² = Array{Real}(undef, length(sol[i].t))
+        temp_t = Array{typeof(sol[1].u[end][1])}(undef, length(sol[i].t))
+        temp_τ² = Array{typeof(sol[1].u[end][2])}(undef, length(sol[i].t))
         for j=1:length(sol[i].t)
                 temp_t[j] = sol[i].u[j][1]
                 temp_τ²[j] = sol[i].u[j][2]
