@@ -1453,7 +1453,7 @@ function peaklist_unthread(sol, par)
     uR = Array{T}(undef, n)
     τR = Array{T}(undef, n)
     kR = Array{T}(undef, n)
-    if T == Measurement{Float64}
+    if T == Measurements.Measurement{Float64}
         Res = fill(NaN ± 0.0, n)
         Δs = fill(NaN ± 0.0, n)
     else
@@ -1545,7 +1545,7 @@ function peaklist(sol, peak, par)
     uR = Array{T}(undef, n)
     τR = Array{T}(undef, n)
     kR = Array{T}(undef, n)
-    if T == Measurement{Float64}
+    if T == Measurements.Measurement{Float64}
         Res = fill(NaN ± 0.0, n)
         Δs = fill(NaN ± 0.0, n)
     else
