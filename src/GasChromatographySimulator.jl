@@ -13,6 +13,7 @@ using HypertextLiteral
 using PlutoUI
 using ChemicalIdentifiers
 using UrlDownload
+using Measurements
 
 # some constants
 const Tst = 273.15            # K
