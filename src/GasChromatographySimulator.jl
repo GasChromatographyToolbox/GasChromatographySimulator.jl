@@ -1453,8 +1453,13 @@ function peaklist_unthread(sol, par)
     uR = Array{T}(undef, n)
     τR = Array{T}(undef, n)
     kR = Array{T}(undef, n)
-    Res = fill(NaN, n)
-    Δs = fill(NaN, n)
+    if T == Measurement{Float64}
+        Res = fill(NaN ± 0.0, n)
+        Δs = fill(NaN ± 0.0, n)
+    else
+        Res = fill(NaN, n)
+        Δs = fill(NaN, n)
+    end
     Annotations = Array{String}(undef, n)
     for i=1:n
         Name[i] = par.sub[i].name
@@ -1540,8 +1545,13 @@ function peaklist(sol, peak, par)
     uR = Array{T}(undef, n)
     τR = Array{T}(undef, n)
     kR = Array{T}(undef, n)
-    Res = fill(NaN, n)
-    Δs = fill(NaN, n)
+    if T == Measurement{Float64}
+        Res = fill(NaN ± 0.0, n)
+        Δs = fill(NaN ± 0.0, n)
+    else
+        Res = fill(NaN, n)
+        Δs = fill(NaN, n)
+    end
     Annotations = Array{String}(undef, n)
     #Threads.@threads for i=1:n
     for i=1:n
