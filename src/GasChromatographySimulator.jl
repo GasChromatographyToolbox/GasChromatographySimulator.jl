@@ -1613,9 +1613,9 @@ function sol_extraction(sol, par)
     # extract the points z=t, t=u1, τ²=u2 from the solution of
     # the ODE system
 	n = length(par.sub)
-    sol_z = Array{typeof(sol[1].t[end])}(undef, n)
-    sol_t = Array{typeof(sol[1].u[end][1])}(undef, n)
-    sol_τ² = Array{typeof(sol[1].u[end][2])}(undef, n)
+    sol_z = Array{typeof(sol[1].t)}(undef, n)
+    sol_t = Array{typeof(sol[1].u[1])}(undef, n)
+    sol_τ² = Array{typeof(sol[1].u[1])}(undef, n)
     solutes = Array{String}(undef, n)
     for i=1:n
         sol_z[i] = sol[i].t
@@ -1652,10 +1652,10 @@ function sol_extraction(sol, peak, par)
     # and the points z=t, τ²=u, from the solution of 
     # the second ODE (peak_τz)
 	n = length(par.sub)
-    sol_z = Array{typeof(sol[1].t[end])}(undef, n)
-    sol_t = Array{typeof(sol[1].u[end])}(undef, n)
-    peak_z = Array{typeof(peak[1].t[end])}(undef, n)
-    peak_τ² = Array{typeof(peak[1].u[end])}(undef, n)
+    sol_z = Array{typeof(sol[1].t)}(undef, n)
+    sol_t = Array{typeof(sol[1].u)}(undef, n)
+    peak_z = Array{typeof(peak[1].t)}(undef, n)
+    peak_τ² = Array{typeof(peak[1].u)}(undef, n)
     solutes = Array{String}(undef, n)
     for i=1:n
         sol_z[i] = sol[i].t
