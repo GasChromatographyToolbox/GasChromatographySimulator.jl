@@ -13,6 +13,8 @@ function chromatogram(t, tR, τR)
 	return sum(chromatograms)
 end
 
+rectangle(w, h, x, y) = Shape(x .+ [-w,w,w,-w], y .+ [0,0,h,h])
+
 """
     plot_chromatogram(peaklist, tlims; annotation=true, number=true, mirror=false, offset=0.0, uncertainty=false, color=:blue)
 
