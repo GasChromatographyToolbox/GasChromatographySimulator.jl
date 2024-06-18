@@ -15,7 +15,7 @@ pout_steps = [0.0, 0.0, 0.0, 0.0].*1000.0
 x₀_steps = zeros(length(time_steps))
 L₀_steps = L.*ones(length(time_steps))
 α_steps = zeros(length(time_steps))
-db_path = string(@__DIR__, "/data")
+db_path = joinpath("..", "data")#string(@__DIR__, "/data")
 db = "Database_test.csv"
 db_unc = "Database_test_uncertainty.csv"
 
@@ -154,8 +154,8 @@ end
     @test k == opt.k_th
 
     H = GasChromatographySimulator.plate_height(0.0, 0.0, par.col, par.prog, par.sub[3], par.opt)
-    H_ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, d, par.col.df, par.col.gas, par.sub[3].Tchar, par.sub[3].θchar, par.sub[3].ΔCp, par.sub[3].φ₀, par.sub[3].Cag)
-    H__ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, d, par.col.df, par.col.gas, 0.0, 0.0, 0.0, par.sub[3].φ₀, par.sub[3].Cag)
+    H_ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[3].Tchar, par.sub[3].θchar, par.sub[3].ΔCp, par.sub[3].φ₀, par.sub[3].Cag)
+    H__ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, 0.0, 0.0, 0.0, par.sub[3].φ₀, par.sub[3].Cag)
     @test H == H_
     @test H > H__
 
@@ -164,7 +164,7 @@ end
     prog_F = GasChromatographySimulator.constructor_Program(time_steps, temp_steps, F_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, opt.Tcontrol, col.L)
     par_F = GasChromatographySimulator.Parameters(col, prog_F, sub, opt_F)
     pin_F = GasChromatographySimulator.inlet_pressure(0.0, par_F)
-    pin_F_ = GasChromatographySimulator.inlet_pressure(0.0, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, d, col.gas; control=opt_F.control) 
+    pin_F_ = GasChromatographySimulator.inlet_pressure(0.0, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; control=opt_F.control) 
     @test pin_F == pin_F_
 end
 
@@ -469,30 +469,32 @@ end
 end
 
 @testset "uncertainty" begin
-    col = GasChromatographySimulator.Column(30.0±1.0, 0.25e-3, 0.25e-6, "Rxi5SilMS", "He")
+    col = GasChromatographySimulator.Column(GasChromatographySimulator.measurement(30.0, 1.0), 0.25e-3, 0.25e-6, "Rxi5SilMS", "He")
     prog = GasChromatographySimulator.Program([40.0, 3.0, 10.0, 300.0, 5.0], [300000.0, 3.0, (450000.0-300000.0)/(300.0-40.0)*10.0, 450000.0, 5.0], col.L)
-    @test typeof(prog.T_itp(col.L, 523.0)) == Measurement{Float64}
-    sub = GasChromatographySimulator.load_solute_database(db_path, db_unc, col.sp, col.gas, ["Octan-1-ol", "Aniline"], zeros(2).±zeros(2), zeros(2).±zeros(2))
-    @test typeof(sub[1].Tchar) == Measurement{Float64}
+    @test typeof(prog.T_itp(col.L, 523.0)) == GasChromatographySimulator.Measurement{Float64}
+    sub = GasChromatographySimulator.load_solute_database(db_path, db_unc, col.sp, col.gas, ["Octan-1-ol", "Aniline"], fill(GasChromatographySimulator.measurement(0.0, 0.0), 2), fill(GasChromatographySimulator.measurement(0.0, 0.0), 2))
+    @test typeof(sub[1].Tchar) == GasChromatographySimulator.Measurement{Float64}
     opt = GasChromatographySimulator.Options(ng=true)
     par = GasChromatographySimulator.Parameters(col, prog, sub, opt)
     sim = GasChromatographySimulator.simulate(par)
-    @test typeof(sim[1].tR) == Array{Measurement{Float64}, 1}
+    @test typeof(sim[1].tR) == Array{GasChromatographySimulator.Measurement{Float64}, 1}
 end
 
 @testset "differentiability" begin
-    prog = GasChromatographySimulator.Program([40.0, 3.0, 10.0, 300.0, 5.0], [300000.0, 3.0, (450000.0-300000.0)/(300.0-40.0)*10.0, 450000.0, 5.0], col.L)
+    prog = GasChromatographySimulator.Program([40.0, 3.0, 10.0, 300.0, 5.0], [300000.0, 3.0, (450000.0-300000.0)/(300.0-40.0)*10.0, 450000.0, 5.0], 30.0)
     opt = GasChromatographySimulator.Options(ng=true)
     # retention time and peak width of one substance depending on retention parameters
-    sol_tR_τ_RP(x) = GasChromatographySimulator.solving_odesystem_r(30.0, 0.25e-3, 0.25e-6, "He", prog.T_itp, prog.Fpin_itp, prog.pout_itp, x[1], x[2], x[3], 1e-3, 1e-6, 0.0, 0.0, opt).u[end]
+    sol_tR_τR_RP(x) = GasChromatographySimulator.solving_odesystem_r(30.0, 0.25e-3, 0.25e-6, "He", prog.T_itp, prog.Fpin_itp, prog.pout_itp, x[1], x[2], x[3], 1e-3, 1e-6, 0.0, 0.0, opt).u[end]
     # differentiation
-    ∂sol_tR_τR_RP(x) = ForwardDiff.jacobian(sol_tR_τR_RP, x)
-    @test size(∂sol_tR_τR_RP([400.0, 30.0, 100.0])) = (2, 3)
+    ∂sol_tR_τR_RP(x) = GasChromatographySimulator.ForwardDiff.jacobian(sol_tR_τR_RP, x)
+    val = ∂sol_tR_τR_RP([400.0, 30.0, 100.0])
+    @test size(val) == (2, 3)
     # retention time and peak width of one substance depending on column parameters
-    sol_tR_τ_col(x) = GasChromatographySimulator.solving_odesystem_r(x[1], x[2], x[3], "He", prog.T_itp, prog.Fpin_itp, prog.pout_itp, 400.0, 30.0, 100.0, 1e-3, 1e-6, 0.0, 0.0, opt).u[end]
+    sol_tR_τR_col(x) = GasChromatographySimulator.solving_odesystem_r(x[1], x[2], x[3], "He", prog.T_itp, prog.Fpin_itp, prog.pout_itp, 400.0, 30.0, 100.0, 1e-3, 1e-6, 0.0, 0.0, opt).u[end]
     # differentiation
-    ∂sol_tR_τR_col(x) = ForwardDiff.jacobian(sol_tR_τR_col, x)
-    @test size(∂sol_tR_τR_col([30.0, 0.25e-3, 0.25e-6])) = (2, 3)
+    ∂sol_tR_τR_col(x) = GasChromatographySimulator.ForwardDiff.jacobian(sol_tR_τR_col, x)
+    val_col = ∂sol_tR_τR_col([30.0, 0.25e-3, 0.25e-6])
+    @test size(val_col) == (2, 3)
 end
 
 println("Test run successful.")
