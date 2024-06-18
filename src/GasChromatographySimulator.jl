@@ -648,10 +648,11 @@ julia> T_itp = temperature_interpolation([0.0, 60.0, 300.0, 120.0], [40.0, 40.0,
 """
 function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Array{<:Real,1}, gradient_function::Function, L; ng=false, dx=1e-3)
 	T(x) = temp_steps .+ gradient_function(x) 
+	L_ = Measurements.value(L)
     if ng == false
-	    nx = 0.0:dx:L # mm exact
+	    nx = 0.0:dx:L_ # mm exact
     else
-        nx = [0.0, L]
+        nx = [0.0, L_]
     end
 	nt = cumsum(time_steps)
 	Tmat = Array{Real}(undef, length(nx), length(nt))
@@ -660,7 +661,7 @@ function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Arra
 			Tmat[i,j] = T(nx[i])[j] + 273.15
 		end
 	end
-	T_itp = LinearInterpolation((nx, nt), Tmat, extrapolation_bc=Flat())
+	T_itp = GasChromatographySimulator.LinearInterpolation((nx, nt), Tmat, extrapolation_bc=GasChromatographySimulator.Flat())
 	return T_itp
 end
 
