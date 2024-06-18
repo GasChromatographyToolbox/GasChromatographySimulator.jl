@@ -381,7 +381,7 @@ function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, Fpi
     # function to construct the Program structure
     # without a thermal gradient
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
-    a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) L.*ones(length(time_steps)) zeros(length(time_steps))]
+    a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) Measurements.value(L).*ones(length(time_steps)) zeros(length(time_steps))]
     gf(x) = gradient(x, a_gf)
     T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
     Fpin_itp = steps_interpolation(time_steps, Fpin_steps)
@@ -430,7 +430,7 @@ function Program(TP, FpinP, L; pout="vacuum", time_unit="min")
     else
         pout_steps = pn.*ones(length(time_steps))
     end
-    a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) L.*ones(length(time_steps)) zeros(length(time_steps))]
+    a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) Measurements.value(L).*ones(length(time_steps)) zeros(length(time_steps))]
     gf(x) = GasChromatographySimulator.gradient(x, a_gf)
     T_itp = GasChromatographySimulator.temperature_interpolation(time_steps, temp_steps, gf, L)
     Fpin_itp = GasChromatographySimulator.steps_interpolation(time_steps, Fpin_steps)
