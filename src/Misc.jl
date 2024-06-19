@@ -63,6 +63,7 @@ DataFrames and calculating the absolute difference of the retention times (in s)
 and the relative difference (in %).
 """
 function compare_measurement_simulation(meas, peaklist)
+	# check this function
 	name = meas.Name
 	tRm = meas.RT
 	tRs = Array{Real}(undef, size(meas)[1])
