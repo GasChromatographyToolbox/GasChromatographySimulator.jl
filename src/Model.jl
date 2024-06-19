@@ -93,8 +93,8 @@ function flow_restriction(x, t, T_itp, d, gas; ng=false, vis="Blumberg")
     if ng==true
         κ = x*GasChromatographySimulator.viscosity(x, t, T_itp, gas, vis=vis)*T_itp(x, t)*d(x)^-4
     else
-		p = (t, d)
-        f(y, p) = GasChromatographySimulator.viscosity(y, p[1], T_itp, gas, vis=vis)*T_itp(y, p[1])*p[2](y)^-4
+		p = (t, )# d) if `d` is function of `x` it cannot be part of `p` 
+        f(y, p) = GasChromatographySimulator.viscosity(y, p[1], T_itp, gas, vis=vis)*T_itp(y, p[1])*d(y)^-4
         if typeof(x) == Measurements.Measurement{Float64}
 			domain = (0.0±0.0, x)
 		else
