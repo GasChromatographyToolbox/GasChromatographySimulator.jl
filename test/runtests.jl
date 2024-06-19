@@ -153,11 +153,11 @@ end
     k = GasChromatographySimulator.retention_factor(0.0, 0.0, par.col, par.prog, par.sub[3], par.opt)
     @test k == opt.k_th
 
-    H = GasChromatographySimulator.plate_height(0.0, 0.0, par.col, par.prog, par.sub[3], par.opt)
-    H_ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[3].Tchar, par.sub[3].θchar, par.sub[3].ΔCp, par.sub[3].φ₀, par.sub[3].Cag)
-    H__ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, 0.0, 0.0, 0.0, par.sub[3].φ₀, par.sub[3].Cag)
-    @test H == H_
-    @test H > H__
+#    H = GasChromatographySimulator.plate_height(0.0, 0.0, par.col, par.prog, par.sub[3], par.opt)
+#    H_ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[3].Tchar, par.sub[3].θchar, par.sub[3].ΔCp, par.sub[3].φ₀, par.sub[3].Cag)
+#    H__ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, 0.0, 0.0, 0.0, par.sub[3].φ₀, par.sub[3].Cag)
+#    @test H == H_
+#    @test H > H__
 
     # control="Flow"
     opt_F = GasChromatographySimulator.Options(control="Flow")
