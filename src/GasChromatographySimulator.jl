@@ -13,6 +13,7 @@ using HypertextLiteral
 using PlutoUI
 using ChemicalIdentifiers
 using UrlDownload
+using Measurements
 
 # some constants
 const Tst = 273.15            # K
@@ -380,7 +381,7 @@ function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, Fpi
     # function to construct the Program structure
     # without a thermal gradient
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
-    a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) L.*ones(length(time_steps)) zeros(length(time_steps))]
+    a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) Measurements.value(L).*ones(length(time_steps)) zeros(length(time_steps))]
     gf(x) = gradient(x, a_gf)
     T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
     Fpin_itp = steps_interpolation(time_steps, Fpin_steps)
@@ -429,7 +430,7 @@ function Program(TP, FpinP, L; pout="vacuum", time_unit="min")
     else
         pout_steps = pn.*ones(length(time_steps))
     end
-    a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) L.*ones(length(time_steps)) zeros(length(time_steps))]
+    a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) Measurements.value(L).*ones(length(time_steps)) zeros(length(time_steps))]
     gf(x) = GasChromatographySimulator.gradient(x, a_gf)
     T_itp = GasChromatographySimulator.temperature_interpolation(time_steps, temp_steps, gf, L)
     Fpin_itp = GasChromatographySimulator.steps_interpolation(time_steps, Fpin_steps)
@@ -647,10 +648,11 @@ julia> T_itp = temperature_interpolation([0.0, 60.0, 300.0, 120.0], [40.0, 40.0,
 """
 function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Array{<:Real,1}, gradient_function::Function, L; ng=false, dx=1e-3)
 	T(x) = temp_steps .+ gradient_function(x) 
+	L_ = Measurements.value(L)
     if ng == false
-	    nx = 0.0:dx:L # mm exact
+	    nx = 0.0:dx:L_ # mm exact
     else
-        nx = [0.0, L]
+        nx = [0.0, L_]
     end
 	nt = cumsum(time_steps)
 	Tmat = Array{Real}(undef, length(nx), length(nt))
@@ -659,7 +661,7 @@ function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Arra
 			Tmat[i,j] = T(nx[i])[j] + 273.15
 		end
 	end
-	T_itp = LinearInterpolation((nx, nt), Tmat, extrapolation_bc=Flat())
+	T_itp = GasChromatographySimulator.LinearInterpolation((nx, nt), Tmat, extrapolation_bc=GasChromatographySimulator.Flat())
 	return T_itp
 end
 
@@ -733,7 +735,8 @@ end
 #	return id
 #end
 
-"""
+# old version
+#="""
     load_solute_database(db, sp, gas, solutes, t₀, τ₀)
 
 Load the data of `solutes` for the stationary phase `sp` and the mobile
@@ -890,7 +893,8 @@ function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
 		@warn "Some solutes could not be found: $(solutes[intersect(i_notfound, i_notfound_name)])."
 	end
 	return unique(sub) # remove duplicates
-end
+end=#
+# old version
 
 """
     load_solute_database(db_path, db, sp, gas, solutes, t₀, τ₀) 
@@ -928,6 +932,213 @@ function load_solute_database(db_path::String, db::String, sp::String, gas::Stri
     insertcols!(db_dataframe, 1, :No => collect(1:length(db_dataframe.Name)))
     sub = load_solute_database(db_dataframe, sp, gas, solutes, t₀, τ₀)
 	return sub
+end
+
+"""
+	find_index_in_database(solutes, db)
+
+Find the index of the substances `solutes` in the database `db`. Herby `solutes` can be a 
+* vector of integers with the number `No` of the substances in the database.
+* vector of strings containing substance names.
+* vector of strings in the CAS number format.
+
+The index of the found substance in the database `db` and the index of the not found substances in the `solutes` vector will be returned.
+"""
+function find_index_in_database(solutes, db)
+	# find the index in the database
+	# three cases
+	# 1. number No
+	# 2. CAS number
+	# 3. name
+	regex_CAS = r"([0-9]{2,8}-[0-9]{2}-[0-9]{1})"
+	if isa(solutes, Array{Int, 1}) # number No
+		colname = :No
+	elseif isa(solutes, Array{String, 1}) #  name
+		if all(occursin.(regex_CAS, solutes)) # CAS number
+			colname = :CAS
+		else
+			colname = :CAS # if name in solutes is different from db it will not find it -> go with CAS number
+			id = GasChromatographySimulator.CAS_identification.(solutes)
+			solutes = [id[x].CAS for x in 1:length(id)]
+		end
+	else
+		error("selected substances should be either a vector of integers (number No. of the substance in the database), a vector of strings in the CAS-number format or a vector of strings containing substance names.")
+	end
+	# all indices of the solutes in the database:
+	index = [findall(solutes[x].==db[!, colname]) for x in 1:length(solutes)]
+	# transform to vector:
+	i_db = filter(isinteger, reduce(vcat, index))
+	# indices of the solutes in the solutes-vector, which are not found in the database:
+	i_solutes_not_found = findall(isempty.(index))
+	# indices of the solutes in the solutes-vector of the found database indices:
+	i_db_i_solutes = reduce(vcat,[findall(db[!, colname][reduce(vcat, index)][x].==solutes) for x in 1:length(reduce(vcat, index))])
+return i_db, i_solutes_not_found, i_db_i_solutes
+end
+
+"""
+	annotations(db)
+
+Extracts an annotation for every substance from the database `db`. The annotation consists of the entries for:
+* `Source`
+* optional categories `Cat` (all columns with the name starting with "Cat")
+* optional number `No`
+"""
+function annotations(db)
+	i_Catnames = findall(occursin.("Cat", names(db)))
+    nCat = length(i_Catnames)
+    if nCat < 1
+        Annotation = String.(db.Source)
+    else
+        Annotation = String.(db.Source)
+        for i=1:nCat
+        	for j=1:length(Annotation)
+                if typeof(db[j,i_Catnames[i]]) != Missing
+                    Annotation[j] = string(Annotation[j], ", ", db[j,i_Catnames[i]])
+                end
+            end
+        end
+    end
+	if "No" in names(db)
+		Annotation = Annotation.*string.(", No: ", db.No)
+	end
+	return Annotation
+end
+
+# new version
+"""
+	load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
+
+New function to load the data for the substances `solutes_` from the database `db_` for the stationary phase `sp_` and mobile phase `gas_` with initial time `t₀_` and initial peak width `τ₀`. The parameters `solutes_`, `t₀_` and `τ₀` must be vectors of the same length. Acceptable values for `solutes_` are either the substance names, CAS numbers or the number No from the database.
+
+The loaded data is returned as a vector of the GasChromatographySimulator.Substance structure.
+"""
+function load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
+	# check for same size of solutes_, t₀_ and τ₀_:
+	if (length(solutes_) != length(t₀_)) || (length(solutes_) != length(τ₀_))
+		@warn "Number of solutes ($(length(solutes_))), t₀ ($(length(t₀_))) and τ₀ ($(length(τ₀_))) do not match. Missing values of t₀ or τ₀ will be added with value 0.0 s. Additional values of t₀ or τ₀ will be skipped."
+        t₀_ = same_length(t₀_, solutes_)
+        τ₀_ = same_length(τ₀_, solutes_)
+	end	
+    ## remove solutes with missing CAS and give warning
+    if true in ismissing.(db_.CAS) 
+        @warn "Some CAS-numbers are missing. These substances are skipped."
+        db = disallowmissing!(db_[completecases(db_, :CAS), :], :CAS)
+    else
+        db = db_
+    end # is this still needed???
+
+	if sp_ == "" # no stationary phase is selected, like for transferlines
+		# -> at a later point
+		# how to assign name/CAS if No is used? 
+		i_db, i_solutes_not_found, i_db_i_solutes = find_index_in_database(solutes_, db)
+		if isempty(i_solutes_not_found) == false
+			@warn "Some solutes could not be found: $(solutes_[i_solutes_not_found])."
+		end
+       	Name = db.Name[i_db]
+        CAS = db.CAS[i_db]
+        # use placeholder values
+        Tchar = ones(length(Name))
+        θchar = ones(length(Name))
+        ΔCp = ones(length(Name))
+        φ₀ = ones(length(Name))
+        Annotation = fill("no sp", length(Name))
+		# Cag -> reading or calculating
+		i_Cag = findfirst("Cag".==names(db))
+		i_Cag_unc = findfirst(occursin.("Cag_", names(db)))
+		if isa(i_Cag, Int)
+			if isa(i_Cag_unc, Int)
+				Cag = db[i_db, i_Cag] .± db[i_db, i_Cag_unc]
+			else
+				Cag = db[i_db, i_Cag]
+			end
+		else
+			id = GasChromatographySimulator.CAS_identification.(CAS)
+			Cag = GasChromatographySimulator.diffusivity.(id, gas_)
+		end
+       	t₀ = t₀_[i_db_i_solutes]
+        τ₀ = τ₀_[i_db_i_solutes]
+	else
+		# 1. Filter the stationary phase
+        db_filtered = filter([:Phase] => x -> x==sp_, db)
+		if isempty(db_filtered)
+			@warn "No data for selected solutes $(solutes_) for stationary phase $(sp_)."
+			#extracted_db = DataFrame()
+			i_db = Int[]
+			i_solutes_not_found = collect(1:length(solutes_))
+			sub = GasChromatographySimulator.Substance[]
+		else
+			i_db, i_solutes_not_found, i_db_i_solutes = find_index_in_database(solutes_, db_filtered)
+			if isempty(i_solutes_not_found) == false
+				@warn "Some solutes could not be found for stationary phase $(sp_): $(solutes_[i_solutes_not_found])."
+			end
+			
+			# look for the following (optional) columns in the data 
+			# parameter name + "_" indicates the column with uncertainty values of this quantity 
+			i_Tchar_unc = findfirst(occursin.("Tchar_", names(db_filtered)))
+			i_θchar_unc = findfirst(occursin.("thetachar_", names(db_filtered)))
+			i_ΔCp = findfirst("DeltaCp".==names(db_filtered))
+			i_ΔCp_unc = findfirst(occursin.("DeltaCp_", names(db_filtered)))
+			i_Cag = findfirst("Cag".==names(db_filtered))
+			i_Cag_unc = findfirst(occursin.("Cag_", names(db_filtered)))
+			i_φ₀_unc = findfirst(occursin.("phi0_", names(db_filtered)))
+	
+			Name = db_filtered.Name[i_db]
+	        CAS = db_filtered.CAS[i_db]
+			# Tchar
+			Tchar = if isa(i_Tchar_unc, Int)
+				db_filtered.Tchar[i_db] .± db_filtered[i_db, i_Tchar_unc] .+ GasChromatographySimulator.Tst
+			else
+				db_filtered.Tchar[i_db] .+ GasChromatographySimulator.Tst
+			end
+			# θchar
+			θchar = if isa(i_θchar_unc, Int)
+				db_filtered.thetachar[i_db] .± db_filtered[i_db, i_θchar_unc]
+			else
+				db_filtered.thetachar[i_db]
+			end
+			# ΔCp
+	        ΔCp = if isa(i_ΔCp, Int)
+				if isa(i_ΔCp_unc, Int)
+					db_filtered[i_db, i_ΔCp] .± db_filtered[i_db, i_ΔCp_unc]
+				else
+					db_filtered[i_db, i_ΔCp]
+				end
+			else
+				ones(length(i_db))
+			end
+			# phi0
+			φ₀ = if isa(i_φ₀_unc, Int)
+				db_filtered.phi0[i_db] .± db_filtered[i_db, i_φ₀_unc]
+			else
+				db_filtered.phi0[i_db]
+			end
+			# annotations
+	        Annotation = annotations(db[i_db,:]) 
+			# Cag -> reading or calculating
+			Cag = if isa(i_Cag, Int)
+				if isa(i_Cag_unc, Int)
+					db_filtered[i_db, i_Cag] .± db_filtered[i_db, i_Cag_unc]
+				else
+					db_filtered[i_db, i_Cag]
+				end
+			else
+				GasChromatographySimulator.diffusivity.(GasChromatographySimulator.CAS_identification.(CAS), gas_)
+			end
+	        t₀ = [t₀_[i_db_i_solutes[x]] for x in 1:length(i_db_i_solutes)]
+	        τ₀ = [τ₀_[i_db_i_solutes[x]] for x in 1:length(i_db_i_solutes)]
+		end
+	end
+	sub = [GasChromatographySimulator.Substance(Name[x],
+                            CAS[x],
+                            Tchar[x], 
+                            θchar[x], 
+                            ΔCp[x], 
+                            φ₀[x],
+                            Annotation[x],
+                            Cag[x], 
+                            t₀[x],
+                            τ₀[x]) for x in 1:length(i_db)]
+	return unique(sub) # remove duplicates
 end
 
 """
@@ -1173,16 +1384,17 @@ end
 
 function peaklist_thread(sol, par)
 	n = length(par.sub)
+    T = typeof(sol[1].u[end][1])
     # sol is solution from ODE system
     No = Array{Union{Missing, Int64}}(undef, n)
     Name = Array{String}(undef, n)
     CAS = Array{String}(undef, n)
-    tR = Array{Real}(undef, n)
-    TR = Array{Real}(undef, n)
-    σR = Array{Real}(undef, n)
-    uR = Array{Real}(undef, n)
-    τR = Array{Real}(undef, n)
-    kR = Array{Real}(undef, n)
+    tR = Array{T}(undef, n)
+    TR = Array{T}(undef, n)
+    σR = Array{T}(undef, n)
+    uR = Array{T}(undef, n)
+    τR = Array{T}(undef, n)
+    kR = Array{T}(undef, n)
     Res = fill(NaN, n)
     Δs = fill(NaN, n)
     Annotations = Array{String}(undef, n)
@@ -1232,18 +1444,24 @@ end
 
 function peaklist_unthread(sol, par)
 	n = length(par.sub)
+    T = typeof(sol[1].u[end][1])
     # sol is solution from ODE system
     No = Array{Union{Missing, Int64}}(undef, n)
     Name = Array{String}(undef, n)
     CAS = Array{String}(undef, n)
-    tR = Array{Real}(undef, n)
-    TR = Array{Real}(undef, n)
-    σR = Array{Real}(undef, n)
-    uR = Array{Real}(undef, n)
-    τR = Array{Real}(undef, n)
-    kR = Array{Real}(undef, n)
-    Res = fill(NaN, n)
-    Δs = fill(NaN, n)
+    tR = Array{T}(undef, n)
+    TR = Array{T}(undef, n)
+    σR = Array{T}(undef, n)
+    uR = Array{T}(undef, n)
+    τR = Array{T}(undef, n)
+    kR = Array{T}(undef, n)
+    if T == Measurements.Measurement{Float64}
+        Res = fill(NaN ± 0.0, n)
+        Δs = fill(NaN ± 0.0, n)
+    else
+        Res = fill(NaN, n)
+        Δs = fill(NaN, n)
+    end
     Annotations = Array{String}(undef, n)
     for i=1:n
         Name[i] = par.sub[i].name
@@ -1319,17 +1537,23 @@ julia> pl = peaklist(sol, peak, par)
 """
 function peaklist(sol, peak, par)
 	n = length(par.sub)
+    T = typeof(sol[1].u[end])
     No = Array{Union{Missing, Int64}}(undef, n)
     Name = Array{String}(undef, n)
     CAS = Array{String}(undef, n)
-    tR = Array{Real}(undef, n)
-    TR = Array{Real}(undef, n)
-    σR = Array{Real}(undef, n)
-    uR = Array{Real}(undef, n)
-    τR = Array{Real}(undef, n)
-    kR = Array{Real}(undef, n)
-    Res = fill(NaN, n)
-    Δs = fill(NaN, n)
+    tR = Array{T}(undef, n)
+    TR = Array{T}(undef, n)
+    σR = Array{T}(undef, n)
+    uR = Array{T}(undef, n)
+    τR = Array{T}(undef, n)
+    kR = Array{T}(undef, n)
+    if T == Measurements.Measurement{Float64}
+        Res = fill(NaN ± 0.0, n)
+        Δs = fill(NaN ± 0.0, n)
+    else
+        Res = fill(NaN, n)
+        Δs = fill(NaN, n)
+    end
     Annotations = Array{String}(undef, n)
     #Threads.@threads for i=1:n
     for i=1:n
@@ -1390,14 +1614,14 @@ function sol_extraction(sol, par)
     # extract the points z=t, t=u1, τ²=u2 from the solution of
     # the ODE system
 	n = length(par.sub)
-    sol_z = Array{Any}(undef, n)
-    sol_t = Array{Any}(undef, n)
-    sol_τ² = Array{Any}(undef, n)
+    sol_z = Array{typeof(sol[1].t)}(undef, n)
+    sol_t = Array{typeof(sol[1].u[1])}(undef, n)
+    sol_τ² = Array{typeof(sol[1].u[1])}(undef, n)
     solutes = Array{String}(undef, n)
     for i=1:n
         sol_z[i] = sol[i].t
-        temp_t = Array{Real}(undef, length(sol[i].t))
-        temp_τ² = Array{Real}(undef, length(sol[i].t))
+        temp_t = Array{typeof(sol[1].u[end][1])}(undef, length(sol[i].t))
+        temp_τ² = Array{typeof(sol[1].u[end][2])}(undef, length(sol[i].t))
         for j=1:length(sol[i].t)
                 temp_t[j] = sol[i].u[j][1]
                 temp_τ²[j] = sol[i].u[j][2]
@@ -1429,10 +1653,10 @@ function sol_extraction(sol, peak, par)
     # and the points z=t, τ²=u, from the solution of 
     # the second ODE (peak_τz)
 	n = length(par.sub)
-    sol_z = Array{Any}(undef, n)
-    sol_t = Array{Any}(undef, n)
-    peak_z = Array{Any}(undef, n)
-    peak_τ² = Array{Any}(undef, n)
+    sol_z = Array{typeof(sol[1].t)}(undef, n)
+    sol_t = Array{typeof(sol[1].u)}(undef, n)
+    peak_z = Array{typeof(peak[1].t)}(undef, n)
+    peak_τ² = Array{typeof(peak[1].u)}(undef, n)
     solutes = Array{String}(undef, n)
     for i=1:n
         sol_z[i] = sol[i].t

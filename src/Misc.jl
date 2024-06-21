@@ -63,6 +63,7 @@ DataFrames and calculating the absolute difference of the retention times (in s)
 and the relative difference (in %).
 """
 function compare_measurement_simulation(meas, peaklist)
+	# check this function
 	name = meas.Name
 	tRm = meas.RT
 	tRs = Array{Real}(undef, size(meas)[1])
@@ -97,4 +98,26 @@ function pares_No_from_sub_values(sub_values; separator=" - ")
 		id[i] = parse(Int, split(sub_values[i], separator)[1])
 	end
 	id
+end
+
+"""
+	isinteger(x)
+
+Wrapper function for `isa(x, Int)`.
+"""
+isinteger(x) = isa(x, Int)
+
+"""
+	same_length(a, b)
+
+Changes the length of vector `a` to the length of vector `b`. If `a` is shorter than `b` then additional zeros will be added to `a`. If `a` is longer than `b` then only the first elements `a` will be used.
+"""
+function same_length(a, b)
+	a = if length(b) > length(a)
+		[a; zeros(length(b)-length(a))]
+	elseif length(b) < length(a)
+		a[1:length(b)]
+	else
+		a
+	end
 end

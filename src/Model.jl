@@ -91,22 +91,34 @@ See also: [`viscosity`](@ref)
 """
 function flow_restriction(x, t, T_itp, d, gas; ng=false, vis="Blumberg")
     if ng==true
-        κ = x*viscosity(x, t, T_itp, gas, vis=vis)*T_itp(x, t)*d(x)^-4
+        κ = x*GasChromatographySimulator.viscosity(x, t, T_itp, gas, vis=vis)*T_itp(x, t)*d(x)^-4
     else
-        f(y, p) = viscosity(y, t, T_itp, gas, vis=vis)*T_itp(y, t)*d(y)^-4
-        prob = IntegralProblem(f, 0.0, x)
-        κ = solve(prob, QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
+		p = (t, )# d) if `d` is function of `x` it cannot be part of `p` 
+        f(y, p) = GasChromatographySimulator.viscosity(y, p[1], T_itp, gas, vis=vis)*T_itp(y, p[1])*d(y)^-4
+        if typeof(x) == Measurements.Measurement{Float64}
+			domain = (0.0±0.0, x)
+		else
+			domain = (0.0, x)
+		end
+        prob = IntegralProblem(f, domain, p)
+        κ = solve(prob, GasChromatographySimulator.QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
     end
     return κ
 end
 
 function flow_restriction(x, t, T_itp, d::Number, gas; ng=false, vis="Blumberg")
     if ng==true
-        κ = x*viscosity(x, t, T_itp, gas, vis=vis)*T_itp(x, t)*d^-4
+        κ = x*GasChromatographySimulator.viscosity(x, t, T_itp, gas, vis=vis)*T_itp(x, t)*d^-4
     else
-        f(y, p) = viscosity(y, t, T_itp, gas, vis=vis)*T_itp(y, t)*d^-4
-        prob = IntegralProblem(f, 0.0, x)
-        κ = solve(prob, QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
+		p = (t, d)
+        f(y, p) = GasChromatographySimulator.viscosity(y, p[1], T_itp, gas, vis=vis)*T_itp(y, p[1])*p[2]^-4
+		if typeof(x) == Measurements.Measurement{Float64}
+			domain = (0.0±0.0, x)
+		else
+			domain = (0.0, x)
+		end
+        prob = IntegralProblem(f, domain, p)
+        κ = solve(prob, GasChromatographySimulator.QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
     end
     return κ
 end

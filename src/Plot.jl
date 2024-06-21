@@ -13,10 +13,12 @@ function chromatogram(t, tR, τR)
 	return sum(chromatograms)
 end
 
-"""
-    plot_chromatogram(peaklist, tlims; annotation=true, number=true, mirror=false, offset=0.0)
+rectangle(w, h, x, y) = Shape(x .+ [-w,w,w,-w], y .+ [0,0,h,h])
 
-Plot the chromatogram of the peaks listed in `peaklist` over the time tupel `tlims = (t_start, t_end`). 
+"""
+    plot_chromatogram(peaklist, tlims; annotation=true, number=true, mirror=false, offset=0.0, uncertainty=false, color=:blue)
+
+Plot the chromatogram of the peaks listed in `peaklist` over the time tupel `tlims = (t_start, t_end`). If `peaklist` contains values with uncertainties, than only the values of retention time and peak widths without uncertainties are used.
 
 # Arguments
 * `peaklist`: DataFrame with the names, retention times and peak widths of the simulated substances.
@@ -25,6 +27,8 @@ Plot the chromatogram of the peaks listed in `peaklist` over the time tupel `tli
 * `number`: Boolean, switching the type of the annotation between _number_ of the substance in the peaklist (`number = true`) or _name_ of the substance (`number = false`); default = true.
 * `mirror`: Boolean, if `mirror = true` the chromatogram is multiplied by `-1`; default = false.
 * `offset`: Float64, this value is added to the chromatogram; default = 0.0.
+* `uncertainty`: Boolean, if `uncertainty = true` the uncertainty in retention time will be plotted as rectangle with ± uncertainty of retention time and uncertainty of peak width wil be plotted as two additional chromatograms with peak width as `peak width - uncertainty` and `peak width + uncertainty`. Default is false.
+* `color`: Symbol of the color for the chromatogram, default is `:blue`.
 
 # Output
 Tupel `(p_chrom, t, chrom)`
@@ -32,7 +36,7 @@ Tupel `(p_chrom, t, chrom)`
 * `t`: Array of time of the chromatogram
 * `chrom`: Array of the abundance values of the chromatogram
 """
-function plot_chromatogram(peaklist, tlims; annotation=true, number=true, mirror=false, offset=0.0)
+function plot_chromatogram(peaklist, tlims; annotation=true, number=true, mirror=false, offset=0.0, uncertainty=false, color=:blue)
 	t₀ = tlims[1]
 	tMax = tlims[2]
 	t = t₀:tMax/10000:tMax
@@ -41,21 +45,33 @@ function plot_chromatogram(peaklist, tlims; annotation=true, number=true, mirror
 	else
 		sgn = 1.0
 	end
-	chrom = sgn.*chromatogram(collect(t), peaklist.tR, peaklist.τR) .+ offset
-	chrom_tR = sgn.*chromatogram(peaklist.tR, peaklist.tR, peaklist.τR) .+ offset
+	chrom = sgn.*GasChromatographySimulator.chromatogram(collect(t), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR)) .+ offset
+	chrom_tR = sgn.*GasChromatographySimulator.chromatogram(Measurements.value.(peaklist.tR), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR)) .+ offset
 	p_chrom = plot(t, chrom, xlabel="time in s", ylabel="abundance", legend=false)
-	if annotation==true && number==true
-		plot!(p_chrom, annotations = [(peaklist.tR[i], chrom_tR[i], text(i, 10, rotation=0, :center)) for i in 1:length(peaklist.tR)])
-	elseif annotation==true && number==false
-		plot!(p_chrom, annotations = [(peaklist.tR[i], chrom_tR[i], text(peaklist.Name[i], 10, rotation=90, :center)) for i in 1:length(peaklist.tR)])
+	if uncertainty == true
+		chrom_lb = sgn.*GasChromatographySimulator.chromatogram(collect(t), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR).-Measurements.uncertainty.(peaklist.τR)) .+ offset
+		chrom_ub = sgn.*GasChromatographySimulator.chromatogram(collect(t), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR).+Measurements.uncertainty.(peaklist.τR)) .+ offset
+		chrom_tR_lb = sgn.*GasChromatographySimulator.chromatogram(Measurements.value.(peaklist.tR), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR).-Measurements.uncertainty.(peaklist.τR)) .+ offset
+		for i=1:length(peaklist.tR)
+			plot!(p_chrom, rectangle(Measurements.uncertainty(peaklist.tR[i]), chrom_tR_lb[i], Measurements.value(peaklist.tR[i]), 0.0), opacity=0.33)
+		end
+		plot!(p_chrom, t, chrom_lb, legend=false, c=color, linestyle=:dash)
+		plot!(p_chrom, t, chrom_ub, legend=false, c=color, linestyle=:dash)
 	end
+	plot!(p_chrom, t, chrom, legend=false, c=color)
+	if annotation==true && number==true
+		plot!(p_chrom, annotations = [(Measurements.value(peaklist.tR[i]), chrom_tR[i], text(i, 10, rotation=0, :center)) for i in 1:length(peaklist.tR)])
+	elseif annotation==true && number==false
+		plot!(p_chrom, annotations = [(Measurements.value(peaklist.tR[i]), chrom_tR[i], text(peaklist.Name[i], 10, rotation=90, :center)) for i in 1:length(peaklist.tR)])
+	end
+	
 	return p_chrom, t, chrom
 end
 
 """
-    plot_chromatogram!(p_chrom, peaklist, tlims; annotation=true, number=true, mirror=false, offset=0.0)
+    plot_chromatogram!(p_chrom, peaklist, tlims; annotation=true, number=true, mirror=true, offset=0.0, uncertainty=false, color=:darkgreen)
 
-Add the chromatogram of the peaks listed in `peaklist` over the time tupel `tlims = (t_start, t_end`) to the plot `p_chrom`. 
+Add the chromatogram of the peaks listed in `peaklist` over the time tupel `tlims = (t_start, t_end`) to the plot `p_chrom`. If `peaklist` contains values with uncertainties, than only the values of retention time and peak widths without uncertainties are used. 
 
 # Arguments
 * `p_chrom`: Plot of an existing chromatogram.
@@ -65,13 +81,15 @@ Add the chromatogram of the peaks listed in `peaklist` over the time tupel `tlim
 * `number`: Boolean, switching the type of the annotation between _number_ of the substance in the peaklist (`number = true`) or _name_ of the substance (`number = false`); default = true.
 * `mirror`: Boolean, if `mirror = true` the chromatogram is multiplied by `-1`; default = false.
 * `offset`: Float64, this value is added to the chromatogram; default = 0.0.
+* `uncertainty`: Boolean, if `uncertainty = true` the uncertainty in retention time will be plotted as rectangle with ± uncertainty of retention time and uncertainty of peak width wil be plotted as two additional chromatograms with peak width as `peak width - uncertainty` and `peak width + uncertainty`. Default is false.
+* `color`: Symbol of the color for the chromatogram, default is `:darkgreen`.
 
 # Output
 Tupel `(t, chrom)`
 * `t`: Array of time of the chromatogram
 * `chrom`: Array of the abundance values of the chromatogram
 """
-function plot_chromatogram!(p_chrom, peaklist, tlims; t₀=0.0, annotation=true, number=true, mirror=false, offset=0.0)
+function plot_chromatogram!(p_chrom, peaklist, tlims; t₀=0.0, annotation=true, number=true, mirror=true, offset=0.0, uncertainty=false, color=:darkgreen)
 	t₀ = tlims[1]
 	tMax = tlims[2]
 	t = t₀:tMax/10000:tMax
@@ -80,13 +98,23 @@ function plot_chromatogram!(p_chrom, peaklist, tlims; t₀=0.0, annotation=true,
 	else
 		sgn = 1.0
 	end
-	chrom = sgn.*chromatogram(collect(t), peaklist.tR, peaklist.τR) .+ offset
-	chrom_tR = sgn.*chromatogram(peaklist.tR, peaklist.tR, peaklist.τR) .+ offset
-	plot!(p_chrom, t, chrom)
+	chrom = sgn.*GasChromatographySimulator.chromatogram(collect(t), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR)) .+ offset
+	chrom_tR = sgn.*GasChromatographySimulator.chromatogram(Measurements.value.(peaklist.tR), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR)) .+ offset
+	if uncertainty == true
+		chrom_lb = sgn.*GasChromatographySimulator.chromatogram(collect(t), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR).-Measurements.uncertainty.(peaklist.τR)) .+ offset
+		chrom_ub = sgn.*GasChromatographySimulator.chromatogram(collect(t), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR).+Measurements.uncertainty.(peaklist.τR)) .+ offset
+		chrom_tR_lb = sgn.*GasChromatographySimulator.chromatogram(Measurements.value.(peaklist.tR), Measurements.value.(peaklist.tR), Measurements.value.(peaklist.τR).-Measurements.uncertainty.(peaklist.τR)) .+ offset
+		for i=1:length(peaklist.tR)
+			plot!(p_chrom, rectangle(Measurements.uncertainty(peaklist.tR[i]), chrom_tR_lb[i], Measurements.value(peaklist.tR[i]), 0.0), opacity=0.33)
+		end
+		plot!(p_chrom, t, chrom_lb, legend=false, c=color, linestyle=:dash)
+		plot!(p_chrom, t, chrom_ub, legend=false, c=color, linestyle=:dash)
+	end
+	plot!(p_chrom, t, chrom, c=color)
 	if annotation==true && number==true
-		plot!(p_chrom, annotations = [(peaklist.tR[i], chrom_tR[i], text(i, 10, rotation=0, :center)) for i in 1:length(peaklist.tR)])
+		plot!(p_chrom, annotations = [(Measurements.value(peaklist.tR[i]), chrom_tR[i], text(i, 10, rotation=0, :center)) for i in 1:length(peaklist.tR)])
 	elseif annotation==true && number==false
-		plot!(p_chrom, annotations = [(peaklist.tR[i], chrom_tR[i], text(peaklist.Name[i], 10, rotation=90, :center)) for i in 1:length(peaklist.tR)])
+		plot!(p_chrom, annotations = [(Measurements.value(peaklist.tR[i]), chrom_tR[i], text(peaklist.Name[i], 10, rotation=90, :center)) for i in 1:length(peaklist.tR)])
 	end
 	return t, chrom
 end
@@ -166,10 +194,11 @@ end
 
 # functions from GasChromatographyTools.jl:
 """
-	local_plots(xx, yy, sol, par)
+	local_plots(xx, yy, sol, par; uncertainty=true)
 
 Show additional 'local' plots of selected `yy` quantities over selected `xx`
-quantities.
+quantities. If the solutions `sol` contain values with uncertainties, the uncertainty of `yy` will be plotted
+as a ribbon, while uncertainties in `xx` are ignored (if `uncertainty=true`, else all uncertainties are ignored).
 
 # Arguments
 * `xx`: Selected quantity shown on the x-axis. Possible values: "z", "t", "T",
@@ -179,13 +208,20 @@ quantities.
 * `sol`: The solution of the simulation.
 * `par`: The parameters of the simulated GC-system.
 """   
-function local_plots(xx, yy, sol, par)
+function local_plots(xx, yy, sol, par; uncertainty=true)
 	n = size(sol)[1]
 
 	df_sol = GasChromatographySimulator.sol_extraction(sol, par)
-	xvalues = Array{Array{Float64,1}}(undef, n)
-	yvalues = Array{Array{Float64,1}}(undef, n)
-	
+	xvalues = if xx=="z"
+		Array{typeof(df_sol.z[1])}(undef, n)
+	else
+		Array{typeof(df_sol.t[1])}(undef, n)
+	end
+	yvalues = if yy=="z"
+		Array{typeof(df_sol.z[1])}(undef, n)
+	else
+		Array{typeof(df_sol.t[1])}(undef, n)
+	end
 	p_add = plot(legend=false)
 	for i=1:n
 		if xx=="z"
@@ -226,7 +262,11 @@ function local_plots(xx, yy, sol, par)
 			yvalues[i] = velocity(df_sol, i, par)
 			ylabel = "solute velocity in m/s"
 		end
-		plot!(p_add, xvalues[i], yvalues[i], xlabel=xlabel, ylabel=ylabel, label=par.sub[i].name, m=:o)
+		if uncertainty == true
+			plot!(p_add, Measurements.value.(xvalues[i]), Measurements.value.(yvalues[i]), xlabel=xlabel, ylabel=ylabel, label=par.sub[i].name, m=:o, ribbon=Measurements.uncertainty.(yvalues[i]),fillalpha=.33)
+		else
+			plot!(p_add, Measurements.value.(xvalues[i]), Measurements.value.(yvalues[i]), xlabel=xlabel, ylabel=ylabel, label=par.sub[i].name, m=:o)
+		end
 	end
 	return p_add
 end
@@ -240,7 +280,7 @@ GC-system defined by `par`.
 function velocity(df_sol, i, par)
 	x = df_sol.z[i]
 	t = df_sol.t[i]
-	u = Array{Float64}(undef, length(x))
+	u = Array{typeof(t[1])}(undef, length(x))
 	for j=1:length(x)
 		u[j] = 1/GasChromatographySimulator.residency(x[j], t[j], par.col, par.prog, par.sub[i], par.opt)
 	end

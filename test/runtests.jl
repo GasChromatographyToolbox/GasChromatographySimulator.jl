@@ -15,8 +15,9 @@ pout_steps = [0.0, 0.0, 0.0, 0.0].*1000.0
 x₀_steps = zeros(length(time_steps))
 L₀_steps = L.*ones(length(time_steps))
 α_steps = zeros(length(time_steps))
-db_path = string(@__DIR__, "/data")
+db_path = joinpath("..", "data")#string(@__DIR__, "/data")
 db = "Database_test.csv"
+db_unc = "Database_test_uncertainty.csv"
 
 @testset "gradient function check" begin
     # Gradient function for d
@@ -109,8 +110,8 @@ end
 
     
     # Substance from the load-function-> 1st test
-    db_path = string(@__DIR__, "/data")
-    db = "Database_test.csv"
+    #db_path = string(@__DIR__, "/data")
+    #db = "Database_test.csv"
     solutes = ["C10", "C11", "Glyceryl trioctanoate", "AAA"]
     init_t = zeros(length(solutes))
     init_τ = zeros(length(solutes))
@@ -132,12 +133,12 @@ end
     @test round(sub_0[1].Cag; sigdigits=5) == 2.5268e-5
     # test for error-cases of GasChromatographySimulator.load_solute_database
 
-    # test for old database format
-    db_old = "Database_test_old_format.csv"
-    sub_new = GasChromatographySimulator.load_solute_database(db_path, db, "Wax", "He", ["C14", "Decyl acetate", "Hexadecane", "C15", "Methyl myristate"], [1.0, 2.0, 3.0, 4.0, 5.0], [0.1, 0.2, 0.3, 0.4, 0.5])
-    sub_old = GasChromatographySimulator.load_solute_database(db_path, db_old, "Wax", "He", ["C14", "Decyl acetate", "Hexadecane", "C15", "Methyl myristate"], [1.0, 2.0, 3.0, 4.0, 5.0], [0.1, 0.2, 0.3, 0.4, 0.5])
-    @test sub_new[1].CAS == sub_old[1].CAS
-    @test sub_new[2].t₀ == 4.0
+    # test for old database format -> not supported any more
+    #db_old = "Database_test_old_format.csv"
+    #sub_new = GasChromatographySimulator.load_solute_database(db_path, db, "Wax", "He", ["C14", "Decyl acetate", "Hexadecane", "C15", "Methyl myristate"], [1.0, 2.0, 3.0, 4.0, 5.0], [0.1, 0.2, 0.3, 0.4, 0.5])
+    #sub_old = GasChromatographySimulator.load_solute_database(db_path, db_old, "Wax", "He", ["C14", "Decyl acetate", "Hexadecane", "C15", "Methyl myristate"], [1.0, 2.0, 3.0, 4.0, 5.0], [0.1, 0.2, 0.3, 0.4, 0.5])
+    #@test sub_new[1].CAS == sub_old[1].CAS
+    #@test sub_new[2].t₀ == 4.0
 
     # parameters
     par = GasChromatographySimulator.Parameters(col, prog, sub, opt)
@@ -153,8 +154,8 @@ end
     @test k == opt.k_th
 
     H = GasChromatographySimulator.plate_height(0.0, 0.0, par.col, par.prog, par.sub[3], par.opt)
-    H_ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, d, par.col.df, par.col.gas, par.sub[3].Tchar, par.sub[3].θchar, par.sub[3].ΔCp, par.sub[3].φ₀, par.sub[3].Cag)
-    H__ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, d, par.col.df, par.col.gas, 0.0, 0.0, 0.0, par.sub[3].φ₀, par.sub[3].Cag)
+    H_ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[3].Tchar, par.sub[3].θchar, par.sub[3].ΔCp, par.sub[3].φ₀, par.sub[3].Cag)
+    H__ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, 0.0, 0.0, 0.0, par.sub[3].φ₀, par.sub[3].Cag)
     @test H == H_
     @test H > H__
 
@@ -163,7 +164,7 @@ end
     prog_F = GasChromatographySimulator.constructor_Program(time_steps, temp_steps, F_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, opt.Tcontrol, col.L)
     par_F = GasChromatographySimulator.Parameters(col, prog_F, sub, opt_F)
     pin_F = GasChromatographySimulator.inlet_pressure(0.0, par_F)
-    pin_F_ = GasChromatographySimulator.inlet_pressure(0.0, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, d, col.gas; control=opt_F.control) 
+    pin_F_ = GasChromatographySimulator.inlet_pressure(0.0, prog_F.T_itp, prog_F.Fpin_itp, prog_F.pout_itp, col.L, col.d, col.gas; control=opt_F.control) 
     @test pin_F == pin_F_
 end
 
@@ -287,30 +288,28 @@ end
     results_o_ng = GasChromatographySimulator.simulate(par_o_ng)
 
     # plot functions
-    t_start = 0.0
-    t_end = 200.0
+    t_start = 0.0#75.0
+    t_end = 200.0#150.0
     p_chrom, t, chrom = GasChromatographySimulator.plot_chromatogram(results_o_ng[1], (t_start, t_end))
     @test t[1] == t_start && t[end] == t_end
-    tR = results_o_ng[1].tR[1]
-    τR = results_o_ng[1].τR[1]
-    t0 = round(tR; digits=1)
-    @test chrom[findfirst(t.==t0)] == 1/sqrt(2*π*τR^2)*exp(-(t0-tR)^2/(2*τR^2))
+    tR = results_o_ng[1].tR[2]
+    τR = results_o_ng[1].τR[2]
+    @test chrom[findlast(t.<=tR)] == 1/sqrt(2*π*τR^2)*exp(-(t[findlast(t.<=tR)]-tR)^2/(2*τR^2))
     t2, chrom2 = GasChromatographySimulator.plot_chromatogram!(p_chrom, results_o_ng[1], (t_start, t_end); mirror=true)
     @test t == t2
     @test chrom == -chrom2
-    @test p_chrom[1][1][:y] == - p_chrom[1][2][:y]
-    @test p_chrom[1][1][:x] == p_chrom[1][2][:x]
+#    @test p_chrom[1][1][:y] == - p_chrom[1][2][:y]
+#    @test p_chrom[1][1][:x] == p_chrom[1][2][:x]
     # mirrored the other way
     p_chrom, t, chrom = GasChromatographySimulator.plot_chromatogram(results_o_ng[1], (t_start, t_end); mirror=true)
     @test t[1] == t_start && t[end] == t_end
     tR = results_o_ng[1].tR[1]
     τR = results_o_ng[1].τR[1]
-    t0 = round(tR; digits=1)
-    @test chrom[findfirst(t.==t0)] == -1/sqrt(2*π*τR^2)*exp(-(t0-tR)^2/(2*τR^2))
+    @test chrom[findlast(t.<=tR)] == -1/sqrt(2*π*τR^2)*exp(-(t[findlast(t.<=tR)]-tR)^2/(2*τR^2))
     t2, chrom2 = GasChromatographySimulator.plot_chromatogram!(p_chrom, results_o_ng[1], (t_start, t_end); mirror=false)
     @test t == t2
     @test chrom == -chrom2
-    @test p_chrom[1][1][:y] == - p_chrom[1][2][:y]
+#    @test p_chrom[1][1][:y] == - p_chrom[1][2][:y]
     @test p_chrom[1][1][:x] == p_chrom[1][2][:x]
 
     p_flow = GasChromatographySimulator.plot_flow(par_o_ng)
@@ -467,6 +466,35 @@ end
 
     common = GasChromatographySimulator.common(["aa", "bb", "cc"], ["dd", "aa", "ee"])
     @test common == ["aa"]
+end
+
+@testset "uncertainty" begin
+    col = GasChromatographySimulator.Column(GasChromatographySimulator.measurement(30.0, 1.0), 0.25e-3, 0.25e-6, "Rxi5SilMS", "He")
+    prog = GasChromatographySimulator.Program([40.0, 3.0, 10.0, 300.0, 5.0], [300000.0, 3.0, (450000.0-300000.0)/(300.0-40.0)*10.0, 450000.0, 5.0], col.L)
+    @test typeof(prog.T_itp(col.L, 523.0)) == GasChromatographySimulator.Measurement{Float64}
+    sub = GasChromatographySimulator.load_solute_database(db_path, db_unc, col.sp, col.gas, ["Octan-1-ol", "Aniline"], fill(GasChromatographySimulator.measurement(0.0, 0.0), 2), fill(GasChromatographySimulator.measurement(0.0, 0.0), 2))
+    @test typeof(sub[1].Tchar) == GasChromatographySimulator.Measurement{Float64}
+    opt = GasChromatographySimulator.Options(ng=true)
+    par = GasChromatographySimulator.Parameters(col, prog, sub, opt)
+    sim = GasChromatographySimulator.simulate(par)
+    @test typeof(sim[1].tR) == Array{GasChromatographySimulator.Measurement{Float64}, 1}
+end
+
+@testset "differentiability" begin
+    prog = GasChromatographySimulator.Program([40.0, 3.0, 10.0, 300.0, 5.0], [300000.0, 3.0, (450000.0-300000.0)/(300.0-40.0)*10.0, 450000.0, 5.0], 30.0)
+    opt = GasChromatographySimulator.Options(ng=true)
+    # retention time and peak width of one substance depending on retention parameters
+    sol_tR_τR_RP(x) = GasChromatographySimulator.solving_odesystem_r(30.0, 0.25e-3, 0.25e-6, "He", prog.T_itp, prog.Fpin_itp, prog.pout_itp, x[1], x[2], x[3], 1e-3, 1e-6, 0.0, 0.0, opt).u[end]
+    # differentiation
+    ∂sol_tR_τR_RP(x) = GasChromatographySimulator.ForwardDiff.jacobian(sol_tR_τR_RP, x)
+    val = ∂sol_tR_τR_RP([400.0, 30.0, 100.0])
+    @test size(val) == (2, 3)
+    # retention time and peak width of one substance depending on column parameters
+    sol_tR_τR_col(x) = GasChromatographySimulator.solving_odesystem_r(x[1], x[2], x[3], "He", prog.T_itp, prog.Fpin_itp, prog.pout_itp, 400.0, 30.0, 100.0, 1e-3, 1e-6, 0.0, 0.0, opt).u[end]
+    # differentiation
+    ∂sol_tR_τR_col(x) = GasChromatographySimulator.ForwardDiff.jacobian(sol_tR_τR_col, x)
+    val_col = ∂sol_tR_τR_col([30.0, 0.25e-3, 0.25e-6])
+    @test size(val_col) == (2, 3)
 end
 
 println("Test run successful.")

@@ -1,5 +1,6 @@
 using Documenter
 using GasChromatographySimulator
+using ForwardDiff, Measurements
 
 makedocs(
             sitename = "GasChromatographySimulator.jl",

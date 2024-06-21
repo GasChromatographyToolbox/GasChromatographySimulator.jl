@@ -52,6 +52,7 @@ col = GasChromatographySimulator.Column(11.18, 0.104e-3, 0.104e-6, "FS5ms", "H2"
 The temperature program starts at 40°C, which is hold for 1 min. The column is heated up to 180°C in 28 min (5°C/min heating ramp), where the temperature is also hold for 1min. Than the column is heated to 300°C in 6 min (20°C/min heating ramp), where the temperature again is kept for 1 min. The inlet pressure is at constant 411564 Pa (absolute) and the outlet pressure is at constant 101300 Pa (absolute) during the program.
 ```@example ex_meas
 prog_D = GasChromatographySimulator.Program([0.0, 60.0, 1680.0, 60.0, 360.0, 60.0], [40.0, 40.0, 180.0, 180.0, 300.0, 300.0], 411564.0*ones(6), 101300.0.*ones(6), col.L);
+nothing # hide
 ```
 
 We want to use all solutes for the stationary phase `FS5ms`, which are in the database [`Database_Leppert2020b.csv`](https://github.com/GasChromatographyToolbox/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Database_Leppert2020b.csv). We load the database into a dataframe:
@@ -72,6 +73,7 @@ sub = GasChromatographySimulator.load_solute_database(db_dataframe, col.sp, col.
 The parameters are combined:
 ```@example ex_meas
 par = GasChromatographySimulator.Parameters(col, prog_D, sub, opt);
+nothing # hide
 ```
 
 The temperature program and the pressure/flow program can be plotted:
@@ -87,7 +89,13 @@ The temperatures at the column inlet and outlet are identical, the temperature a
 Finally, the simulation is executed:
 ```@example ex_meas
 peaklist, sol = GasChromatographySimulator.simulate(par);
+nothing # hide
 ```
+with the `peaklist`:
+```@example ex_meas
+peaklist # hide
+```
+
 We know can compare the simulation results with the measured chromatogram. The file [`Leppert2020b_measured_RT_progD.csv`](https://github.com/GasChromatographyToolbox/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Leppert2020b_measured_RT_progD.csv) contains the retention times and peak widths (as standard deviations) from the measurement.
 ```@example ex_meas
 measurement_D = DataFrame(CSV.File("../../data/Leppert2020b/Leppert2020b_measured_RT_progD.csv", header=1, silencewarnings=true));
