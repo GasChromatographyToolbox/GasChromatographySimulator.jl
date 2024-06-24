@@ -22,7 +22,9 @@ const Tn = 25.0 + Tst         # K
 const pn = 101300             # Pa
 const custom_database_url = "https://raw.githubusercontent.com/JanLeppert/RetentionData/main/data/add_CI_db.tsv"
 const shortnames_url = "https://raw.githubusercontent.com/JanLeppert/RetentionData/main/data/shortnames.csv"
-const missingsubs_url = "https://raw.githubusercontent.com/JanLeppert/RetentionData/main/data/missing.csv"
+const missing_url = "https://raw.githubusercontent.com/JanLeppert/RetentionData/main/data/missing.csv"
+const shortnames_filepath = joinpath("data", "shortnames.csv")
+const missing_filepath = joinpath("data", "missing.csv")
 #const k_th = 1e20#1e12            # threshold for retention factor k, if k>k_th => k=k_th 
 
 # ---Begin-Structures---
@@ -692,9 +694,16 @@ Look up the substance name from the `data` dataframe with ChemicalIdentifiers.jl
 """
 function CAS_identification(Name)
     load_custom_CI_database(custom_database_url)
-	#shortnames = DataFrame(CSV.File(shortnames_filepath))
-    shortnames = DataFrame(urldownload(shortnames_url))
-    missingsubs = DataFrame(urldownload(missingsubs_url))
+    shortnames = try
+        DataFrame(urldownload(shortnames_url))
+    catch
+        DataFrame(CSV.File(shortnames_filepath))
+    end
+    missingsubs = try 
+        DataFrame(urldownload(missing_url))
+    catch
+        DataFrame(CSV.File(missing_filepath))
+    end
 #	id = Array{NamedTuple{(:Name, :CAS, :formula, :MW, :smiles), Tuple{String, String, String, Float64, String}}}(undef, length(Name))
 #	for i=1:length(Name)
     if Name in missingsubs.name # first look the name up in the missing.csv

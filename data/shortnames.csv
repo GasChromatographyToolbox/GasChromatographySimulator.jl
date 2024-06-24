@@ -95,18 +95,16 @@ C11 acid methyl ester, Methyl undecanoate
 C12 FAME, Methyl laurate
 C12 acid methyl ester, Methyl laurate
 Tert-butylpyridine, "2,6-ditert-butylpyridine"
-Nicotine, 3-(1-methylpyrrolidin-2-yl)pyridine
-Citral A, "3,7-dimethylocta-2,6-dienal"
-Geranial, "3,7-dimethylocta-2,6-dienal"
-Isomethyl-alpha-Ionon, "3-methyl-4-(2,6,6-trimethylcyclohex-2-en-1-yl)but-3-en-2-one"
+Isomethyl-alpha-Ionon,"3-methyl-4-(2,6,6-trimethylcyclohex-2-en-1-yl)but-3-en-2-one"
+alpha-isomethyl ionone,"3-methyl-4-(2,6,6-trimethylcyclohex-2-en-1-yl)but-3-en-2-one"
 Isoeugenol, 2-methoxy-4-prop-1-enyl-phenol
 Benzylsalicylate, benzyl salicylate
 Benzylcinnamate, benzyl cinnamate
 Farnesol A, 4602-84-0
 Farnesol B, 4602-84-0
 Anisalkohol, 4-methoxybenzyl alcohol
-Cinnamylalkohol A, "cinnamyl alcohol"
-Cinnamylalkohol B, "cinnamyl alcohol"
+Cinnamyl alcohol A, "cinnamyl alcohol"
+Cinnamyl alcohol B, "cinnamyl alcohol"
 alpha-Pinen, alpha-pinene
 Methyl-2-Octyonate, methyl 2-octynoate
 Methylsalicylat, methyl salicylate
@@ -114,16 +112,12 @@ Isobornylacetat, bornyl acetate
 E-beta-Damascone, damascenone
 Amylsalicylate, amyl salicylate
 Isoeugenylacetat, 1-acetoxy-2-methoxy-4-(1-propenyl)benzene
+Isoeugenyl acetate, 1-acetoxy-2-methoxy-4-(1-propenyl)benzene
 Hexadecanolaceton, 1-hexadecanol
 Ebanol A, ebanol
 Ebanol B, ebanol
-Santalol A, 115-71-9
-Santalol B, 115-71-9
-Santalol C, 77-42-9
-Santalol D, 77-42-9
 Amylcinnamylaldehyd, amylcinnamaldehyde
 Methyl myristoleate, methyl tetradec-9-enoate
-Methyl palmitoleate, methyl cis-9-hexadecenoate
 trans-9-Elaidic acid methyl ester, 1937-62-8
 cis-9-Oleic acid methyl ester, methyl oleate
 Methyl gamma linolenate, "methyl octadeca-6,9,12-trienoate"
@@ -150,3 +144,14 @@ PCB 138 Std, "2,2',3,4,4',5'-hexachlorobiphenyl"
 Glyceryl trihexanoate, "trihexanoin"
 Glyceryl trimyristine, "trimyristin"
 Glyceryl tripalmitin, "tripalmitin"
+PCB 180, "1,2,3,4-tetrachloro-5-(2,4,5-trichlorophenyl)benzene"
+cis-10-Heptadecenoic acid methyl ester, 16219491
+Methyl cis-10-heptadecanoate, 16219491
+"cis-10-Heptadecanoic acid methyl ester", 16219491
+Methyl γ-linolenate, "Gamma-Methyl linolenate"
+Methyl gamma linolenate, "Gamma-Methyl linolenate"
+Methyl linolenate, "methyl octadeca-9,12,15-trienoate"
+Methyl-Docosanoat, methyl docosanoate
+(1R)-(-)-Fenchone, fenchone
+(R)-(+)-Pulegone, pulegone
+(-)-Caryophyllene oxide, caryophyllene oxide
