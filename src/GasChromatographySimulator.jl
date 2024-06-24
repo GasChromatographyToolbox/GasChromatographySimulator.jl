@@ -23,8 +23,8 @@ const pn = 101300             # Pa
 const custom_database_url = "https://raw.githubusercontent.com/JanLeppert/RetentionData/main/data/add_CI_db.tsv"
 const shortnames_url = "https://raw.githubusercontent.com/JanLeppert/RetentionData/main/data/shortnames.csv"
 const missing_url = "https://raw.githubusercontent.com/JanLeppert/RetentionData/main/data/missing.csv"
-const shortnames_filepath = joinpath("..", "data", "shortnames.csv")
-const missing_filepath = joinpath("..", "data", "missing.csv")
+const shortnames_filepath = joinpath("data", "shortnames.csv")
+const missing_filepath = joinpath("data", "missing.csv")
 #const k_th = 1e20#1e12            # threshold for retention factor k, if k>k_th => k=k_th 
 
 # ---Begin-Structures---
