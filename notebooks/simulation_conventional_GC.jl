@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.31
+# v0.19.41
 
 using Markdown
 using InteractiveUtils
@@ -18,7 +18,7 @@ end
 begin 
 	# online version
 	import Pkg
-	version = "0.4.6"
+	version = "0.5.0"
 	Pkg.activate(mktempdir())
 	Pkg.add([
 		Pkg.PackageSpec(name="CSV"),
@@ -397,8 +397,8 @@ $(DownloadButton(export_str_, result_filename))
 # ╟─a2287fe8-5aa2-4259-bf7c-f715cc866243
 # ╟─3c856d47-c6c2-40d3-b547-843f9654f48d
 # ╟─0740f2e6-bce0-4590-acf1-ad4d7cb7c523
-# ╠═e8f84397-bd60-41a2-98c7-494873f6faf4
-# ╠═8cea4027-0987-4147-ac60-3b6bacb551ca
+# ╟─e8f84397-bd60-41a2-98c7-494873f6faf4
+# ╟─8cea4027-0987-4147-ac60-3b6bacb551ca
 # ╟─95e1ca30-9442-4f39-9af0-34bd202fcc24
 # ╟─115fa61e-8e82-42b2-8eea-9c7e21d97ea8
 # ╟─f7f06be1-c8fa-4eee-953f-0d5ea26fafbf

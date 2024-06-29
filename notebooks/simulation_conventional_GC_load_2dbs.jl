@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.31
+# v0.19.41
 
 using Markdown
 using InteractiveUtils
@@ -19,7 +19,7 @@ begin
 	# no usage of id number of selected solutes
 	# online version
 	import Pkg
-	version = "0.4.6"
+	version = "0.5.0"
 	Pkg.activate(mktempdir())
 	Pkg.add([
 		Pkg.PackageSpec(name="CSV"),
