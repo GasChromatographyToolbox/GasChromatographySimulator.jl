@@ -910,7 +910,7 @@ end=#
 
 Load the data of `solutes` for the stationary phase `sp` and the mobile
 phase `gas` from the database file `db` (located in `db_path`) into an array
-of the structure `Substance`. THe row number of the selected solutes in the loaded database are added to the annotations of the `Substance` structure. 
+of the structure `Substance`. The row number of the selected solutes in the loaded database are added to the annotations of the `Substance` structure. 
 
 # Arguments
 * `db_path::String`: Path to the database file.
@@ -1017,7 +1017,7 @@ end
 """
 	load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
 
-New function to load the data for the substances `solutes_` from the database `db_` for the stationary phase `sp_` and mobile phase `gas_` with initial time `t₀_` and initial peak width `τ₀`. The parameters `solutes_`, `t₀_` and `τ₀` must be vectors of the same length. Acceptable values for `solutes_` are either the substance names, CAS numbers or the number No from the database.
+New function to load the data for the substances `solutes_` from the database `db_` for the stationary phase `sp_` and mobile phase `gas_` with initial time `t₀_` and initial peak width `τ₀_`. The parameters `solutes_`, `t₀_` and `τ₀_` must be vectors of the same length. Acceptable values for `solutes_` are either the substance names, CAS numbers or the number No from the database.
 
 The loaded data is returned as a vector of the GasChromatographySimulator.Substance structure.
 """
@@ -1037,8 +1037,6 @@ function load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
     end # is this still needed???
 
 	if sp_ == "" # no stationary phase is selected, like for transferlines
-		# -> at a later point
-		# how to assign name/CAS if No is used? 
 		i_db, i_solutes_not_found, i_db_i_solutes = find_index_in_database(solutes_, db)
 		if isempty(i_solutes_not_found) == false
 			@warn "Some solutes could not be found: $(solutes_[i_solutes_not_found])."
@@ -1053,6 +1051,7 @@ function load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
         Annotation = fill("no sp", length(Name))
 		# Cag -> reading or calculating
 		i_Cag = findfirst("Cag".==names(db))
+        # parameter name + "_" indicates the column with uncertainty values of this quantity 
 		i_Cag_unc = findfirst(occursin.("Cag_", names(db)))
 		if isa(i_Cag, Int)
 			if isa(i_Cag_unc, Int)
