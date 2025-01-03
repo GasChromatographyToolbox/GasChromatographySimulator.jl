@@ -15,7 +15,7 @@ pout_steps = [0.0, 0.0, 0.0, 0.0].*1000.0
 x₀_steps = zeros(length(time_steps))
 L₀_steps = L.*ones(length(time_steps))
 α_steps = zeros(length(time_steps))
-db_path = joinpath("..", "data")#string(@__DIR__, "/data")
+db_path = joinpath("..", "data")#joinpath(pwd(), "data")#string(@__DIR__, "/data")
 db = "Database_test.csv"
 db_unc = "Database_test_uncertainty.csv"
 
