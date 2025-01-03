@@ -232,11 +232,13 @@ function CAS_identification(Name)
         else # otherwise use the input name
             name = Name
         end
+        @info "Searching for $name"
         ci = try
             search_chemical(name)
         catch
             missing
         end
+        @info "Found $ci"
         if ismissing(ci) # 
             #ci_ = search_chemical("629-62-9")
             # Placeholder data from Pentadecane
