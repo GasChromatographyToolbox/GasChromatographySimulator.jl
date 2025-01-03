@@ -236,10 +236,10 @@ function CAS_identification_from_CAS(cas_number::String)
     if ismissing(ci)
         # Placeholder data if CAS number not found
         id = (Name = string(cas_number,"_ph"), 
-                        CAS = "629-62-9_ph", 
-                        formula = "C15H32", 
-                        MW = 212.41, 
-                        smiles = "CCCCCCCCCCCCCCC")
+                CAS = "629-62-9_ph", 
+                formula = "C15H32", 
+                MW = 212.41, 
+                smiles = "CCCCCCCCCCCCCCC")
     else
         # Reconstruct CAS number with proper formatting
         if length(digits(ci.CAS[2])) == 1
@@ -247,7 +247,7 @@ function CAS_identification_from_CAS(cas_number::String)
         else
             CAS = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
         end
-        id = (Name = ci.name, 
+        id = (Name = ci.iupac_name, 
               CAS = CAS, 
               formula = ci.formula, 
               MW = ci.MW, 
