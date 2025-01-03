@@ -124,6 +124,7 @@ struct Options
     vis::String         # viscosity model 'HP' or 'Blumberg'
     control::String     # control of the 'Flow' or of the inlet 'Pressure' during the program
     k_th                # threshold for the max. possible retention factor
+    # TODO: add check for the correct values of the options: Tcontrol, vis, control
 end
 
 """
