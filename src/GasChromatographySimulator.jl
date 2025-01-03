@@ -252,6 +252,7 @@ function CAS_identification(Name)
             id = (Name = Name, CAS = CAS, formula = ci.formula, MW = ci.MW, smiles = ci.smiles)
         end
     end
+    @info "Found $id"
 	return id
 end
 
