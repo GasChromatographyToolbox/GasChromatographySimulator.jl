@@ -204,56 +204,120 @@ function steps_interpolation(time_steps::Array{<:Real,1}, steps::Array{<:Real,1}
 end
 
 """
+    CAS_identification_from_CAS(cas_number::String)
+
+Look up a substance by its CAS number using ChemicalIdentifiers.jl to find the name, formula, molecular weight `MW` and `smiles`-identifier. 
+Returns a NamedTuple with the substance information or placeholder data if the CAS number is not found.
+
+# Example
+```julia
+julia> CAS_identification_from_CAS("71-43-2")
+(Name = "Benzene", CAS = "71-43-2", formula = "C6H6", MW = 78.11, smiles = "c1ccccc1")
+```
+"""
+function CAS_identification_from_CAS(cas_number::String)
+    # Check if the input matches CAS number format (XX-XX-X)
+    if !occursin(r"^\d{1,7}-\d{2}-\d$", cas_number)
+        error("Invalid CAS number format. Expected format: XX-XX-X")
+    end
+
+    # Split the CAS number into its components
+    cas_parts = split(cas_number, "-")
+    cas_tuple = (parse(Int, cas_parts[1]), parse(Int, cas_parts[2]), parse(Int, cas_parts[3]))
+
+    @info "Searching for CAS number $cas_number"
+    ci = try
+        search_chemical(cas_tuple)
+    catch
+        missing
+    end
+    @info "Found $ci"
+
+    if ismissing(ci)
+        # Placeholder data if CAS number not found
+        id = (Name = string(cas_number,"_ph"), 
+                        CAS = "629-62-9_ph", 
+                        formula = "C15H32", 
+                        MW = 212.41, 
+                        smiles = "CCCCCCCCCCCCCCC")
+    else
+        # Reconstruct CAS number with proper formatting
+        if length(digits(ci.CAS[2])) == 1
+            CAS = string(ci.CAS[1], "-0", ci.CAS[2], "-", ci.CAS[3])
+        else
+            CAS = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
+        end
+        id = (Name = ci.name, 
+              CAS = CAS, 
+              formula = ci.formula, 
+              MW = ci.MW, 
+              smiles = ci.smiles)
+    end
+    
+    @info "Found $id"
+    return id
+end
+
+"""
 	CAS_identification(Name)
 
 Look up the substance name from the `data` dataframe with ChemicalIdentifiers.jl to find the `CAS`-number, the `formula`, the molecular weight `MW` and the `smiles`-identifier. If the name is not found in the database of ChemicalIdentifiers.jl a list with alternative names (`shortnames.csv`) is used. If there are still no matches, `missing` is used.
 """
 function CAS_identification(Name)
-    load_custom_CI_database(custom_database_url)
-    shortnames = try
-        DataFrame(urldownload(shortnames_url))
-    catch
-        DataFrame(CSV.File(shortnames_filepath))
-    end
-    missingsubs = try 
-        DataFrame(urldownload(missing_url))
-    catch
-        DataFrame(CSV.File(missing_filepath))
-    end
-#	id = Array{NamedTuple{(:Name, :CAS, :formula, :MW, :smiles), Tuple{String, String, String, Float64, String}}}(undef, length(Name))
-#	for i=1:length(Name)
-    if Name in missingsubs.name # first look the name up in the missing.csv
-        j = findfirst(Name.==missingsubs.name)
-        id = (Name = missingsubs.name[j], CAS = missingsubs.CAS[j], formula = missingsubs.formula[j], MW = missingsubs.MW[j], smiles = missingsubs.smiles[j])
+    # Check if the input is in CAS number format
+    if occursin(r"^\d{1,7}-\d{2}-\d$", Name)
+        return CAS_identification_from_CAS(Name)
     else
-        if Name in shortnames.shortname # second look for name alternative in shortnames.csv for an alternative name used for the search
-            j = findfirst(Name.==shortnames.shortname)
-            name = String(shortnames.name[j])
-        else # otherwise use the input name
-            name = Name
-        end
-        @info "Searching for $name"
-        ci = try
-            search_chemical(name)
+        load_custom_CI_database(custom_database_url)
+        shortnames = try
+            DataFrame(urldownload(shortnames_url))
         catch
-            missing
+            DataFrame(CSV.File(shortnames_filepath))
         end
-        @info "Found $ci"
-        if ismissing(ci) # 
-            #ci_ = search_chemical("629-62-9")
-            # Placeholder data from Pentadecane
-            id = (Name = string(Name,"_ph"), CAS = "629-62-9_ph", formula = "C15H32", MW = 212.41, smiles = "CCCCCCCCCCCCCCC")
+        missingsubs = try 
+            DataFrame(urldownload(missing_url))
+        catch
+            DataFrame(CSV.File(missing_filepath))
+        end
+    #	id = Array{NamedTuple{(:Name, :CAS, :formula, :MW, :smiles), Tuple{String, String, String, Float64, String}}}(undef, length(Name))
+    #	for i=1:length(Name)
+        if Name in missingsubs.name # first look the name up in the missing.csv
+            j = findfirst(Name.==missingsubs.name)
+            id = (Name = missingsubs.name[j], CAS = missingsubs.CAS[j], formula = missingsubs.formula[j], MW = missingsubs.MW[j], smiles = missingsubs.smiles[j])
         else
-            if length(digits(ci.CAS[2])) == 1 # if the second CAS number has only one digit, add a leading zero
-                CAS = string(ci.CAS[1], "-0", ci.CAS[2], "-", ci.CAS[3])
-            else
-                CAS = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
+            if Name in shortnames.shortname # second look for name alternative in shortnames.csv for an alternative name used for the search
+                j = findfirst(Name.==shortnames.shortname)
+                name = String(shortnames.name[j])
+            else # otherwise use the input name
+                name = Name
             end
-            id = (Name = Name, CAS = CAS, formula = ci.formula, MW = ci.MW, smiles = ci.smiles)
+            @info "Searching for $name"
+            ci = try
+                search_chemical(name)
+            catch
+                missing
+            end
+            @info "Found $ci"
+            if ismissing(ci) # 
+                #ci_ = search_chemical("629-62-9")
+                # Placeholder data from Pentadecane
+                id = (Name = string(Name,"_ph"), 
+                        CAS = "629-62-9_ph", 
+                        formula = "C15H32", 
+                        MW = 212.41, 
+                        smiles = "CCCCCCCCCCCCCCC")
+            else
+                if length(digits(ci.CAS[2])) == 1 # if the second CAS number has only one digit, add a leading zero
+                    CAS = string(ci.CAS[1], "-0", ci.CAS[2], "-", ci.CAS[3])
+                else
+                    CAS = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
+                end
+                id = (Name = Name, CAS = CAS, formula = ci.formula, MW = ci.MW, smiles = ci.smiles)
+            end
         end
+        @info "Found $id"
+        return id
     end
-    @info "Found $id"
-	return id
 end
 
 #function CAS_identification(Name::Array{<:AbstractString})
