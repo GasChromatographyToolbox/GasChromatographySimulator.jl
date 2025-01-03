@@ -238,10 +238,11 @@ function CAS_identification(Name)
             missing
         end
         if ismissing(ci) # 
-            ci_ = search_chemical("629-62-9")
-            id = (Name = string(Name,"_ph"), CAS = "629-62-9_ph", formula = ci_.formula, MW = ci_.MW, smiles = ci_.smiles)
+            #ci_ = search_chemical("629-62-9")
+            # Placeholder data from Pentadecane
+            id = (Name = string(Name,"_ph"), CAS = "629-62-9_ph", formula = "C15H32", MW = 212.41, smiles = "CCCCCCCCCCCCCCC")
         else
-            if length(digits(ci.CAS[2])) == 1 # if the second CAS numver has only one digit, add a leading zero
+            if length(digits(ci.CAS[2])) == 1 # if the second CAS number has only one digit, add a leading zero
                 CAS = string(ci.CAS[1], "-0", ci.CAS[2], "-", ci.CAS[3])
             else
                 CAS = string(ci.CAS[1], "-", ci.CAS[2], "-", ci.CAS[3])
