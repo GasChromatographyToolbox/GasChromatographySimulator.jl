@@ -179,7 +179,7 @@ function temperature_interpolation(time_steps::Array{<:Real,1}, temp_steps::Arra
 			Tmat[i,j] = T(nx[i])[j] + 273.15
 		end
 	end
-	T_itp = GasChromatographySimulator.LinearInterpolation((nx, nt), Tmat, extrapolation_bc=GasChromatographySimulator.Flat())
+	T_itp = GasChromatographySimulator.linear_interpolation((nx, nt), Tmat, extrapolation_bc=GasChromatographySimulator.Flat())
 	return T_itp
 end
 
@@ -199,7 +199,7 @@ julia> pin_itp = steps_interpolation([0.0, 60.0, 300.0, 120.0],
 ```
 """
 function steps_interpolation(time_steps::Array{<:Real,1}, steps::Array{<:Real,1})
-    s_itp = LinearInterpolation((cumsum(time_steps), ), steps, extrapolation_bc=Flat())
+    s_itp = linear_interpolation((cumsum(time_steps), ), steps, extrapolation_bc=Flat())
     return s_itp
 end
 
