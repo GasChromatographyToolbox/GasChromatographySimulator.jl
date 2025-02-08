@@ -204,7 +204,7 @@ function steps_interpolation(time_steps::Array{<:Real,1}, steps::Array{<:Real,1}
 end
 
 """
-    CAS_identification_from_CAS(cas_number::String)
+    CAS_identification_from_CAS(cas_number::AbstractString)
 
 Look up a substance by its CAS number using ChemicalIdentifiers.jl to find the name, formula, molecular weight `MW` and `smiles`-identifier. 
 Returns a NamedTuple with the substance information or placeholder data if the CAS number is not found.
@@ -215,7 +215,7 @@ julia> CAS_identification_from_CAS("71-43-2")
 (Name = "Benzene", CAS = "71-43-2", formula = "C6H6", MW = 78.11, smiles = "c1ccccc1")
 ```
 """
-function CAS_identification_from_CAS(cas_number::String)
+function CAS_identification_from_CAS(cas_number::AbstractString)
     # Check if the input matches CAS number format (XX-XX-X)
     if !occursin(r"^\d{1,7}-\d{2}-\d$", cas_number)
         error("Invalid CAS number format. Expected format: XX-XX-X")
