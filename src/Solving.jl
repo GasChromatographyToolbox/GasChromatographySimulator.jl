@@ -222,6 +222,9 @@ function solving_migration(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θch
 	zspan = (0.0, L)
 	prob_tz = ODEProblem(f_tz, t₀, zspan, p)
 	solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol, reltol=opt.reltol; kwargs...)
+    if SciMLBase.successful_retcode(solution_tz) == false
+        solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=L/1000000)
+    end
 	return solution_tz
 end
 
@@ -251,6 +254,9 @@ function solving_peakvariance(solution_tz, L, d, df, gas, T_itp, Fpin_itp, pout_
     zspan = (0.0, L)
     prob_τ²z = ODEProblem(f_τ²z, τ²₀, zspan, p)
     solution_τ²z = solve(prob_τ²z, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
+    if SciMLBase.successful_retcode(solution_τ²z) == false
+        solution_τ²z = solve(prob_τ²z, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=L/1000000)
+    end
     return solution_τ²z
 end
 
@@ -277,9 +283,9 @@ function solving_odesystem_r(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θ
 	p = (L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
     solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
-    #if solution.t[end]<col.L
-    #    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=col.L/1000000)
-    #end
+    if SciMLBase.successful_retcode(solution) == false
+        solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=col.L/1000000)
+    end
     return solution
 end
 
