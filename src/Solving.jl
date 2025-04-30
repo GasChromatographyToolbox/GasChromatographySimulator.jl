@@ -284,7 +284,7 @@ function solving_odesystem_r(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θ
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
     solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
     if SciMLBase.successful_retcode(solution) == false
-        solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=col.L/1000000)
+        solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=L/1000000)
     end
     return solution
 end
