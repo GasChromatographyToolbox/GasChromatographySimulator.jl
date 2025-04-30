@@ -497,4 +497,13 @@ end
     @test size(val_col) == (2, 3)
 end
 
+@testset "ODE solver dtNaN" begin
+    col = GasChromatographySimulator.Column(0.25, 0.1e-3, 0.1e-6, "Rxi5SilMS", "He")
+    prog = GasChromatographySimulator.Program([300.0, 5.0], [120000.0, 5.0], col.L)
+    opt = GasChromatographySimulator.Options(abstol=1e-8, reltol=1e-5)
+    sol = GasChromatographySimulator.solving_odesystem_r(col.L, col.d, col.df, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, 340.0, 34.0, 200.0, 1e-3, 1e-4, 240.0, 1.0, opt)
+    @test sol.t[end] == col.L
+    GasChromatographySimulator.solve_system(col.L, col.d, col.df, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, 340.0, 34.0, 200.0, 1e-3, 1e-4, 240.0, 1.0, opt)
+end
+
 println("Test run successful.")
