@@ -146,7 +146,7 @@ function solve_system(par; kwargs...)
 end
 
 function solve_system(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
-	n = length(Tchar_)
+	n = length(Tchar)
 	sol = Array{Any}(undef, n)
 	for i=1:n
 		sol[i] = solving_odesystem_r(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], t₀[i], τ₀[i], opt; kwargs...)
@@ -223,6 +223,7 @@ function solving_migration(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θch
 	prob_tz = ODEProblem(f_tz, t₀, zspan, p)
 	solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol, reltol=opt.reltol; kwargs...)
     if SciMLBase.successful_retcode(solution_tz) == false
+        @info "ODE solver failed, trying again with set dt=L/1000000."
         solution_tz = solve(prob_tz, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=L/1000000)
     end
 	return solution_tz
@@ -255,6 +256,7 @@ function solving_peakvariance(solution_tz, L, d, df, gas, T_itp, Fpin_itp, pout_
     prob_τ²z = ODEProblem(f_τ²z, τ²₀, zspan, p)
     solution_τ²z = solve(prob_τ²z, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
     if SciMLBase.successful_retcode(solution_τ²z) == false
+        @info "ODE solver failed, trying again with set dt=L/1000000."
         solution_τ²z = solve(prob_τ²z, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=L/1000000)
     end
     return solution_τ²z
@@ -284,6 +286,7 @@ function solving_odesystem_r(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θ
     prob = ODEProblem(odesystem_r!, t₀, zspan, p)
     solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs...)
     if SciMLBase.successful_retcode(solution) == false
+        @info "ODE solver failed, trying again with set dt=L/1000000."
         solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol; kwargs..., dt=L/1000000)
     end
     return solution
