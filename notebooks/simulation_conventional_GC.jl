@@ -18,7 +18,7 @@ end
 begin 
 	# online version
 	import Pkg
-	version = "0.5.0"
+	version = "0.5.3"
 	Pkg.activate(mktempdir())
 	Pkg.add([
 		Pkg.PackageSpec(name="CSV"),
