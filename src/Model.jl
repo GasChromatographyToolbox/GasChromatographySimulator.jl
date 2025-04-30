@@ -95,11 +95,7 @@ function flow_restriction(x, t, T_itp, d, gas; ng=false, vis="Blumberg")
     else
 		p = (t, )# d) if `d` is function of `x` it cannot be part of `p` 
         f(y, p) = GasChromatographySimulator.viscosity(y, p[1], T_itp, gas, vis=vis)*T_itp(y, p[1])*d(y)^-4
-        if typeof(x) == Measurements.Measurement{Float64}
-			domain = (0.0±0.0, x)
-		else
-			domain = (0.0, x)
-		end
+        domain = (zero(x), x)  # Use zero(x) to get a zero of the same type as x
         prob = IntegralProblem(f, domain, p)
         κ = solve(prob, GasChromatographySimulator.QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
     end
@@ -112,11 +108,7 @@ function flow_restriction(x, t, T_itp, d::Number, gas; ng=false, vis="Blumberg")
     else
 		p = (t, d)
         f(y, p) = GasChromatographySimulator.viscosity(y, p[1], T_itp, gas, vis=vis)*T_itp(y, p[1])*p[2]^-4
-		if typeof(x) == Measurements.Measurement{Float64}
-			domain = (0.0±0.0, x)
-		else
-			domain = (0.0, x)
-		end
+        domain = (zero(x), x)  # Use zero(x) to get a zero of the same type as x
         prob = IntegralProblem(f, domain, p)
         κ = solve(prob, GasChromatographySimulator.QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
     end
@@ -611,7 +603,7 @@ function mobile_phase_residency(x, t, par::Parameters)
 end
 
 """
-    residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp,  φ₀; ng=false, vis="Blumberg", control="Pressure")
+    residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp,  φ₀; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
 
 Calculate the residency (the inverse velocity) of the solute at
 position `x` at time `t`.
