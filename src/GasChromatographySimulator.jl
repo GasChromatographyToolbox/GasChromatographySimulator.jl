@@ -215,7 +215,7 @@ julia> CAS_identification_from_CAS("71-43-2")
 (Name = "Benzene", CAS = "71-43-2", formula = "C6H6", MW = 78.11, smiles = "c1ccccc1")
 ```
 """
-function CAS_identification_from_CAS(cas_number::AbstractString)
+function CAS_identification_from_CAS(cas_number::AbstractString; show_info=false)
     # Check if the input matches CAS number format (XX-XX-X)
     if !occursin(r"^\d{1,7}-\d{2}-\d$", cas_number)
         error("Invalid CAS number format. Expected format: XX-XX-X")
@@ -225,13 +225,17 @@ function CAS_identification_from_CAS(cas_number::AbstractString)
     cas_parts = split(cas_number, "-")
     cas_tuple = (parse(Int, cas_parts[1]), parse(Int, cas_parts[2]), parse(Int, cas_parts[3]))
 
-    @info "Searching for CAS number $cas_number"
+    if show_info
+        @info "Searching for CAS number $cas_number"
+    end
     ci = try
         search_chemical(cas_tuple)
     catch
         missing
     end
-    @info "Found $ci"
+    if show_info
+        @info "Found $ci"
+    end
 
     if ismissing(ci)
         # Placeholder data if CAS number not found
@@ -253,8 +257,9 @@ function CAS_identification_from_CAS(cas_number::AbstractString)
               MW = ci.MW, 
               smiles = ci.smiles)
     end
-    
-    @info "Found $id"
+    if show_info
+        @info "Found $id"
+    end
     return id
 end
 
@@ -263,7 +268,7 @@ end
 
 Look up the substance name from the `data` dataframe with ChemicalIdentifiers.jl to find the `CAS`-number, the `formula`, the molecular weight `MW` and the `smiles`-identifier. If the name is not found in the database of ChemicalIdentifiers.jl a list with alternative names (`shortnames.csv`) is used. If there are still no matches, `missing` is used.
 """
-function CAS_identification(Name)
+function CAS_identification(Name; show_info=false)
     # Check if the input is in CAS number format
     if occursin(r"^\d{1,7}-\d{2}-\d$", Name)
         return CAS_identification_from_CAS(Name)
@@ -279,8 +284,6 @@ function CAS_identification(Name)
         catch
             DataFrame(CSV.File(missing_filepath))
         end
-    #	id = Array{NamedTuple{(:Name, :CAS, :formula, :MW, :smiles), Tuple{String, String, String, Float64, String}}}(undef, length(Name))
-    #	for i=1:length(Name)
         if Name in missingsubs.name # first look the name up in the missing.csv
             j = findfirst(Name.==missingsubs.name)
             id = (Name = missingsubs.name[j], CAS = missingsubs.CAS[j], formula = missingsubs.formula[j], MW = missingsubs.MW[j], smiles = missingsubs.smiles[j])
@@ -291,13 +294,17 @@ function CAS_identification(Name)
             else # otherwise use the input name
                 name = Name
             end
-            @info "Searching for $name"
+            if show_info
+                @info "Searching for $name"
+            end
             ci = try
                 search_chemical(name)
             catch
                 missing
             end
-            @info "Found $ci"
+            if show_info
+                @info "Found $ci"
+            end
             if ismissing(ci) # 
                 #ci_ = search_chemical("629-62-9")
                 # Placeholder data from Pentadecane
@@ -315,179 +322,12 @@ function CAS_identification(Name)
                 id = (Name = Name, CAS = CAS, formula = ci.formula, MW = ci.MW, smiles = ci.smiles)
             end
         end
-        @info "Found $id"
+        if show_info
+            @info "Found $id"
+        end
         return id
     end
 end
-
-#function CAS_identification(Name::Array{<:AbstractString})
-#	id = Array{NamedTuple{(:Name, :CAS, :formula, :MW, :smiles), Tuple{String, String, String, Float64, String}}}(undef, length(Name))
-#	for i=1:length(Name)
-#        id[i] = CAS_identification(Name[i])
-#	end
-#	return id
-#end
-
-# old version
-#="""
-    load_solute_database(db, sp, gas, solutes, t₀, τ₀)
-
-Load the data of `solutes` for the stationary phase `sp` and the mobile
-phase `gas` from the database `db` into an array of the structure `Substance`.
-
-# Arguments
-* `db::DataFrame`: DataFrame of the database. 
-* `sp::String`: Name of the stationary phase.
-* `gas::String`: Name of the mobile phase.
-* `solutes`: Name of the solutes or the id number of the solutes (array of Integers). If id numbers are used, the dataframe of the database must include a column "No" with the id numbers.
-* `t₀`: Initial start times of the solutes.
-* `τ₀`: Initial peak widths of the solutes. 
-
-# Examples
-```julia
-julia> sub = load_solute_database(db, "DB5", "He", ["C10", "C11"], [0.0, 0.0], [0.5, 0.5])
-```
-"""
-function load_solute_database(db_, sp, gas, solutes_, t₀, τ₀)
-	# compare names to CAS, using ChemicalIdentifiers.jl and a synonym list (different names of the same solute for different stationary phases)
-	
-    # remove solutes with missing CAS
-    if true in ismissing.(db_.CAS) #&& allowmissingCAS == false
-        @warn "Some CAS-numbers are missing. These substances are skipped."
-        db = disallowmissing!(db_[completecases(db_, :CAS), :], :CAS)
-    else
-        db = db_
-    end
-	
-	if "No" in names(db)
-		datanames = ["No", "Name", "CAS", "Phase", "Tchar", "thetachar", "DeltaCp", "phi0", "Source"]
-		if typeof(solutes_) == Vector{Int}
-			s_i = [findfirst(solutes_[x].==db.No) for x in 1:length(solutes_)]
-			solutes = db.Name[s_i]
-		else
-			solutes = solutes_
-		end
-	else
-		datanames = ["Name", "CAS", "Phase", "Tchar", "thetachar", "DeltaCp", "phi0", "Source"]
-		solutes = solutes_
-	end
-	#i_No = findfirst("No".==names(db_))
-	
-	
-	
-    id = GasChromatographySimulator.CAS_identification.(solutes)
-    #id_df_ = DataFrame(id_)
-    # ignore id where the CAS is not included in the database
-   	#id = id_#[findall([id_[x].CAS in db.CAS for x=1:length(id_)])]
-    id_df = DataFrame(id)
-
-    # indices of placeholders are used in id results:
-    i_ph = findall(occursin.("_ph", id_df.Name))
-
-    if sp == "" # no stationary phase is selected, like for transferlines
-        if "No" in names(db) && typeof(solutes_) == Vector{Int}
-	        db_filtered=db[in(solutes_).(db.No),:]
-	    else
-	        db_filtered=db[filter(x -> !isnothing(x), [findfirst(id_df.CAS[i] .== db.CAS) for i=1:length(id_df.CAS)]),:]
-	    end
-        Name = db_filtered.Name
-        CAS = db_filtered.CAS
-        # use placeholder values
-        Tchar = ones(length(Name))
-        θchar = ones(length(Name))
-        ΔCp = ones(length(Name))
-        φ₀ = ones(length(Name))
-        Annotation = fill("no sp", length(Name))
-        #t₀_ = t₀
-        #τ₀_ = τ₀ 
-        #indices = 1:length(Name)
-    elseif size(db)[2]>14 && "No" ∉ names(db)
-        error("Data format not supported. Use the appended database structure.")
-    elseif size(db)[2]>15 && "No" ∈ names(db)
-        error("Data format not supported. Use the appended database structure.")
-	elseif isa(findfirst(unique(db.Phase).==sp), Nothing) && sp!=""
-		error("Unknown selction of stationary phase. Choose one of these: $(unique(db.Phase))")	
-	else
-        # 1. Filter the stationary phase
-        db_filtered = filter([:Phase] => x -> x==sp, db)
-        # 2. Filter the solutes
-		if "No" in names(db_filtered) && typeof(solutes_) == Vector{Int}
-        	db_filtered_1=db_filtered[in(solutes_).(db_filtered.No),:]
-		else
-			db_filtered_1=db_filtered[in(id_df.CAS).(db_filtered.CAS),:]
-		end
-		
-		#if isempty(i_ph) == false
-		#	append!(db_filtered_1, db_filtered[in([split(x, "_ph")[1] for x in id_df.Name[i_ph]]).(db_filtered.Name),:])
-		#end
-        # values
-        Name = db_filtered_1.Name
-        CAS = db_filtered_1.CAS
-        Tchar = db_filtered_1.Tchar.+GasChromatographySimulator.Tst
-        θchar = db_filtered_1.thetachar
-        ΔCp = db_filtered_1.DeltaCp
-        φ₀ = db_filtered_1.phi0
-        if "Cnumber" in names(db_filtered_1)
-			Annotation = db_filtered_1.Annotation 
-        else # newer database version without information about the solute structure
-            # columns which have additional information, not needed (e.g. Categories)
-            i_datanames = [findfirst(datanames[x] .== names(db)) for x in 1:length(datanames)]
-            Catnames = names(db)[Not(i_datanames)]
-            i_Catnames = [findfirst(Catnames[x] .== names(db)) for x in 1:length(Catnames)]
-            nCat = length(i_Catnames)
-            if nCat < 1
-                Annotation = String.(db_filtered_1.Source)
-            else
-                Annotation = String.(db_filtered_1.Source)
-                for i=1:nCat
-                    for j=1:length(Annotation)
-                        if typeof(db_filtered_1[j,i_Catnames[i]]) != Missing
-                            Annotation[j] = string(Annotation[j], ", ", db_filtered_1[j,i_Catnames[i]])
-                        end
-                    end
-                end
-            end
-			if "No" in names(db_filtered_1)
-				Annotation = Annotation.*string.(", No: ", db_filtered_1.No)
-			end
-        end
-        # correct assignment of the t₀ and τ₀ values to the correct values from the input
-#		indices_cas = findall(in(db_filtered_1.CAS).(id_df_.CAS))
-#		indices_name = findall(in(string.(db_filtered_1.Name, "_ph")).(id_df_.Name))
-#        indices = union(indices_cas, indices_name)
-#        t₀_ = t₀[indices]
-#        τ₀_ = τ₀[indices]  
-		# ??? is this still correct ???
-	end
-    sub = Array{GasChromatographySimulator.Substance}(undef, length(Name))
-    for i=1:length(Name)
-        i_ind = if i in i_ph
-			findfirst(string(Name[i], "_ph").==id_df.Name)
-        else
-            findfirst(CAS[i].==id_df.CAS)
-		end
-        sub[i] = GasChromatographySimulator.Substance(Name[i],
-                            CAS[i],
-                            Tchar[i], 
-                            θchar[i], 
-                            ΔCp[i], 
-                            φ₀[i],
-                            Annotation[i],
-                            GasChromatographySimulator.diffusivity(id[i_ind], gas), 
-                            t₀[i_ind],
-                            τ₀[i_ind])
-    end
-	# warning for not found solutes
-	found_cas = [sub[i].CAS for i in 1:length(sub)]
-	i_notfound = findall(x ∉ found_cas for x in id_df.CAS)
-	found_name = [sub[i].name for i in 1:length(sub)]
-	i_notfound_name = findall(x ∉ found_name for x in solutes)
-	if isempty(i_notfound) == false && isempty(i_notfound_name) == false
-		@warn "Some solutes could not be found: $(solutes[intersect(i_notfound, i_notfound_name)])."
-	end
-	return unique(sub) # remove duplicates
-end=#
-# old version
 
 """
     load_solute_database(db_path, db, sp, gas, solutes, t₀, τ₀) 
