@@ -66,7 +66,7 @@ function solve_system_multithreads(par; kwargs...)
 end
 
 function solve_system_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
-	n = length(Tchar_)
+	n = length(Tchar)
 	sol = Array{Any}(undef, n)
 	Threads.@threads for i=1:n
 		sol[i] = solving_odesystem_r(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar[i], θchar[i], ΔCp[i], φ₀[i], Cag[i], t₀[i], τ₀[i], opt; kwargs...)
