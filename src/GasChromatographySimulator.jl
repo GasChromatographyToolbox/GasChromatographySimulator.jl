@@ -814,6 +814,15 @@ function peaklist(sol, par; thread=false)
     return pl
 end
 
+function peaklist(sol, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, opt; thread=false)
+    if thread == true
+        pl = peaklist_thread(sol, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, opt)
+    else
+        pl = peaklist_unthread(sol, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, opt)
+    end
+    return pl
+end
+
 function peaklist_thread(sol, par)
 	n = length(par.sub)
     T = typeof(sol[1].u[end][1])
@@ -939,6 +948,117 @@ function peaklist_unthread(sol, par)
     return select(df, [:No, :Name, :CAS, :tR, :τR, :TR, :σR, :uR, :kR, :Res, :Δs, :Annotations])
 end
 
+
+function peaklist_thread(sol, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, opt)
+	n = length(Name)
+    T = typeof(sol[1].u[end][1])
+    # sol is solution from ODE system
+    No = Array{Union{Missing, Int64}}(undef, n)
+    tR = Array{T}(undef, n)
+    TR = Array{T}(undef, n)
+    σR = Array{T}(undef, n)
+    uR = Array{T}(undef, n)
+    τR = Array{T}(undef, n)
+    kR = Array{T}(undef, n)
+    if T == Measurements.Measurement{Float64}
+        Res = fill(NaN ± 0.0, n)
+        Δs = fill(NaN ± 0.0, n)
+    else
+        Res = fill(NaN, n)
+        Δs = fill(NaN, n)
+    end
+    Threads.@threads for i=1:n
+        if sol[i].t[end]==L
+            tR[i] = sol[i].u[end][1]
+            TR[i] = T_itp(L, tR[i]) - 273.15 
+            uR[i] = 1/residency(L, tR[i], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar[i], θchar[i], ΔCp[i], φ₀[i]; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+            τR[i] = sqrt(sol[i].u[end][2])
+            σR[i] = τR[i]*uR[i]
+            kR[i] = retention_factor(L, tR[i], T_itp, d, df, Tchar[i], θchar[i], ΔCp[i], φ₀[i]; k_th=opt.k_th)
+        else
+            tR[i] = NaN
+            TR[i] = NaN
+            uR[i] = NaN
+            τR[i] = NaN
+            σR[i] = NaN
+            kR[i] = NaN
+        end
+        No[i] = try
+            parse(Int,split(ann, ", ")[end])
+        catch
+            try 
+                parse(Int,split(ann, ", No: ")[end])
+            catch
+                missing
+            end
+        end
+    end  
+    df = sort!(DataFrame(No = No, Name = Name, CAS = CAS, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, Annotations = ann, ), [:tR])
+    Threads.@threads for i=1:n-1
+        Res[i] = (df.tR[i+1] - df.tR[i])/(2*(df.τR[i+1] + df.τR[i]))
+        Δs[i] = (df.tR[i+1] - df.tR[i])/(df.τR[i+1] - df.τR[i]) * log(df.τR[i+1]/df.τR[i])
+    end
+    df[!, :Res] = Res
+    df[!, :Δs] = Δs 
+    
+    return select(df, [:No, :Name, :CAS, :tR, :τR, :TR, :σR, :uR, :kR, :Res, :Δs, :Annotations])
+end
+
+function peaklist_unthread(sol, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, opt)
+	n = length(Name)
+    T = typeof(sol[1].u[end][1])
+    # sol is solution from ODE system
+    No = Array{Union{Missing, Int64}}(undef, n)
+    tR = Array{T}(undef, n)
+    TR = Array{T}(undef, n)
+    σR = Array{T}(undef, n)
+    uR = Array{T}(undef, n)
+    τR = Array{T}(undef, n)
+    kR = Array{T}(undef, n)
+    if T == Measurements.Measurement{Float64}
+        Res = fill(NaN ± 0.0, n)
+        Δs = fill(NaN ± 0.0, n)
+    else
+        Res = fill(NaN, n)
+        Δs = fill(NaN, n)
+    end
+    for i=1:n
+        if sol[i].t[end]==L
+            tR[i] = sol[i].u[end][1]
+            TR[i] = T_itp(L, tR[i]) - 273.15 
+            uR[i] = 1/residency(L, tR[i], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar[i], θchar[i], ΔCp[i], φ₀[i]; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+            τR[i] = sqrt(sol[i].u[end][2])
+            σR[i] = τR[i]*uR[i]
+            kR[i] = retention_factor(L, tR[i], T_itp, d, df, Tchar[i], θchar[i], ΔCp[i], φ₀[i]; k_th=opt.k_th)
+        else
+            tR[i] = NaN
+            TR[i] = NaN
+            uR[i] = NaN
+            τR[i] = NaN
+            σR[i] = NaN
+            kR[i] = NaN
+        end
+        No[i] = try
+            parse(Int,split(ann, ", ")[end])
+        catch
+            try 
+                parse(Int,split(ann, ", No: ")[end])
+            catch
+                missing
+            end
+        end
+    end  
+    df = sort!(DataFrame(No = No, Name = Name, CAS = CAS, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, Annotations = ann, ), [:tR])
+    for i=1:n-1
+        Res[i] = (df.tR[i+1] - df.tR[i])/(2*(df.τR[i+1] + df.τR[i]))
+        Δs[i] = (df.tR[i+1] - df.tR[i])/(df.τR[i+1] - df.τR[i]) * log(df.τR[i+1]/df.τR[i])
+    end
+    df[!, :Res] = Res
+    df[!, :Δs] = Δs 
+    
+    return select(df, [:No, :Name, :CAS, :tR, :τR, :TR, :σR, :uR, :kR, :Res, :Δs, :Annotations])
+end
+
 """
     peaklist(sol, peak, par)
 
@@ -1028,6 +1148,59 @@ function peaklist(sol, peak, par)
     
     return select(df, [:No, :Name, :CAS, :tR, :τR, :TR, :σR, :uR, :kR, :Res, :Δs, :Annotations])
 end
+
+function peaklist(sol, peak, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, opt)
+	n = length(Name)
+    T = typeof(sol[1].u[end])
+    No = Array{Union{Missing, Int64}}(undef, n)
+    tR = Array{T}(undef, n)
+    TR = Array{T}(undef, n)
+    σR = Array{T}(undef, n)
+    uR = Array{T}(undef, n)
+    τR = Array{T}(undef, n)
+    kR = Array{T}(undef, n)
+    if T == Measurements.Measurement{Float64}
+        Res = fill(NaN ± 0.0, n)
+        Δs = fill(NaN ± 0.0, n)
+    else
+        Res = fill(NaN, n)
+        Δs = fill(NaN, n)
+    end
+    #Threads.@threads for i=1:n
+    for i=1:n
+        if sol[i].t[end]==L
+            tR[i] = sol[i].u[end]
+            TR[i] = T_itp(L, tR[i]) - 273.15 
+            uR[i] = 1/residency(L, tR[i], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar[i], θchar[i], ΔCp[i], φ₀[i]; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+            τR[i] = sqrt(peak[i].u[end])
+            σR[i] = τR[i]*uR[i]
+            kR[i] = retention_factor(L, tR[i], T_itp, d, df, Tchar[i], θchar[i], ΔCp[i], φ₀[i]; k_th=opt.k_th)
+        else
+            tR[i] = NaN
+            TR[i] = NaN
+            uR[i] = NaN
+            τR[i] = NaN
+            σR[i] = NaN
+            kR[i] = NaN
+        end
+        No[i] = try
+            parse(Int,split(ann, ", ")[end])
+        catch
+            missing
+        end
+    end  
+    df = sort!(DataFrame(No = No, Name = Name, CAS = CAS, tR = tR, τR = τR, TR=TR, σR = σR, uR = uR, kR = kR, Annotations = ann, ), [:tR])
+    #Threads.@threads for i=1:n-1
+    for i=1:n-1
+        Res[i] = (df.tR[i+1] - df.tR[i])/(2*(df.τR[i+1] + df.τR[i]))
+        Δs[i] = (df.tR[i+1] - df.tR[i])/(df.τR[i+1] - df.τR[i]) * log(df.τR[i+1]/df.τR[i])
+    end
+    df[!, :Res] = Res 
+    df[!, :Δs] = Δs   
+    
+    return select(df, [:No, :Name, :CAS, :tR, :τR, :TR, :σR, :uR, :kR, :Res, :Δs, :Annotations])
+end
+
 
 """
     sol_extraction(sol, par)
