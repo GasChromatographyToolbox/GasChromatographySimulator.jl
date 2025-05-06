@@ -5,7 +5,7 @@
 Simulate the GC system defined by the structure `par`.
 
 Alternative call:
-`simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)`
+`simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp,Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)`
 
 Note: Based on the option for `odesys` the result is different. For `odesys =
 true` the result is a dataframe (the peaklist) and the solution of the ODEs
@@ -25,10 +25,13 @@ function simulate(par; kwargs...)
 	end
 end
 
-function simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
+function simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
     if opt.odesys==true
         sol = solve_system_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
-    	pl = GasChromatographySimulator.peaklist(sol, par)
+    	# TODO: either create par from the input variables 
+        # or create new peaklist function
+        # perhaps add some parameters like 'Name' of the solutes
+        pl = GasChromatographySimulator.peaklist(sol, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, opt)
         return pl, sol
 	else
 		sol, peak = solve_separate_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
