@@ -248,6 +248,13 @@ end
                                                     opt_ng)
     @test results_p[1].tR[1] == results_o_ng[1].tR[1]
 
+    # odesys = false
+    results_odesys_false = GasChromatographySimulator.simulate(col.L, col.d, col.df, col.gas, 
+                                                    prog_o_ng.T_itp,prog_o_ng.Fpin_itp, prog_o_ng.pout_itp, 
+                                                    Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, 
+                                                    opt[2])
+    @test isapprox(results_odesys_false[1].tR[1], results_p[1].tR[1], atol=1e-2)
+
     # vis = "HP"
     #opt_vis = GasChromatographySimulator.Options(vis="HP")
     #prog_vis = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [zeros(length(time_steps)) x₀_steps L₀_steps α_steps], opt_vis.Tcontrol, col.L)
