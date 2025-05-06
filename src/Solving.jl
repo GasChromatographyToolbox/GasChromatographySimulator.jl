@@ -35,7 +35,7 @@ function simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tcha
         return pl, sol
 	else
 		sol, peak = solve_separate_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
-    	pl = GasChromatographySimulator.peaklist(sol, peak, par)
+    	pl = GasChromatographySimulator.peaklist(sol, peak, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, opt)
         return pl, sol, peak
 	end
 end
@@ -110,7 +110,7 @@ function solve_separate_multithreads(par; kwargs...)
 end
 
 function solve_separate_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
-    n = length(Tchar_)
+    n = length(Tchar)
     sol = Array{Any}(undef, n)
     peak = Array{Any}(undef, n)
     Threads.@threads for i=1:n
