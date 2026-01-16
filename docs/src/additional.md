@@ -34,6 +34,10 @@ This function calculated the derivative for the selected value:
 This functionality can be used for sensitivity analysis and can be helpful for the use of optimization methods.
 ## Uncertainty
 
+!!! warning "Attention!"
+
+    With version 0.5.7 the functionality of using values with uncertainties via Measurements.jl is not working.
+
 A uncertainty for the solutions of the ODEs can be calculated based on uncertainties of parameters of the system, e.g., column diameter ``d`` or retention parameters ``\Delta C_\text{p}``, using the Julia package `Measurements.jl`.
 
 !!! warning "Attention!"
