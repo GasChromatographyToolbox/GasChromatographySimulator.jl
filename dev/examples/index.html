@@ -50,67 +50,7 @@ pout_steps = prog_settings.pdet[1:20:end].*1000.0
 α_steps = -3.0.*ones(length(ΔT_steps))
 x₀_steps = zeros(length(ΔT_steps))
 L₀_steps = col_tg.L.*ones(length(ΔT_steps))
-prog_med_grad = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, &quot;outlet&quot;, col_tg.L);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">GasChromatographySimulator.Program{GasChromatographySimulator.var&quot;#gf#2&quot;{String, Matrix{Float64}}}([0.0, 0.9200000000000003, 0.9100000000000007, 0.9199999999999986, 0.9199999999999995, 0.910000000000001, 0.9199999999999999, 0.9199999999999982, 0.9200000000000008, 0.9300000000000006  …  0.9199999999999875, 0.9100000000000108, 0.9200000000000017, 0.9099999999999966, 0.9200000000000017, 0.9099999999999966, 0.9200000000000017, 0.9099999999999966, 0.9099999999999966, 0.9200000000000017], [49.323, 48.954, 49.323, 49.077, 49.569, 49.446, 48.831, 49.323, 49.077, 49.077  …  63.099, 56.211, 51.414, 48.339, 46.74, 45.51, 44.895, 44.28, 43.911, 43.542], [354589.48, 354562.67000000004, 354589.48, 354571.61, 354607.32, 354598.4, 354553.72, 354589.48, 354571.61, 354571.61  …  355560.34, 355082.14, 354740.58, 354517.9, 354400.94, 354310.42000000004, 354264.98, 354219.43, 354192.04000000004, 354164.6], [230168.87, 230224.3, 230168.87, 230205.81999999998, 230131.96, 230150.41, 230242.79, 230168.87, 230205.81999999998, 230205.81999999998  …  228154.50999999998, 229148.40000000002, 229856.25, 230316.84999999998, 230558.51, 230745.38999999998, 230839.16, 230933.15000000002, 230989.65000000002, 231046.23], GasChromatographySimulator.var&quot;#gf#2&quot;{String, Matrix{Float64}}(&quot;outlet&quot;, [-2.829 0.0 2.05 -3.0; -2.46 0.0 2.05 -3.0; … ; -1.23 0.0 2.05 -3.0; -0.984 0.0 2.05 -3.0]), [-2.829 0.0 2.05 -3.0; -2.46 0.0 2.05 -3.0; … ; -1.23 0.0 2.05 -3.0; -0.984 0.0 2.05 -3.0], 2051×108 extrapolate(interpolate((0.0:0.001:2.05,::Vector{Float64}), ::Matrix{Real}, Gridded(Linear())), Flat()) with element type Float64:
- 319.644  319.644  319.644  319.89   …  316.077  315.954  315.831  315.708
- 319.644  319.644  319.644  319.89      316.077  315.954  315.831  315.708
- 319.645  319.644  319.645  319.89      316.077  315.954  315.831  315.708
- 319.645  319.645  319.645  319.891     316.078  315.954  315.831  315.708
- 319.645  319.645  319.645  319.891     316.078  315.955  315.831  315.708
- 319.645  319.645  319.645  319.891  …  316.078  315.955  315.832  315.708
- 319.646  319.645  319.646  319.891     316.078  315.955  315.832  315.709
- 319.646  319.646  319.646  319.892     316.078  315.955  315.832  315.709
- 319.646  319.646  319.646  319.892     316.079  315.955  315.832  315.709
- 319.646  319.646  319.646  319.892     316.079  315.955  315.832  315.709
-   ⋮                                 ⋱             ⋮               
- 322.44   322.075  322.44   322.199     318.022  317.413  317.046  316.68
- 322.444  322.079  322.444  322.203     318.025  317.415  317.048  316.682
- 322.448  322.082  322.448  322.206     318.028  317.417  317.05   316.683
- 322.452  322.086  322.452  322.21   …  318.03   317.419  317.052  316.685
- 322.456  322.089  322.456  322.213     318.033  317.421  317.054  316.686
- 322.46   322.093  322.46   322.217     318.036  317.423  317.056  316.688
- 322.465  322.097  322.465  322.22      318.039  317.426  317.057  316.689
- 322.469  322.1    322.469  322.224     318.042  317.428  317.059  316.691
- 322.473  322.104  322.473  322.227  …  318.045  317.43   317.061  316.692, 108-element extrapolate(interpolate((::Vector{Float64},), ::Vector{Float64}, Gridded(Linear())), Flat()) with element type Float64:
- 354589.48
- 354562.67000000004
- 354589.48
- 354571.61
- 354607.32
- 354598.4
- 354553.72
- 354589.48
- 354571.61
- 354571.61
-      ⋮
- 355082.14
- 354740.58
- 354517.9
- 354400.94
- 354310.42000000004
- 354264.98
- 354219.43
- 354192.04000000004
- 354164.6, 108-element extrapolate(interpolate((::Vector{Float64},), ::Vector{Float64}, Gridded(Linear())), Flat()) with element type Float64:
- 230168.87
- 230224.3
- 230168.87
- 230205.81999999998
- 230131.96
- 230150.41
- 230242.79
- 230168.87
- 230205.81999999998
- 230205.81999999998
-      ⋮
- 229148.40000000002
- 229856.25
- 230316.84999999998
- 230558.51
- 230745.38999999998
- 230839.16
- 230933.15000000002
- 230989.65000000002
- 231046.23)</code></pre><p>The same solutes <code>sub</code> are used as in the previous example.</p><p>The parameters are combined:</p><pre><code class="language- hljs">par_tg = GasChromatographySimulator.Parameters(col_tg, prog_med_grad, sub, opt_tg);</code></pre><p>The temperature program and the pressure/flow program can be plotted:</p><pre><code class="language- hljs">p_flow_tg = GasChromatographySimulator.plot_flow(par_tg)
+prog_med_grad = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, &quot;outlet&quot;, col_tg.L);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">GasChromatographySimulator.Program{GasChromatographySimulator.var&quot;#gf#2&quot;{String, Matrix{Float64}}}([0.0, 0.9200000000000003, 0.9100000000000007, 0.9199999999999986, 0.9199999999999995, 0.910000000000001, 0.9199999999999999, 0.9199999999999982, 0.9200000000000008, 0.9300000000000006  …  0.9199999999999875, 0.9100000000000108, 0.9200000000000017, 0.9099999999999966, 0.9200000000000017, 0.9099999999999966, 0.9200000000000017, 0.9099999999999966, 0.9099999999999966, 0.9200000000000017], [49.323, 48.954, 49.323, 49.077, 49.569, 49.446, 48.831, 49.323, 49.077, 49.077  …  63.099, 56.211, 51.414, 48.339, 46.74, 45.51, 44.895, 44.28, 43.911, 43.542], [354589.48, 354562.67000000004, 354589.48, 354571.61, 354607.32, 354598.4, 354553.72, 354589.48, 354571.61, 354571.61  …  355560.34, 355082.14, 354740.58, 354517.9, 354400.94, 354310.42000000004, 354264.98, 354219.43, 354192.04000000004, 354164.6], [230168.87, 230224.3, 230168.87, 230205.81999999998, 230131.96, 230150.41, 230242.79, 230168.87, 230205.81999999998, 230205.81999999998  …  228154.50999999998, 229148.40000000002, 229856.25, 230316.84999999998, 230558.51, 230745.38999999998, 230839.16, 230933.15000000002, 230989.65000000002, 231046.23], GasChromatographySimulator.var&quot;#gf#2&quot;{String, Matrix{Float64}}(&quot;outlet&quot;, [-2.829 0.0 2.05 -3.0; -2.46 0.0 2.05 -3.0; … ; -1.23 0.0 2.05 -3.0; -0.984 0.0 2.05 -3.0]), [-2.829 0.0 2.05 -3.0; -2.46 0.0 2.05 -3.0; … ; -1.23 0.0 2.05 -3.0; -0.984 0.0 2.05 -3.0], GasChromatographySimulator.SimpleLinearInterpolation{2, Real}((Real[0.0, 0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009  …  2.041, 2.042, 2.043, 2.044, 2.045, 2.046, 2.047, 2.048, 2.049, 2.05], Real[0.0, 0.9200000000000003, 1.830000000000001, 2.7499999999999996, 3.669999999999999, 4.58, 5.5, 6.419999999999998, 7.339999999999999, 8.27  …  90.99999999999996, 91.90999999999997, 92.82999999999997, 93.73999999999997, 94.65999999999997, 95.56999999999996, 96.48999999999997, 97.39999999999996, 98.30999999999996, 99.22999999999996]), Real[319.644 319.644 … 315.83099999999996 315.70799999999997; 319.64427497550935 319.64423910913854 … 315.8311195545693 315.7080956436554; … ; 322.4687943216368 322.1003428883798 … 317.0591714441899 316.6905371553519; 322.47299999999996 322.104 … 317.061 316.692]), GasChromatographySimulator.SimpleLinearInterpolation{1, Float64}(([0.0, 0.9200000000000003, 1.830000000000001, 2.7499999999999996, 3.669999999999999, 4.58, 5.5, 6.419999999999998, 7.339999999999999, 8.27  …  90.99999999999996, 91.90999999999997, 92.82999999999997, 93.73999999999997, 94.65999999999997, 95.56999999999996, 96.48999999999997, 97.39999999999996, 98.30999999999996, 99.22999999999996],), [354589.48, 354562.67000000004, 354589.48, 354571.61, 354607.32, 354598.4, 354553.72, 354589.48, 354571.61, 354571.61  …  355560.34, 355082.14, 354740.58, 354517.9, 354400.94, 354310.42000000004, 354264.98, 354219.43, 354192.04000000004, 354164.6]), GasChromatographySimulator.SimpleLinearInterpolation{1, Float64}(([0.0, 0.9200000000000003, 1.830000000000001, 2.7499999999999996, 3.669999999999999, 4.58, 5.5, 6.419999999999998, 7.339999999999999, 8.27  …  90.99999999999996, 91.90999999999997, 92.82999999999997, 93.73999999999997, 94.65999999999997, 95.56999999999996, 96.48999999999997, 97.39999999999996, 98.30999999999996, 99.22999999999996],), [230168.87, 230224.3, 230168.87, 230205.81999999998, 230131.96, 230150.41, 230242.79, 230168.87, 230205.81999999998, 230205.81999999998  …  228154.50999999998, 229148.40000000002, 229856.25, 230316.84999999998, 230558.51, 230745.38999999998, 230839.16, 230933.15000000002, 230989.65000000002, 231046.23]))</code></pre><p>The same solutes <code>sub</code> are used as in the previous example.</p><p>The parameters are combined:</p><pre><code class="language- hljs">par_tg = GasChromatographySimulator.Parameters(col_tg, prog_med_grad, sub, opt_tg);</code></pre><p>The temperature program and the pressure/flow program can be plotted:</p><pre><code class="language- hljs">p_flow_tg = GasChromatographySimulator.plot_flow(par_tg)
 p_press_tg = GasChromatographySimulator.plot_pressure(par_tg)
 p_temp_tg = GasChromatographySimulator.plot_temperature(par_tg)
 l = @layout([a{0.65w} [b; c]])
@@ -121,4 +61,4 @@ p_chrom_tg, t_, chrom_ = GasChromatographySimulator.plot_chromatogram(peaklist_t
 plot!(p_chrom_tg, chrom_tg[!,1].*60.0, chrom_tg[!,2].*8e-5)
 ylims!(-13,13)
 xlims!(0.0,55.0)
-p_chrom_tg</code></pre><p>The measured chromatogram is plotted in orange, while the simulated chromatogram is plotted in blue and mirrored.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../usage/">« Usage</a><a class="docs-footer-nextpage" href="../additional/">Additional features »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Tuesday 13 January 2026 22:30">Tuesday 13 January 2026</span>. Using Julia version 1.10.10.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+p_chrom_tg</code></pre><p>The measured chromatogram is plotted in orange, while the simulated chromatogram is plotted in blue and mirrored.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../usage/">« Usage</a><a class="docs-footer-nextpage" href="../additional/">Additional features »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Friday 16 January 2026 11:15">Friday 16 January 2026</span>. Using Julia version 1.10.10.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
