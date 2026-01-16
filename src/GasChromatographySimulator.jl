@@ -734,7 +734,7 @@ function load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
 				db_filtered.phi0[i_db]
 			end
 			# annotations
-	        Annotation = annotations(db[i_db,:]) 
+	        Annotation = annotations(db_filtered[i_db,:]) 
 			# Cag -> reading or calculating
 			Cag = if isa(i_Cag, Int)
 				if isa(i_Cag_unc, Int)
