@@ -19,7 +19,7 @@ begin
 	# no usage of id number of selected solutes
 	# online version
 	import Pkg
-	version = "0.5.7"
+	version = "0.5.8"
 	Pkg.activate(mktempdir())
 	Pkg.add([
 		Pkg.PackageSpec(name="CSV"),
