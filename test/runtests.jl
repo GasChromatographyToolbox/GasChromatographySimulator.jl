@@ -545,4 +545,278 @@ end
     #GasChromatographySimulator.solve_system(col.L, col.d, col.df, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, 340.0, 34.0, 200.0, 1e-3, 1e-4, 240.0, 1.0, opt)
 end
 
+@testset "linear_interpolation" begin
+    # Test 1: Basic 1D linear interpolation with sorted data
+    x = [0.0, 1.0, 2.0, 3.0]
+    y = [10.0, 20.0, 30.0, 40.0]
+    interp = GasChromatographySimulator.linear_interpolation((x,), y)
+    
+    # Test interpolation at known points
+    @test interp(0.0) == 10.0
+    @test interp(1.0) == 20.0
+    @test interp(2.0) == 30.0
+    @test interp(3.0) == 40.0
+    
+    # Test interpolation between points
+    @test isapprox(interp(0.5), 15.0, atol=1e-10)
+    @test isapprox(interp(1.5), 25.0, atol=1e-10)
+    @test isapprox(interp(2.5), 35.0, atol=1e-10)
+    
+    # Test 2: Extrapolation (should return boundary values - flat extrapolation)
+    @test interp(-1.0) == 10.0  # Below range, returns first value
+    @test interp(5.0) == 40.0   # Above range, returns last value
+    
+    # Test 3: Single point (edge case)
+    x_single = [1.0]
+    y_single = [5.0]
+    interp_single = GasChromatographySimulator.linear_interpolation((x_single,), y_single)
+    @test interp_single(1.0) == 5.0
+    @test interp_single(0.0) == 5.0  # Extrapolation returns the single value
+    @test interp_single(2.0) == 5.0  # Extrapolation returns the single value
+    
+    # Test 4: Non-uniform spacing
+    x_nonuniform = [0.0, 0.5, 2.0, 5.0]
+    y_nonuniform = [0.0, 10.0, 40.0, 100.0]
+    interp_nonuniform = GasChromatographySimulator.linear_interpolation((x_nonuniform,), y_nonuniform)
+    # At x=1.0: between 0.5 (y=10.0) and 2.0 (y=40.0)
+    # Linear: 10.0 + (1.0-0.5)/(2.0-0.5) * (40.0-10.0) = 10.0 + 0.5/1.5 * 30.0 = 20.0
+    @test isapprox(interp_nonuniform(1.0), 20.0, atol=1e-10)
+    # At x=3.5: between 2.0 (y=40.0) and 5.0 (y=100.0)
+    # Linear: 40.0 + (3.5-2.0)/(5.0-2.0) * (100.0-40.0) = 40.0 + 1.5/3.0 * 60.0 = 70.0
+    @test isapprox(interp_nonuniform(3.5), 70.0, atol=1e-10)
+    
+    # Test 5: 2D bilinear interpolation
+    x_grid = [0.0, 1.0, 2.0]
+    t_grid = [0.0, 10.0, 20.0]
+    values = [10.0 20.0 30.0; 15.0 25.0 35.0; 20.0 30.0 40.0]
+    interp_2d = GasChromatographySimulator.linear_interpolation((x_grid, t_grid), values)
+    
+    # Test at grid points
+    @test interp_2d(0.0, 0.0) == 10.0
+    @test interp_2d(1.0, 10.0) == 25.0
+    @test interp_2d(2.0, 20.0) == 40.0
+    
+    # Test interpolation between grid points
+    # At (0.5, 5.0): bilinear interpolation
+    # x=0.5 is between x_grid[1]=0.0 and x_grid[2]=1.0
+    # t=5.0 is between t_grid[1]=0.0 and t_grid[2]=10.0
+    # Interpolate in x at t=0.0: 10.0 + 0.5*(15.0-10.0) = 12.5
+    # Interpolate in x at t=10.0: 20.0 + 0.5*(25.0-20.0) = 22.5
+    # Interpolate in t: 12.5 + 0.5*(22.5-12.5) = 17.5
+    result = interp_2d(0.5, 5.0)
+    @test isapprox(result, 17.5, atol=1e-10)
+    
+    # Test 6: Extrapolation for 2D (should return boundary values)
+    @test interp_2d(-1.0, 5.0) == interp_2d(0.0, 5.0)  # Below x range
+    @test interp_2d(3.0, 5.0) == interp_2d(2.0, 5.0)   # Above x range
+    @test interp_2d(1.0, -5.0) == interp_2d(1.0, 0.0)  # Below t range
+    @test interp_2d(1.0, 25.0) == interp_2d(1.0, 20.0) # Above t range
+    
+    # Test 7: Equality comparison
+    interp1 = GasChromatographySimulator.linear_interpolation((x,), y)
+    interp2 = GasChromatographySimulator.linear_interpolation((x,), y)
+    @test interp1 == interp2
+    
+    # Test 8: Different values should not be equal
+    y2 = [10.0, 21.0, 30.0, 40.0]
+    interp3 = GasChromatographySimulator.linear_interpolation((x,), y2)
+    @test interp1 != interp3
+    
+    # Test 9: Different grids should not be equal
+    x3 = [0.0, 1.0, 2.0, 3.1]
+    interp4 = GasChromatographySimulator.linear_interpolation((x3,), y)
+    @test interp1 != interp4
+    
+    # Test 10: Boundary edge cases (exactly at boundaries)
+    @test interp(0.0) == 10.0  # First point
+    @test interp(3.0) == 40.0  # Last point
+    @test interp_2d(0.0, 0.0) == 10.0  # Corner
+    @test interp_2d(2.0, 20.0) == 40.0  # Corner
+    @test interp_2d(0.0, 10.0) == 20.0  # Edge
+    @test interp_2d(1.0, 0.0) == 15.0   # Edge
+    
+    # Test 11: Different numeric types
+    x_int = [0, 1, 2, 3]
+    y_int = [10, 20, 30, 40]
+    interp_int = GasChromatographySimulator.linear_interpolation((x_int,), y_int)
+    @test interp_int(1.5) ≈ 25.0
+    
+    x_float32 = Float32[0.0, 1.0, 2.0, 3.0]
+    y_float32 = Float32[10.0, 20.0, 30.0, 40.0]
+    interp_float32 = GasChromatographySimulator.linear_interpolation((x_float32,), y_float32)
+    @test interp_float32(1.5) ≈ 25.0f0
+    
+    # Test 12: 2D with minimum points (2 points in each dimension required for bilinear interpolation)
+    # Note: Single point in one dimension is not supported as it requires at least 2 points for interpolation
+    # Instead, test with minimum 2x2 grid
+    x_grid_min = [0.0, 1.0]
+    t_grid_min = [0.0, 10.0]
+    values_min = [10.0 20.0; 15.0 25.0]  # 2x2 matrix
+    interp_2d_min = GasChromatographySimulator.linear_interpolation((x_grid_min, t_grid_min), values_min)
+    @test interp_2d_min(0.0, 0.0) == 10.0
+    @test interp_2d_min(1.0, 10.0) == 25.0
+    @test interp_2d_min(0.5, 5.0) ≈ 17.5  # Bilinear interpolation
+    
+    # Test 13: 2D with different sized grids (non-square)
+    x_grid_wide = [0.0, 1.0, 2.0]
+    t_grid_narrow = [0.0, 10.0]
+    values_wide = [10.0 20.0; 15.0 25.0; 20.0 30.0]  # 3x2 matrix
+    interp_2d_wide = GasChromatographySimulator.linear_interpolation((x_grid_wide, t_grid_narrow), values_wide)
+    @test interp_2d_wide(0.0, 0.0) == 10.0
+    @test interp_2d_wide(2.0, 10.0) == 30.0
+    @test interp_2d_wide(1.0, 5.0) ≈ 20.0  # Interpolate in both directions
+    
+    # Test 14: ForwardDiff compatibility (Dual numbers)
+    # Note: ForwardDiff is already available via GasChromatographySimulator
+    x_dual = GasChromatographySimulator.ForwardDiff.Dual(1.5, 1.0)  # value=1.5, partial=1.0
+    result_dual = interp(x_dual)
+    @test GasChromatographySimulator.ForwardDiff.value(result_dual) ≈ 25.0
+    @test GasChromatographySimulator.ForwardDiff.partials(result_dual, 1) ≈ 10.0  # derivative should be 10.0 (slope)
+    
+    # Test 15: ForwardDiff with 2D interpolation
+    # For 2D, we need Dual numbers with 2 partials
+    x_dual_2d = GasChromatographySimulator.ForwardDiff.Dual(0.5, 1.0, 0.0)  # partial w.r.t. x
+    t_dual_2d = GasChromatographySimulator.ForwardDiff.Dual(5.0, 0.0, 1.0)  # partial w.r.t. t
+    result_2d_dual = interp_2d(x_dual_2d, t_dual_2d)
+    @test GasChromatographySimulator.ForwardDiff.value(result_2d_dual) ≈ 17.5
+    
+    # Test 16: Very small values
+    x_small = [0.0, 1e-10, 2e-10, 3e-10]
+    y_small = [1e-20, 2e-20, 3e-20, 4e-20]
+    interp_small = GasChromatographySimulator.linear_interpolation((x_small,), y_small)
+    @test interp_small(1.5e-10) ≈ 2.5e-20
+    
+    # Test 17: Very large values
+    x_large = [0.0, 1e10, 2e10, 3e10]
+    y_large = [1e20, 2e20, 3e20, 4e20]
+    interp_large = GasChromatographySimulator.linear_interpolation((x_large,), y_large)
+    @test interp_large(1.5e10) ≈ 2.5e20
+    
+    # Test 18: Negative values
+    x_neg = [-3.0, -2.0, -1.0, 0.0]
+    y_neg = [-40.0, -30.0, -20.0, -10.0]
+    interp_neg = GasChromatographySimulator.linear_interpolation((x_neg,), y_neg)
+    @test interp_neg(-1.5) ≈ -25.0
+    @test interp_neg(-4.0) == -40.0  # Extrapolation
+    @test interp_neg(1.0) == -10.0   # Extrapolation
+    
+    # Test 19: 2D with negative values
+    x_grid_neg = [-2.0, -1.0, 0.0]
+    t_grid_neg = [-20.0, -10.0, 0.0]
+    values_neg = [-40.0 -30.0 -20.0; -30.0 -20.0 -10.0; -20.0 -10.0 0.0]
+    interp_2d_neg = GasChromatographySimulator.linear_interpolation((x_grid_neg, t_grid_neg), values_neg)
+    # At (-1.5, -15.0): bilinear interpolation
+    # x=-1.5 is between x_grid[1]=-2.0 and x_grid[2]=-1.0
+    # t=-15.0 is between t_grid[1]=-20.0 and t_grid[2]=-10.0
+    # Interpolate in x at t=-20.0: -40.0 + 0.5*(-30.0-(-40.0)) = -35.0
+    # Interpolate in x at t=-10.0: -30.0 + 0.5*(-20.0-(-30.0)) = -25.0
+    # Interpolate in t: -35.0 + 0.5*(-25.0-(-35.0)) = -30.0
+    @test interp_2d_neg(-1.5, -15.0) ≈ -30.0
+    @test interp_2d_neg(-3.0, -15.0) == interp_2d_neg(-2.0, -15.0)  # Extrapolation
+    
+    # Test 20: Type promotion
+    x_mixed = [0.0, 1, 2.0, 3]
+    y_mixed = [10, 20.0, 30, 40.0]
+    interp_mixed = GasChromatographySimulator.linear_interpolation((x_mixed,), y_mixed)
+    @test interp_mixed(1.5) ≈ 25.0
+    
+    # Test 21: 2D interpolation at all corners
+    @test interp_2d(0.0, 0.0) == 10.0
+    @test interp_2d(0.0, 10.0) == 20.0
+    @test interp_2d(0.0, 20.0) == 30.0
+    @test interp_2d(1.0, 0.0) == 15.0
+    @test interp_2d(1.0, 10.0) == 25.0
+    @test interp_2d(1.0, 20.0) == 35.0
+    @test interp_2d(2.0, 0.0) == 20.0
+    @test interp_2d(2.0, 10.0) == 30.0
+    @test interp_2d(2.0, 20.0) == 40.0
+    
+    # Test 22: 2D interpolation along edges
+    @test isapprox(interp_2d(0.0, 5.0), 15.0, atol=1e-10)  # Edge at x=0
+    @test isapprox(interp_2d(2.0, 5.0), 25.0, atol=1e-10)  # Edge at x=2
+    @test isapprox(interp_2d(1.0, 0.0), 15.0, atol=1e-10)  # Edge at t=0
+    @test isapprox(interp_2d(1.0, 20.0), 35.0, atol=1e-10) # Edge at t=20
+    
+    # Test 23: 2D extrapolation at corners
+    @test interp_2d(-1.0, -5.0) == interp_2d(0.0, 0.0)  # Below both ranges
+    @test interp_2d(3.0, 25.0) == interp_2d(2.0, 20.0)  # Above both ranges
+    @test interp_2d(-1.0, 10.0) == interp_2d(0.0, 10.0)  # Below x, within t
+    @test interp_2d(1.0, -5.0) == interp_2d(1.0, 0.0)    # Within x, below t
+    
+    # Test 24: Constant values (zero slope)
+    x_const = [0.0, 1.0, 2.0, 3.0]
+    y_const = [5.0, 5.0, 5.0, 5.0]
+    interp_const = GasChromatographySimulator.linear_interpolation((x_const,), y_const)
+    @test interp_const(0.5) == 5.0
+    @test interp_const(1.5) == 5.0
+    @test interp_const(-1.0) == 5.0  # Extrapolation
+    @test interp_const(5.0) == 5.0   # Extrapolation
+    
+    # Test 25: 2D with constant values in one direction
+    x_grid_const = [0.0, 1.0, 2.0]
+    t_grid_const = [0.0, 10.0, 20.0]
+    values_const_t = [10.0 10.0 10.0; 15.0 15.0 15.0; 20.0 20.0 20.0]  # Constant in t
+    interp_2d_const_t = GasChromatographySimulator.linear_interpolation((x_grid_const, t_grid_const), values_const_t)
+    @test interp_2d_const_t(0.5, 5.0) ≈ 12.5  # Should only interpolate in x
+    
+    values_const_x = [10.0 20.0 30.0; 10.0 20.0 30.0; 10.0 20.0 30.0]  # Constant in x
+    interp_2d_const_x = GasChromatographySimulator.linear_interpolation((x_grid_const, t_grid_const), values_const_x)
+    @test interp_2d_const_x(0.5, 5.0) ≈ 15.0  # Should only interpolate in t
+end
+
+@testset "deduplicate_knots!" begin
+    # Test 1: Basic deduplication with move_knots=true
+    x = [1.0, 2.0, 2.0, 3.0, 3.0, 3.0, 4.0]
+    x_copy = copy(x)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_copy; move_knots=true)
+    
+    # After deduplication, consecutive duplicates should be slightly different
+    @test length(unique_indices) == length(x)
+    @test x_copy[2] != x_copy[3]  # Duplicates should be modified
+    @test abs(x_copy[2] - x_copy[3]) < 1e-9  # But very close
+    @test x_copy[4] != x_copy[5]  # Multiple duplicates
+    @test x_copy[5] != x_copy[6]  # Multiple duplicates
+    
+    # Test 2: No duplicates (should not modify)
+    x_no_dup = [1.0, 2.0, 3.0, 4.0, 5.0]
+    x_no_dup_copy = copy(x_no_dup)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_no_dup_copy; move_knots=true)
+    @test x_no_dup_copy == x_no_dup  # Should be unchanged
+    
+    # Test 3: move_knots=false (should not modify duplicates)
+    x_dup = [1.0, 2.0, 2.0, 3.0]
+    x_dup_copy = copy(x_dup)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_dup_copy; move_knots=false)
+    @test x_dup_copy == x_dup  # Should be unchanged when move_knots=false
+    
+    # Test 4: Single element
+    x_single = [5.0]
+    x_single_copy = copy(x_single)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_single_copy; move_knots=true)
+    @test x_single_copy == x_single
+    @test unique_indices == 1:1
+    
+    # Test 5: Empty array (edge case)
+    x_empty = Float64[]
+    x_empty_copy = copy(x_empty)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_empty_copy; move_knots=true)
+    @test x_empty_copy == x_empty
+    @test unique_indices == 1:0
+    
+    # Test 6: All duplicates
+    x_all_dup = [1.0, 1.0, 1.0, 1.0]
+    x_all_dup_copy = copy(x_all_dup)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_all_dup_copy; move_knots=true)
+    @test length(unique_indices) == length(x_all_dup)
+    # Last element should be adjusted based on previous difference
+    @test x_all_dup_copy[end] != x_all_dup_copy[end-1]
+    
+    # Test 7: Duplicate at the end
+    x_end_dup = [1.0, 2.0, 3.0, 3.0]
+    x_end_dup_copy = copy(x_end_dup)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_end_dup_copy; move_knots=true)
+    @test x_end_dup_copy[3] != x_end_dup_copy[4]  # Last duplicate should be modified
+    @test abs(x_end_dup_copy[3] - x_end_dup_copy[4]) < 1e-9  # But very close
+end
+
 println("Test run successful.")
