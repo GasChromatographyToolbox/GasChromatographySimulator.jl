@@ -121,3 +121,94 @@ function same_length(a, b)
 		a
 	end
 end
+
+"""
+    deduplicate_knots!(x; move_knots=true)
+
+Remove duplicate consecutive values from array x, optionally moving knots to avoid duplicates.
+Similar to Interpolations.deduplicate_knots! but simpler.
+
+# Arguments
+* `x` ... array to deduplicate (modified in place)
+* `move_knots` ... if true, slightly adjust duplicate values to make them unique
+
+# Output
+* Indices of unique values (returns 1:length(x) after modification)
+
+# Examples
+```julia
+x = [1.0, 2.0, 2.0, 3.0]
+unique_indices = deduplicate_knots!(x; move_knots=true)
+# x is now [1.0, 2.0, 2.0000000001, 3.0] (approximately)
+# unique_indices = 1:4
+```
+"""
+function deduplicate_knots!(x; move_knots=true)
+    if length(x) <= 1
+        return 1:length(x)
+    end
+    
+    # Modify duplicates to make them unique (similar to Interpolations.deduplicate_knots!)
+    # When move_knots=true, slightly adjust duplicate values
+    if move_knots
+        i = 1
+        while i < length(x)
+            # Find the start of a duplicate sequence
+            if x[i+1] == x[i]
+                # Found a duplicate, find the end of the duplicate sequence
+                dup_start = i
+                dup_end = i + 1
+                while dup_end < length(x) && x[dup_end + 1] == x[dup_start]
+                    dup_end += 1
+                end
+                
+                # Now modify all duplicates in the sequence
+                if dup_end < length(x)
+                    # Not at the end: adjust based on next value
+                    next_val = x[dup_end + 1]
+                    for j in (dup_start + 1):dup_end
+                        # Use a small increment that increases with position in duplicate sequence
+                        offset = 1e-10 * (next_val - x[dup_start]) * (j - dup_start) / (dup_end - dup_start + 1)
+                        # If next value is same, use absolute increment
+                        if next_val == x[dup_start]
+                            offset = 1e-10 * abs(x[dup_start]) * (j - dup_start) + 1e-15 * (j - dup_start)
+                        end
+                        x[j] = x[dup_start] + offset
+                    end
+                else
+                    # At the end: adjust based on previous difference
+                    # Find the last different value
+                    prev_val = x[dup_start]
+                    prev_diff = 0.0
+                    for j in (dup_start - 1):-1:1
+                        if x[j] != x[dup_start]
+                            prev_val = x[j]
+                            prev_diff = x[dup_start] - x[j]
+                            break
+                        end
+                    end
+                    
+                    if prev_diff == 0.0
+                        # All previous values are the same, use small increment
+                        for j in (dup_start + 1):dup_end
+                            x[j] = x[dup_start] + 1e-10 * abs(x[dup_start]) * (j - dup_start) + 1e-15 * (j - dup_start)
+                        end
+                    else
+                        # Use previous difference as direction
+                        for j in (dup_start + 1):dup_end
+                            x[j] = x[dup_start] + 1e-10 * prev_diff * (j - dup_start)
+                        end
+                    end
+                end
+                
+                # Skip to after the duplicate sequence
+                i = dup_end + 1
+            else
+                i += 1
+            end
+        end
+    end
+    
+    # Return all indices (after modification, all values should be unique if move_knots=true)
+    return 1:length(x)
+end
