@@ -160,9 +160,26 @@ function (itp::SimpleLinearInterpolation{2, T})(x, t) where T
     # 1. Interpolate in x direction for both t boundaries
     # 2. Interpolate in t direction between the two x-interpolated values
     
+    # For extrapolation, use clamped values for weight calculation
+    # but preserve Dual number structure by using original x, t when within bounds
+    # When clamped, we need to use the clamped value for proper extrapolation
+    if x_val == x_val_clamped
+        x_for_interp = x
+    else
+        # Convert clamped value to same type as x to preserve Dual structure
+        x_for_interp = convert(typeof(x), x_val_clamped)
+    end
+    
+    if t_val == t_val_clamped
+        t_for_interp = t
+    else
+        # Convert clamped value to same type as t to preserve Dual structure
+        t_for_interp = convert(typeof(t), t_val_clamped)
+    end
+    
     # Compute weights (preserves Dual number structure)
-    wx = (x - x1) / (x2 - x1)
-    wt = (t - t1) / (t2 - t1)
+    wx = (x_for_interp - x1) / (x2 - x1)
+    wt = (t_for_interp - t1) / (t2 - t1)
     
     # Interpolate in x direction at t1 and t2
     v_t1 = v11 + wx * (v21 - v11)  # value at (x, t1)
