@@ -545,4 +545,137 @@ end
     #GasChromatographySimulator.solve_system(col.L, col.d, col.df, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, 340.0, 34.0, 200.0, 1e-3, 1e-4, 240.0, 1.0, opt)
 end
 
+@testset "linear_interpolation" begin
+    # Test 1: Basic 1D linear interpolation with sorted data
+    x = [0.0, 1.0, 2.0, 3.0]
+    y = [10.0, 20.0, 30.0, 40.0]
+    interp = GasChromatographySimulator.linear_interpolation((x,), y)
+    
+    # Test interpolation at known points
+    @test interp(0.0) == 10.0
+    @test interp(1.0) == 20.0
+    @test interp(2.0) == 30.0
+    @test interp(3.0) == 40.0
+    
+    # Test interpolation between points
+    @test isapprox(interp(0.5), 15.0, atol=1e-10)
+    @test isapprox(interp(1.5), 25.0, atol=1e-10)
+    @test isapprox(interp(2.5), 35.0, atol=1e-10)
+    
+    # Test 2: Extrapolation (should return boundary values - flat extrapolation)
+    @test interp(-1.0) == 10.0  # Below range, returns first value
+    @test interp(5.0) == 40.0   # Above range, returns last value
+    
+    # Test 3: Single point (edge case)
+    x_single = [1.0]
+    y_single = [5.0]
+    interp_single = GasChromatographySimulator.linear_interpolation((x_single,), y_single)
+    @test interp_single(1.0) == 5.0
+    @test interp_single(0.0) == 5.0  # Extrapolation returns the single value
+    @test interp_single(2.0) == 5.0  # Extrapolation returns the single value
+    
+    # Test 4: Non-uniform spacing
+    x_nonuniform = [0.0, 0.5, 2.0, 5.0]
+    y_nonuniform = [0.0, 10.0, 40.0, 100.0]
+    interp_nonuniform = GasChromatographySimulator.linear_interpolation((x_nonuniform,), y_nonuniform)
+    # At x=1.0: between 0.5 (y=10.0) and 2.0 (y=40.0)
+    # Linear: 10.0 + (1.0-0.5)/(2.0-0.5) * (40.0-10.0) = 10.0 + 0.5/1.5 * 30.0 = 20.0
+    @test isapprox(interp_nonuniform(1.0), 20.0, atol=1e-10)
+    # At x=3.5: between 2.0 (y=40.0) and 5.0 (y=100.0)
+    # Linear: 40.0 + (3.5-2.0)/(5.0-2.0) * (100.0-40.0) = 40.0 + 1.5/3.0 * 60.0 = 70.0
+    @test isapprox(interp_nonuniform(3.5), 70.0, atol=1e-10)
+    
+    # Test 5: 2D bilinear interpolation
+    x_grid = [0.0, 1.0, 2.0]
+    t_grid = [0.0, 10.0, 20.0]
+    values = [10.0 20.0 30.0; 15.0 25.0 35.0; 20.0 30.0 40.0]
+    interp_2d = GasChromatographySimulator.linear_interpolation((x_grid, t_grid), values)
+    
+    # Test at grid points
+    @test interp_2d(0.0, 0.0) == 10.0
+    @test interp_2d(1.0, 10.0) == 25.0
+    @test interp_2d(2.0, 20.0) == 40.0
+    
+    # Test interpolation between grid points
+    # At (0.5, 5.0): bilinear interpolation
+    # x=0.5 is between x_grid[1]=0.0 and x_grid[2]=1.0
+    # t=5.0 is between t_grid[1]=0.0 and t_grid[2]=10.0
+    # Interpolate in x at t=0.0: 10.0 + 0.5*(15.0-10.0) = 12.5
+    # Interpolate in x at t=10.0: 20.0 + 0.5*(25.0-20.0) = 22.5
+    # Interpolate in t: 12.5 + 0.5*(22.5-12.5) = 17.5
+    result = interp_2d(0.5, 5.0)
+    @test isapprox(result, 17.5, atol=1e-10)
+    
+    # Test 6: Extrapolation for 2D (should return boundary values)
+    @test interp_2d(-1.0, 5.0) == interp_2d(0.0, 5.0)  # Below x range
+    @test interp_2d(3.0, 5.0) == interp_2d(2.0, 5.0)   # Above x range
+    @test interp_2d(1.0, -5.0) == interp_2d(1.0, 0.0)  # Below t range
+    @test interp_2d(1.0, 25.0) == interp_2d(1.0, 20.0) # Above t range
+    
+    # Test 7: Equality comparison
+    interp1 = GasChromatographySimulator.linear_interpolation((x,), y)
+    interp2 = GasChromatographySimulator.linear_interpolation((x,), y)
+    @test interp1 == interp2
+    
+    # Test 8: Different values should not be equal
+    y2 = [10.0, 21.0, 30.0, 40.0]
+    interp3 = GasChromatographySimulator.linear_interpolation((x,), y2)
+    @test interp1 != interp3
+end
+
+@testset "deduplicate_knots!" begin
+    # Test 1: Basic deduplication with move_knots=true
+    x = [1.0, 2.0, 2.0, 3.0, 3.0, 3.0, 4.0]
+    x_copy = copy(x)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_copy; move_knots=true)
+    
+    # After deduplication, consecutive duplicates should be slightly different
+    @test length(unique_indices) == length(x)
+    @test x_copy[2] != x_copy[3]  # Duplicates should be modified
+    @test abs(x_copy[2] - x_copy[3]) < 1e-9  # But very close
+    @test x_copy[4] != x_copy[5]  # Multiple duplicates
+    @test x_copy[5] != x_copy[6]  # Multiple duplicates
+    
+    # Test 2: No duplicates (should not modify)
+    x_no_dup = [1.0, 2.0, 3.0, 4.0, 5.0]
+    x_no_dup_copy = copy(x_no_dup)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_no_dup_copy; move_knots=true)
+    @test x_no_dup_copy == x_no_dup  # Should be unchanged
+    
+    # Test 3: move_knots=false (should not modify duplicates)
+    x_dup = [1.0, 2.0, 2.0, 3.0]
+    x_dup_copy = copy(x_dup)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_dup_copy; move_knots=false)
+    @test x_dup_copy == x_dup  # Should be unchanged when move_knots=false
+    
+    # Test 4: Single element
+    x_single = [5.0]
+    x_single_copy = copy(x_single)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_single_copy; move_knots=true)
+    @test x_single_copy == x_single
+    @test unique_indices == 1:1
+    
+    # Test 5: Empty array (edge case)
+    x_empty = Float64[]
+    x_empty_copy = copy(x_empty)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_empty_copy; move_knots=true)
+    @test x_empty_copy == x_empty
+    @test unique_indices == 1:0
+    
+    # Test 6: All duplicates
+    x_all_dup = [1.0, 1.0, 1.0, 1.0]
+    x_all_dup_copy = copy(x_all_dup)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_all_dup_copy; move_knots=true)
+    @test length(unique_indices) == length(x_all_dup)
+    # Last element should be adjusted based on previous difference
+    @test x_all_dup_copy[end] != x_all_dup_copy[end-1]
+    
+    # Test 7: Duplicate at the end
+    x_end_dup = [1.0, 2.0, 3.0, 3.0]
+    x_end_dup_copy = copy(x_end_dup)
+    unique_indices = GasChromatographySimulator.deduplicate_knots!(x_end_dup_copy; move_knots=true)
+    @test x_end_dup_copy[3] != x_end_dup_copy[4]  # Last duplicate should be modified
+    @test abs(x_end_dup_copy[3] - x_end_dup_copy[4]) < 1e-9  # But very close
+end
+
 println("Test run successful.")
