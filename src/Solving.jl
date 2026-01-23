@@ -190,7 +190,7 @@ function solve_separate(par; kwargs...)
 end
 
 function solve_separate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
-    n = length(Tchar_)
+    n = length(Tchar)
     sol = Array{Any}(undef, n)
     peak = Array{Any}(undef, n)
     for i=1:n
@@ -322,8 +322,12 @@ function odesystem_r!(dt, t, p, z)
     φ₀ = p[11]
     Cag = p[12]
     opt = p[13]
-    dt[1] = residency(z, t[1], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
-    dt[2] = peakode(z, t[1], t[2], L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)
+    
+    # Compute residency once and reuse it (performance optimization)
+    r_val = residency(z, t[1], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+    dt[1] = r_val
+    # Pass pre-computed r_val to peakode to avoid redundant calculation
+    dt[2] = peakode(z, t[1], t[2], L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt, r_val)
 end
 
 """
@@ -341,18 +345,28 @@ function peakode(z, t, τ², col, prog, sub, opt)
     return peakode(z, t, τ², col.L, col.d, col.df, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag, opt)
 end
 
-function peakode(z, t, τ², L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)
-    if opt.ng==true
-        r_ng(zt) = residency(zt[1], zt[2], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=true, vis=opt.vis, control=opt.control, k_th=opt.k_th)
-        H_ng(z,t) = plate_height(z, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=true, vis=opt.vis, control=opt.control, k_th=opt.k_th)
-        ∂r∂t_ng(z,t) = ForwardDiff.gradient(r_ng, [z, t])[2]
-        return H_ng(z,t)*r_ng([z,t])^2 + 2*τ²*∂r∂t_ng(z,t)
-    else
-        r(z, t) = residency(z, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; vis=opt.vis, control=opt.control, k_th=opt.k_th)
-        rz(t) = r(z, t)
-        H(z, t) = plate_height(z, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; vis=opt.vis, control=opt.control, k_th=opt.k_th)
-        ∂rz∂t(t) = ForwardDiff.derivative(rz, t)
-        return H(z,t)*r(z,t)^2 + 2*τ²*∂rz∂t(t)
+# Optimized version that accepts optional pre-computed residency value to avoid redundant calculations
+function peakode(z, t, τ², L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt, r_val=nothing)
+    # If r_val is provided, reuse it; otherwise compute it (for backward compatibility)
+    if r_val === nothing
+        r_val = residency(z, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
     end
+    
+    # Compute plate height
+    H_val = plate_height(z, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=opt.ng, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+    
+    # Compute derivative ∂r/∂t using ForwardDiff
+    # ForwardDiff needs to evaluate residency at different points, so we create closures for AD
+    if opt.ng==true
+        # For ng=true, residency depends on both z and t
+        r_func(zt::AbstractVector) = residency(zt[1], zt[2], T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=true, vis=opt.vis, control=opt.control, k_th=opt.k_th)
+        ∂r∂t = ForwardDiff.gradient(r_func, [z, t])[2]
+    else
+        # For ng=false, residency depends only on t (z is fixed)
+        r_func_t(t_val) = residency(z, t_val, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; vis=opt.vis, control=opt.control, k_th=opt.k_th)
+        ∂r∂t = ForwardDiff.derivative(r_func_t, t)
+    end
+    
+    return H_val * r_val^2 + 2*τ²*∂r∂t
 end
 #---End-Solving-Functions---
