@@ -283,6 +283,16 @@ end
     pl1 = results_g[1][1]
     comp = GasChromatographySimulator.compare_measurement_simulation(meas, pl1)
     @test isnan(comp.simulated_tR[1])
+    # accept :tR column
+    meas_tr = DataFrame(Name=[pl1.Name[1]], tR=[pl1.tR[1]])
+    comp_tr = GasChromatographySimulator.compare_measurement_simulation(meas_tr, pl1)
+    @test comp_tr.simulated_tR[1] == pl1.tR[1]
+    # accept String column names
+    meas_str = DataFrame("Name" => [pl1.Name[1]], "tR" => [pl1.tR[1]])
+    comp_str = GasChromatographySimulator.compare_measurement_simulation(meas_str, pl1)
+    @test comp_str.simulated_tR[1] == pl1.tR[1]
+    # error if neither RT nor tR is present
+    @test_throws ErrorException GasChromatographySimulator.compare_measurement_simulation(DataFrame(Name=["C9"]), pl1)
 
     # simulation of a highly retained solute, retention factor > 1e15
     sub_ret = GasChromatographySimulator.Substance("Glyceryl triacetate", "102-76-1", 719.3, 31.282, 1552.2, 0.001, "Brehmer2022, triglyceride, ester", 9.459e-5, 0.0, 0.0)
