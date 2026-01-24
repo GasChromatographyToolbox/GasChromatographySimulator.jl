@@ -87,7 +87,7 @@ GasChromatographySimulator.solve_system_multithreads
 ```
 
 ```@docs
-GasChromatographySimulator.solve_multithreads
+GasChromatographySimulator.solve_separate_multithreads
 ```
 
 ```@docs
