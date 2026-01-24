@@ -30,11 +30,11 @@ Pluto will open your browser. In the field `Open from file` the URL of a noteboo
 
 ## Simulation of measurements
 
-Two measurements from [`[8]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References) will be simulated and compared to the measured chromatograms. The n-alkanes from n-nonane (C9) to n-triacontane (C30) are separated in a conventional GC and a thermal gradient GC . The database with the thermodynamic parameters is [`Database_Leppert2020b.csv`](https://github.com/GasChromatographyToolbox/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Database_Leppert2020b.csv).
+Two measurements from [`[7]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References) will be simulated and compared to the measured chromatograms. The n-alkanes from n-nonane (C9) to n-triacontane (C30) are separated in a conventional GC and a thermal gradient GC . The database with the thermodynamic parameters is [`Database_Leppert2020b.csv`](https://github.com/GasChromatographyToolbox/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Database_Leppert2020b.csv).
 
 ### Conventional GC
 
-The conventional GC program simulated here is `Prog. D` from [`[8]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References), a temperature program with two heating ramps, constant inlet pressure and a flame ionization detector (FID, atmospheric outlet pressure). 
+The conventional GC program simulated here is `Prog. D` from [`[7]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References), a temperature program with two heating ramps, constant inlet pressure and a flame ionization detector (FID, atmospheric outlet pressure). 
 
 The standard options are used, beside the option `ng` (non-gradient) is changed to `true`. Because the conventional GC does not use non-uniform temperature, diameter or film thickness, the model can be simplified and the calculation of the separation is faster.
 ```@example ex_meas
@@ -60,8 +60,11 @@ We want to use all solutes for the stationary phase `FS5ms`, which are in the da
 db_dataframe = DataFrame(CSV.File("../../data/Leppert2020b/Database_Leppert2020b.csv", header=1, silencewarnings=true));
 ```
 and extract all the names of the substances with:
+To keep the documentation concise, tables in this section are truncated to the first 10 rows in the output.
 ```@example ex_meas
-solutes = GasChromatographySimulator.all_solutes(col.sp, db_dataframe);
+solutes = String.(GasChromatographySimulator.all_solutes(col.sp, db_dataframe));
+println("Showing first 10 of $(length(solutes)) solutes:")
+first(solutes, 10)
 ```
 The injection is assumed to be ideal with initial peak widths `τ₀` of 0 seconds and occuring at the beginning of the temperature program (`t₀` of 0 seconds). The data for all solutes is finally loaded with:
 ```@example ex_meas 
@@ -103,9 +106,9 @@ measurement_D[!, 2] = measurement_D[!, 2] .* 60.0; # conversion from min -> s
 rename!(measurement_D, [:Name, :tR, :τR]);
 ```
 
-The simulated and measured separations can be compared by comparing the peak lists:
+The simulated and measured separations can be compared by comparing measured and simulated retention times:
 ```@example ex_meas
-compare = GasChromatographySimulator.compare_peaklist(measurement_D, peaklist)
+compare = GasChromatographySimulator.compare_measurement_simulation(measurement_D, peaklist)
 ```
 Differences between measured and simulated retention times are in the range of some seconds, while the retention times are in minutes. Most differences are below 1%. The measured peak widths are 10 to 15% higher than the calculated peak widths.
 
@@ -122,7 +125,7 @@ The measured chromatogram is plotted in orange, while the simulated chromatogram
 
 ### Thermal gradient GC
 
-The following example of a thermal gradient GC is the example `medium gradient` from [`[8]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References). 
+The following example of a thermal gradient GC is the example `medium gradient` from [`[7]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References). 
 
 Standard options are used (here the option `ng` has to be `false`):
 ```@example ex_meas
@@ -137,6 +140,8 @@ col_tg = GasChromatographySimulator.Column(2.05, 0.104e-3, 0.104e-6, "FS5ms", "H
 The program is taken from the measured temperatures and pressures during the GC run, stored in the file [`Leppert2020b_prog_settings_med_gradient_x90.csv`](https://github.com/GasChromatographyToolbox/GasChromatographySimulator.jl/blob/main/data/Leppert2020b/Leppert2020b_prog_settings_med_gradient_x90.csv).
 ```@example ex_meas
 prog_settings = DataFrame(CSV.File("../../data/Leppert2020b/Leppert2020b_prog_settings_med_gradient_x90.csv", header=1, silencewarnings=true));
+println("Showing first 10 of $(nrow(prog_settings)) rows:")
+first(prog_settings, 10)
 ```
 We do not need the measured temperatures and pressures at such a high measurement rate (every 40 to 50 ms). Only every 20th measurement point is used to re-construct the temperature and pressure program. The curvature factor $α$ is set to a value of `-3.0`, based on separate measurements of the temperature profile along the column.
 ```@example ex_meas   
@@ -186,9 +191,9 @@ measurement_tg[!, 3] = measurement_tg[!, 3] ./ 1000.0; # conversion from ms -> s
 rename!(measurement_tg, [:Name, :tR, :τR]);
 ```
 
-The simulated and measured separations can be compared by comparing the peak lists:
+The simulated and measured separations can be compared by comparing measured and simulated retention times:
 ```@example ex_meas
-compare_tg = GasChromatographySimulator.compare_peaklist(measurement_tg, peaklist_tg)
+compare_tg = GasChromatographySimulator.compare_measurement_simulation(measurement_tg, peaklist_tg)
 ```
 Differences in retention times are below 1 s, while the retention times are in the range of several seconds. Relative retention time differences are below 4%. The peak widths on the other hand are partly more than 50% higher in the measurement than in the simulation. Main reasons are peak broadening effects outside the scope of this simulation, e.g. extra-column broadening (in the detector) and asymmetric peak broadening (tailing of the peaks, especially for the later substances).
 
