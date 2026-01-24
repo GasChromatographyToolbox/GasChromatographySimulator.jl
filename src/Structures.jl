@@ -97,9 +97,9 @@ end
 Structure describing some general options for the simulation. 
 
 # Arguments
-* `alg`: The algorithm used for the ODE solver. The algorithms `OwrenZen3()`, `OwrenZen4()` and `OwrenZen5()` are recommended.
-* `abstol`: The absolute tolerance for the ODE solver. Recommended value 1e-6 to 1e-8.
-* `reltol`: The relative tolerance for the ODE solver. Recommended value 1e-3 to 1e-5. 
+* `alg`: The algorithm used for the ODE solver. Recommended: `OwrenZen5()` (default), `Tsit5()`, `Vern9()`, `BS5()` and `DP5()`. Legacy/alternative: `OwrenZen3()`, `OwrenZen4()`.
+* `abstol`: The absolute tolerance for the ODE solver. Recommended value 1e-6 to 1e-8 (use 1e-8 for high-accuracy solvers like `Vern9()`).
+* `reltol`: The relative tolerance for the ODE solver. Recommended value 1e-3 to 1e-5 (use 1e-5 for high-accuracy solvers like `Vern9()`).
 * `Tcontrol`: Option defining at which point of the column the temperature program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
 * `odesys`: Combine the ODEs for migration and peak-width into a system of ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`) or with a gradient (`ng = false`).
@@ -420,12 +420,9 @@ end
 Construct the structure `Options` with default values. 
 
 # Arguments
-* `alg`: The algorithm used for the ODE solver. The algorithms
-    `OwrenZen3()`, `OwrenZen4()` and `OwrenZen5()` are recommended.
-* `abstol`: The absolute tolerance for the ODE solver. Recommended value
-    1e-6 to 1e-8.
-* `reltol`: The relative tolerance for the ODE solver. Recommended value
-1e-3 to 1e-5. 
+* `alg`: The algorithm used for the ODE solver. Recommended: `OwrenZen5()` (default), `Tsit5()`, `Vern9()`, `BS5()` and `DP5()`. Legacy/alternative: `OwrenZen3()`, `OwrenZen4()`.
+* `abstol`: The absolute tolerance for the ODE solver. Recommended value 1e-6 to 1e-8 (use 1e-8 for high-accuracy solvers like `Vern9()`).
+* `reltol`: The relative tolerance for the ODE solver. Recommended value 1e-3 to 1e-5 (use 1e-5 for high-accuracy solvers like `Vern9()`).
 * `Tcontrol`: Option defining at which point of the column the temperature
     program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
 * `odesys`: Combine the ODEs for migration and peak-width into a system of
@@ -460,12 +457,9 @@ end
 Construct the structure `Options` with given values. 
 
 # Arguments
-* `alg`: The algorithm used for the ODE solver. The algorithms
-    `OwrenZen3()`, `OwrenZen4()` and `OwrenZen5()` are recommended.
-* `abstol`: The absolute tolerance for the ODE solver. Recommended value
-    1e-6 to 1e-8.
-* `reltol`: The relative tolerance for the ODE solver. Recommended value
-1e-3 to 1e-5. 
+* `alg`: The algorithm used for the ODE solver. Recommended: `OwrenZen5()` (default), `Tsit5()`, `Vern9()`, `BS5()` and `DP5()`. Legacy/alternative: `OwrenZen3()`, `OwrenZen4()`.
+* `abstol`: The absolute tolerance for the ODE solver. Recommended value 1e-6 to 1e-8 (use 1e-8 for high-accuracy solvers like `Vern9()`).
+* `reltol`: The relative tolerance for the ODE solver. Recommended value 1e-3 to 1e-5 (use 1e-5 for high-accuracy solvers like `Vern9()`).
 * `Tcontrol`: Option defining at which point of the column the temperature
     program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
 * `odesys`: Combine the ODEs for migration and peak-width into a system of
