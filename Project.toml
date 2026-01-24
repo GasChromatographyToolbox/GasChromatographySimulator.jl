@@ -1,6 +1,6 @@
 name = "GasChromatographySimulator"
 uuid = "dd82b6e2-56ef-419d-b271-0be268cb65f5"
-version = "0.5.8"
+version = "0.6.0"
 authors = ["Jan Leppert <jleppert@uni-bonn.de>"]
 
 [deps]
