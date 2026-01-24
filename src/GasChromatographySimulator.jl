@@ -2,7 +2,7 @@ module GasChromatographySimulator
 
 using Reexport
 using Integrals
-@reexport using OrdinaryDiffEq: OwrenZen3, OwrenZen4, OwrenZen5, ODEProblem
+@reexport using OrdinaryDiffEq: ODEProblem, OwrenZen3, OwrenZen4, OwrenZen5, Tsit5, Vern9, BS5, DP5
 using ForwardDiff
 using ForwardDiffOverMeasurements
 using DataFrames
