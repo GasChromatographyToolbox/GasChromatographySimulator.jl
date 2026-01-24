@@ -24,6 +24,10 @@ using Statistics  # For mean() function
 using BenchmarkTools
 HAS_BENCHMARKTOOLS = true
 
+# Local plot/CSV generation:
+#   GCS_BENCH_OUT=docs/src/assets/ode_solver_benchmarks.csv \
+#     julia --project scripts/compare_ode_algorithms.jl
+
 # Define algorithms to test (reference algorithm should be first)
 ALGORITHMS = [
     ("OwrenZen5", OwrenZen5()),  # Reference/baseline
@@ -445,13 +449,78 @@ if !isempty(out_path)
         return rows
     end
 
-    mkpath(dirname(out_path))
+    out_dir = dirname(out_path)
+    mkpath(out_dir)
     df_out = vcat(
         _build_results_df("no_gradient", results1, ALGORITHMS, ref_name),
         _build_results_df("gradient", results2, ALGORITHMS, ref_name),
     )
     CSV.write(out_path, df_out)
+
+    # Create plots for documentation reuse
+    using Plots
+    using Measurements
+
+    function _values(v)
+        return Measurements.value.(v)
+    end
+
+    # Runtime bar plot (no gradient)
+    df_no = df_out[df_out.case .== "no_gradient", :]
+    runtime = ifelse.(isnan.(df_no.bench_median_s), df_no.run_time_s, df_no.bench_median_s)
+    order_no = sortperm(runtime)
+    p_runtime = bar(df_no.algorithm[order_no], runtime[order_no],
+        xlabel="Algorithm", ylabel="Time (s)",
+        title="Runtime (no gradient)", legend=false, rotation=45)
+    savefig(p_runtime, joinpath(out_dir, "ode_solver_runtime_no_gradient.png"))
+
+    # Max difference bar plot (gradient)
+    df_grad = df_out[df_out.case .== "gradient", :]
+    order_grad = sortperm(df_grad.max_diff_tR_s)
+    p_diff = bar(df_grad.algorithm[order_grad], df_grad.max_diff_tR_s[order_grad],
+        xlabel="Algorithm", ylabel="Max |ΔtR| (s)",
+        title="Max retention time difference vs baseline (gradient)",
+        legend=false, rotation=45)
+    savefig(p_diff, joinpath(out_dir, "ode_solver_maxdiff_gradient.png"))
+
+    # Chromatogram overlays
+    function _chromatogram_plot(case_label, results, tmax_factor, out_name)
+        pl_ref = results[ref_name].peaklist
+        tmax = maximum(_values(pl_ref.tR)) * tmax_factor
+        t = range(0.0, tmax; length=10_001)
+
+        # Determine a global max to set a consistent offset between solvers
+        global_max = 0.0
+        for (name, _) in ALGORITHMS
+            pl = results[name].peaklist
+            chrom = GasChromatographySimulator.chromatogram(collect(t), _values(pl.tR), _values(pl.τR))
+            global_max = max(global_max, maximum(chrom))
+        end
+        offset_step = global_max * 0.3
+
+        colors = palette(:tab10, length(ALGORITHMS))
+        title_str = case_label == "no_gradient" ? "Chromatogram comparison (no gradient)" :
+                    "Chromatogram comparison (gradient)"
+
+        p = plot(xlabel="time (s)", ylabel="abundance (offset)", title=title_str, legend=:topright)
+        for (idx, (name, _)) in enumerate(ALGORITHMS)
+            pl = results[name].peaklist
+            offset = (idx - 1) * offset_step
+            GasChromatographySimulator.plot_chromatogram!(
+                p, pl, (0.0, tmax);
+                annotation=false, number=false, mirror=false,
+                offset=offset, uncertainty=false, color=colors[idx], label=name
+            )
+        end
+
+        savefig(p, joinpath(out_dir, out_name))
+    end
+
+    _chromatogram_plot("no_gradient", results1, 1.05, "ode_solver_chrom_no_gradient.png")
+    _chromatogram_plot("gradient", results2, 1.05, "ode_solver_chrom_gradient.png")
+
     println("Wrote benchmark results to: $(out_path)")
+    println("Wrote plots and peaklists to: $(out_dir)")
 end
 
 println("="^80)
