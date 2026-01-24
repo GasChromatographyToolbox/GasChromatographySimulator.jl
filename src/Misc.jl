@@ -53,8 +53,8 @@ end
 Compare the retention times of measured and simulated substances.
 
 # Arguments
-* `meas`: DataFrame consisting at least of the columns `:Name` and `:RT`
-  (measured retention time in s)
+* `meas`: DataFrame consisting at least of the columns `:Name` and `:RT` or
+  `:tR` (measured retention time in s)
 * `peaklist`: DataFrame as result from GasChromatographySimulator.jl with the
   columns `:Name` and `:tR` (simulated retention time in s).
   
@@ -65,7 +65,19 @@ and the relative difference (in %).
 function compare_measurement_simulation(meas, peaklist)
 	# check this function
 	name = meas.Name
-	tRm = meas.RT
+	name_syms = names(meas, Symbol)
+	tR_col = if :RT in name_syms
+		:RT
+	elseif :tR in name_syms
+		:tR
+	elseif "RT" in names(meas)
+		"RT"
+	elseif "tR" in names(meas)
+		"tR"
+	else
+		error("meas must have a :RT or :tR column")
+	end
+	tRm = meas[!, tR_col]
 	tRs = Array{Real}(undef, size(meas)[1])
 	for i=1:size(meas)[1]
 		i2 = findfirst(name[i].==peaklist.Name)
