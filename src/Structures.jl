@@ -1,5 +1,52 @@
 # Structures and Constructor functions
 # ---Begin-Structures---
+function _canonical_gas_string(gas)
+    gas_str = String(gas)
+    canonical = Dict("he" => "He", "h2" => "H2", "n2" => "N2")
+    key = lowercase(strip(gas_str))
+    haskey(canonical, key) || throw(ArgumentError("Wrong selection for `gas`: `$gas`. Choose `He`, `H2` or `N2`."))
+    return canonical[key]
+end
+
+function _value_real(x)
+    v = Measurements.value(x)
+    v isa Real || throw(ArgumentError("Expected real-valued input, got `$(typeof(x))`."))
+    return v
+end
+
+function _validate_positive_real(x, name::AbstractString)
+    v = _value_real(x)
+    (isfinite(v) && v > 0) || throw(ArgumentError("`$name` must be finite and > 0, got `$x`."))
+    return x
+end
+
+function _validate_nonnegative_real(x, name::AbstractString)
+    v = _value_real(x)
+    (isfinite(v) && v >= 0) || throw(ArgumentError("`$name` must be finite and >= 0, got `$x`."))
+    return x
+end
+
+function _validate_program_steps(steps::AbstractVector, name::AbstractString; allow_zero::Bool=true)
+    length(steps) > 0 || throw(ArgumentError("`$name` must not be empty."))
+    for (i, s) in enumerate(steps)
+        v = _value_real(s)
+        isfinite(v) || throw(ArgumentError("`$name[$i]` must be finite, got `$s`."))
+        if allow_zero
+            v >= 0 || throw(ArgumentError("`$name[$i]` must be >= 0, got `$s`."))
+        else
+            v > 0 || throw(ArgumentError("`$name[$i]` must be > 0, got `$s`."))
+        end
+    end
+end
+
+function _validate_program_inputs(ts, Ts, Fpis, pos, agf)
+    _validate_program_steps(ts, "time_steps"; allow_zero=true)
+    _validate_program_steps(Ts, "temp_steps"; allow_zero=true)
+    _validate_program_steps(Fpis, "Fpin_steps"; allow_zero=true)
+    _validate_program_steps(pos, "pout_steps"; allow_zero=true)
+    size(agf, 2) == 4 || throw(ArgumentError("`a_gf` must have 4 columns ([ΔT, x₀, L₀, α]); got size $(size(agf))."))
+end
+
 """
     Column(L, d, a_d, df, a_df, sp, gas)
 
@@ -23,7 +70,17 @@ struct Column
     a_df::Array{<:Real}    # parameters of the film thickness function df(x)
     sp::String              # stationary phase of the column
     gas::String             # gas of the mobile phase ["He", "H2", "N2"]
-    Column(L, d, a_d, df, a_df, sp, gas) = (gas!="He" && gas!="H2" && gas!="N2") ? error("Wrong selection for 'gas'. Choose 'He', 'H2' or 'N2'.") : new(L, d, a_d, df, a_df, sp, gas)
+    Column(L, d, a_d, df, a_df, sp, gas) = begin
+        L_ = _validate_positive_real(L, "L")
+        gas_ = _canonical_gas_string(gas)
+        if d isa Number
+            _validate_positive_real(d, "d")
+        end
+        if df isa Number
+            _validate_nonnegative_real(df, "df")
+        end
+        new(L_, d, a_d, df, a_df, sp, gas_)
+    end
 end
 
 """
@@ -56,7 +113,10 @@ struct Program{Fgf<:Function}
     Fpin_itp                                # interpolation function of Fpin(t)
     pout_itp                                # interpolation function of pout(t)
     # add inner constructor to check the lengths of the Arrays and of the result of gf
-    Program(ts, Ts, Fpis, pos, gf, agf, T, Fpin, po) = (length(ts)!=length(Ts) || length(ts)!=length(gf(0.0)) || length(ts)!=length(Fpis) || length(ts)!=length(pos)) || length(ts)!=size(agf)[1] ? error("Mismatch between length(time_steps) = $(length(ts)), length(temp_steps) = $(length(Ts)), length(Fpin_steps) = $(length(Fpis)), length(pout_steps) = $(length(pos)), length(gf(0.0)) = $(length(gf(0.0))) and size(a_gf)[1] = $(size(agf)[1]).") : new{typeof(gf)}(ts, Ts, Fpis, pos, gf, agf, T, Fpin, po)
+    Program(ts, Ts, Fpis, pos, gf, agf, T, Fpin, po) = begin
+        _validate_program_inputs(ts, Ts, Fpis, pos, agf)
+        (length(ts)!=length(Ts) || length(ts)!=length(gf(0.0)) || length(ts)!=length(Fpis) || length(ts)!=length(pos)) || length(ts)!=size(agf)[1] ? error("Mismatch between length(time_steps) = $(length(ts)), length(temp_steps) = $(length(Ts)), length(Fpin_steps) = $(length(Fpis)), length(pout_steps) = $(length(pos)), length(gf(0.0)) = $(length(gf(0.0))) and size(a_gf)[1] = $(size(agf)[1]).") : new{typeof(gf)}(ts, Ts, Fpis, pos, gf, agf, T, Fpin, po)
+    end
 end
 
 """
@@ -173,6 +233,9 @@ function Column(L, d, df, sp, gas)
     # for the case of constant diameter and constant film thickness
     #d_func(x) = gradient(x, [d])
     #df_func(x) = gradient(x, [df])
+    _validate_positive_real(L, "L")
+    _validate_positive_real(d, "d")
+    _validate_nonnegative_real(df, "df")
     col = Column(L, d, [d], df, [df], sp, gas)
     return col
 end
@@ -212,7 +275,10 @@ julia> Program([0.0, 60.0, 300.0, 120.0],
 function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, Fpin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, a_gf::Array{<:Real, 2}, Tcontrol, L)
     # function to construct the Program structure
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
-    gf(x) = gradient(x, a_gf; Tcontrol=Tcontrol)
+    Tcontrol_ = _canonical_option_string(Tcontrol, ("inlet", "outlet"), "Tcontrol")
+    _validate_positive_real(L, "L")
+    _validate_program_inputs(time_steps, temp_steps, Fpin_steps, pout_steps, a_gf)
+    gf(x) = gradient(x, a_gf; Tcontrol=Tcontrol_)
     T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
     Fpin_itp = steps_interpolation(time_steps, Fpin_steps)
     pout_itp = steps_interpolation(time_steps, pout_steps)
@@ -261,8 +327,11 @@ julia> Program([0.0, 60.0, 300.0, 120.0],
 function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, Fpin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, ΔT_steps::Array{<:Real, 1}, x₀_steps::Array{<:Real, 1}, L₀_steps::Array{<:Real, 1}, α_steps::Array{<:Real, 1}, Tcontrol, L)
     # function to construct the Program structure
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
+    Tcontrol_ = _canonical_option_string(Tcontrol, ("inlet", "outlet"), "Tcontrol")
+    _validate_positive_real(L, "L")
     a_gf = [ΔT_steps x₀_steps L₀_steps α_steps]
-    gf(x) = gradient(x, a_gf; Tcontrol=Tcontrol)
+    _validate_program_inputs(time_steps, temp_steps, Fpin_steps, pout_steps, a_gf)
+    gf(x) = gradient(x, a_gf; Tcontrol=Tcontrol_)
     T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
     Fpin_itp = steps_interpolation(time_steps, Fpin_steps)
     pout_itp = steps_interpolation(time_steps, pout_steps)
@@ -295,6 +364,8 @@ function `gf(x)` and the temperature interpolation `T_itp(x,t)`.
 """
 function Program(TP::Array{<:Real, 1}, FpinP::Array{<:Real, 1}, poutP::Array{<:Real, 1}, ΔTP::Array{<:Real, 1}, x₀P::Array{<:Real, 1}, L₀P::Array{<:Real, 1}, αP::Array{<:Real, 1}, Tcontrol::String, L::Real; time_unit="min")
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)
+    Tcontrol_ = _canonical_option_string(Tcontrol, ("inlet", "outlet"), "Tcontrol")
+    _validate_positive_real(L, "L")
     ts = Array{Array{Real,1}}(undef, 7)
     ts[1], Ts = GasChromatographySimulator.conventional_program(TP; time_unit=time_unit)
     ts[2], Fps = GasChromatographySimulator.conventional_program(FpinP; time_unit=time_unit)
@@ -316,7 +387,7 @@ function Program(TP::Array{<:Real, 1}, FpinP::Array{<:Real, 1}, poutP::Array{<:R
     α_steps = GasChromatographySimulator.new_value_steps(αs, ts[7], time_steps)
    
     a_gf = [ΔT_steps x₀_steps L₀_steps α_steps]
-    gf(x) = gradient(x, a_gf; Tcontrol=Tcontrol)
+    gf(x) = gradient(x, a_gf; Tcontrol=Tcontrol_)
     T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
     Fpin_itp = steps_interpolation(time_steps, Fpin_steps)
     pout_itp = steps_interpolation(time_steps, pout_steps)
@@ -355,7 +426,9 @@ function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, Fpi
     # function to construct the Program structure
     # without a thermal gradient
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)'
+    _validate_positive_real(L, "L")
     a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) Measurements.value(L).*ones(length(time_steps)) zeros(length(time_steps))]
+    _validate_program_inputs(time_steps, temp_steps, Fpin_steps, pout_steps, a_gf)
     gf(x) = gradient(x, a_gf)
     T_itp = temperature_interpolation(time_steps, temp_steps, gf, L)
     Fpin_itp = steps_interpolation(time_steps, Fpin_steps)
@@ -387,6 +460,7 @@ julia> Program((40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0),
 ```
 """
 function Program(TP, FpinP, L; pout="vacuum", time_unit="min")
+    _validate_positive_real(L, "L")
     ts1, Ts = GasChromatographySimulator.conventional_program(TP; time_unit=time_unit)
     ts2, Fps = GasChromatographySimulator.conventional_program(FpinP; time_unit=time_unit)
     # remove additional 0.0 which are not at the first position
@@ -397,14 +471,23 @@ function Program(TP, FpinP, L; pout="vacuum", time_unit="min")
     time_steps = GasChromatographySimulator.common_time_steps(ts1_, ts2_)
     temp_steps = GasChromatographySimulator.new_value_steps(Ts_, ts1_, time_steps)
     Fpin_steps = GasChromatographySimulator.new_value_steps(Fps_, ts2_, time_steps)
-    if pout == "vacuum"
-        pout_steps = zeros(length(time_steps))
+    if isa(pout, AbstractString)
+        pout_key = lowercase(strip(pout))
+        if pout_key == "vacuum"
+            pout_steps = zeros(length(time_steps))
+        elseif pout_key == "atmosphere"
+            pout_steps = pn.*ones(length(time_steps))
+        else
+            throw(ArgumentError("Invalid `pout`: `$pout`. Allowed values are `\"vacuum\"`, `\"atmosphere\"`, or a numeric pressure in Pa(a)."))
+        end
     elseif isa(pout, Number)
+        _validate_nonnegative_real(pout, "pout")
         pout_steps = pout.*ones(length(time_steps)) 
     else
-        pout_steps = pn.*ones(length(time_steps))
+        throw(ArgumentError("Invalid `pout` type: `$(typeof(pout))`. Use `\"vacuum\"`, `\"atmosphere\"`, or a numeric pressure in Pa(a)."))
     end
     a_gf = [zeros(length(time_steps)) zeros(length(time_steps)) Measurements.value(L).*ones(length(time_steps)) zeros(length(time_steps))]
+    _validate_program_inputs(time_steps, temp_steps, Fpin_steps, pout_steps, a_gf)
     gf(x) = GasChromatographySimulator.gradient(x, a_gf)
     T_itp = GasChromatographySimulator.temperature_interpolation(time_steps, temp_steps, gf, L)
     Fpin_itp = GasChromatographySimulator.steps_interpolation(time_steps, Fpin_steps)
