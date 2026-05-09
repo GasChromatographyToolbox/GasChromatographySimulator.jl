@@ -41,6 +41,17 @@ end
     # default Options
     opt = GasChromatographySimulator.Options(OwrenZen5(), 1e-6, 1e-3, "inlet", true)
     @test GasChromatographySimulator.Options() == opt
+    # option normalization / validation
+    opt_norm = GasChromatographySimulator.Options(Tcontrol="InLeT", vis="hp", control="flow")
+    @test opt_norm.Tcontrol == "inlet"
+    @test opt_norm.vis == "HP"
+    @test opt_norm.control == "Flow"
+    @test_throws ArgumentError GasChromatographySimulator.Options(Tcontrol="middle")
+    @test_throws ArgumentError GasChromatographySimulator.Options(vis="Sutherland")
+    @test_throws ArgumentError GasChromatographySimulator.Options(control="massflow")
+    @test_throws ArgumentError GasChromatographySimulator.Options(abstol=0.0)
+    @test_throws ArgumentError GasChromatographySimulator.Options(reltol=-1e-3)
+    @test_throws ArgumentError GasChromatographySimulator.Options(k_th=0.0)
 
     # Column
     a_d = [d]
