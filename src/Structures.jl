@@ -459,6 +459,31 @@ function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, Fpi
 end
 
 """
+    Program(time_steps, temp_steps, Fpin_steps, pout_steps)
+
+Construct the structure `Program` with direct step arrays for the case without
+a thermal gradient and without explicitly specifying a column length.
+
+This is intended for conventional GC use-cases where `T(x,t)` is spatially
+uniform (`ng=true` workflows), so only time dependence is relevant.
+
+# Examples
+```julia
+julia> Program(
+        [0.0, 60.0, 360.0, 600.0],
+        [40.0, 40.0, 250.0, 250.0],
+        [150000.0, 150000.0, 150000.0, 150000.0],
+        [101325.0, 101325.0, 101325.0, 101325.0]
+       )
+```
+"""
+function Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, Fpin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1})
+    # Reference length used only to build T(x,t) interpolation for non-gradient use-cases.
+    Lref = 1.0
+    return Program(time_steps, temp_steps, Fpin_steps, pout_steps, Lref)
+end
+
+"""
     Program(TP, FpinP, L; pout="vacuum", time_unit="min")
 
 Construct the structure `Program` with conventional formulation (see [`conventional_program`](@ref)) of programs for the case
@@ -516,6 +541,37 @@ function Program(TP, FpinP, L; pout="vacuum", time_unit="min")
     pout_itp = GasChromatographySimulator.steps_interpolation(time_steps, pout_steps)
     prog = GasChromatographySimulator.Program(time_steps, temp_steps, Fpin_steps, pout_steps, gf, a_gf, T_itp, Fpin_itp, pout_itp)
     return prog
+end
+
+"""
+    Program(TP, FpinP, pout, time_unit)
+
+Construct the structure `Program` with conventional formulation (see [`conventional_program`](@ref)) of programs for the case
+without a thermal gradient, without explicitly specifying a column length.
+
+This overload is intended for conventional GC use-cases where temperature is spatially uniform (`ng=true` workflows),
+so the specific length used for constructing `T_itp(x,t)` is not physically relevant.
+
+# Arguments
+* `TP`: conventional formulation of a temperature program.
+* `FpinP`: conventional formulation of a Flow (in m³/s) resp. inlet pressure (in Pa(a)) program.
+* `pout`: Outlet pressure, `"vacuum"`, `"atmosphere"` or the outlet pressure in Pa(a).
+* `time_unit`: unit of time in the programs, `"min"` times are measured in minutes, `"s"` in seconds.
+
+# Examples
+```julia
+julia> Program(
+        [40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0],
+        [400000.0, 10.0, 5000.0, 500000.0, 20.0];
+        pout="vacuum",
+        time_unit="min"
+       )
+```
+"""
+function Program(TP, FpinP; pout="vacuum", time_unit="min")
+    # Reference length used only to build T(x,t) interpolation for non-gradient use-cases.
+    Lref = 1.0
+    return Program(TP, FpinP, Lref; pout=pout, time_unit=time_unit)
 end
 
 """
