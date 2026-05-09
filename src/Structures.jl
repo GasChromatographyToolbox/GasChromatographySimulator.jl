@@ -457,14 +457,34 @@ function _validate_positive_option(value, name::AbstractString)
     return value
 end
 
+function _validate_ode_algorithm(alg)
+    recommended = Union{
+        typeof(OwrenZen3()),
+        typeof(OwrenZen4()),
+        typeof(OwrenZen5()),
+        typeof(Tsit5()),
+        typeof(Vern9()),
+        typeof(BS5()),
+        typeof(DP5())
+    }
+    if alg === nothing || alg isa AbstractString || alg isa Number || alg isa Symbol || alg isa Bool
+        throw(ArgumentError("`alg` must be an ODE algorithm object, got `$(typeof(alg))`."))
+    end
+    if !(alg isa recommended)
+        @warn "Selected `alg=$(typeof(alg))` is not in the recommended solver set (OwrenZen3/4/5, Tsit5, Vern9, BS5, DP5). Continuing with user-provided algorithm."
+    end
+    return alg
+end
+
 function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
+    alg_ = _validate_ode_algorithm(alg)
     Tcontrol_ = _canonical_option_string(Tcontrol, ("inlet", "outlet"), "Tcontrol")
     vis_ = _canonical_option_string(vis, ("Blumberg", "HP"), "vis")
     control_ = _canonical_option_string(control, ("Pressure", "Flow"), "control")
     abstol_ = _validate_positive_option(abstol, "abstol")
     reltol_ = _validate_positive_option(reltol, "reltol")
     k_th_ = _validate_positive_option(k_th, "k_th")
-    opt = Options(alg, abstol_, reltol_, Tcontrol_, odesys, ng, vis_, control_, k_th_)
+    opt = Options(alg_, abstol_, reltol_, Tcontrol_, odesys, ng, vis_, control_, k_th_)
     return opt
 end
 
@@ -501,13 +521,14 @@ julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true; ng=true, vis="HP", contro
 ```
 """
 function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
+    alg_ = _validate_ode_algorithm(alg)
     Tcontrol_ = _canonical_option_string(Tcontrol, ("inlet", "outlet"), "Tcontrol")
     vis_ = _canonical_option_string(vis, ("Blumberg", "HP"), "vis")
     control_ = _canonical_option_string(control, ("Pressure", "Flow"), "control")
     abstol_ = _validate_positive_option(abstol, "abstol")
     reltol_ = _validate_positive_option(reltol, "reltol")
     k_th_ = _validate_positive_option(k_th, "k_th")
-    opt = Options(alg, abstol_, reltol_, Tcontrol_, odesys, ng, vis_, control_, k_th_)
+    opt = Options(alg_, abstol_, reltol_, Tcontrol_, odesys, ng, vis_, control_, k_th_)
     return opt
 end
 
