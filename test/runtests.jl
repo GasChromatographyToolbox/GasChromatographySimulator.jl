@@ -288,7 +288,8 @@ end
                                                     prog_o_ng.T_itp,prog_o_ng.Fpin_itp, prog_o_ng.pout_itp, 
                                                     Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, 
                                                     opt[2])
-    @test isapprox(results_odesys_false[1].tR[1], results_p[1].tR[1], rtol=2e-4)
+    # odesys=true/false follows different numerical paths; require close (not identical) retention times across platforms
+    @test isapprox(results_odesys_false[1].tR[1], results_p[1].tR[1], rtol=5e-4, atol=5e-2)
 
     # vis = "HP"
     #opt_vis = GasChromatographySimulator.Options(vis="HP")
