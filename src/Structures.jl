@@ -124,7 +124,6 @@ struct Options
     vis::String         # viscosity model 'HP' or 'Blumberg'
     control::String     # control of the 'Flow' or of the inlet 'Pressure' during the program
     k_th                # threshold for the max. possible retention factor
-    # TODO: add check for the correct values of the options: Tcontrol, vis, control
 end
 
 """
@@ -446,8 +445,26 @@ julia> Options()
 julia> Options(abstol=1e-8, Tcontrol="outlet")
 ```
 """
+function _canonical_option_string(value::AbstractString, allowed::NTuple{N, String}, name::AbstractString) where {N}
+    canonical = Dict(lowercase(x) => x for x in allowed)
+    key = lowercase(strip(value))
+    haskey(canonical, key) || throw(ArgumentError("Invalid `$name`: `$value`. Allowed values are: $(join(allowed, ", "))."))
+    return canonical[key]
+end
+
+function _validate_positive_option(value, name::AbstractString)
+    value > 0 || throw(ArgumentError("`$name` must be > 0, got `$value`."))
+    return value
+end
+
 function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
-    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis, control, k_th)
+    Tcontrol_ = _canonical_option_string(Tcontrol, ("inlet", "outlet"), "Tcontrol")
+    vis_ = _canonical_option_string(vis, ("Blumberg", "HP"), "vis")
+    control_ = _canonical_option_string(control, ("Pressure", "Flow"), "control")
+    abstol_ = _validate_positive_option(abstol, "abstol")
+    reltol_ = _validate_positive_option(reltol, "reltol")
+    k_th_ = _validate_positive_option(k_th, "k_th")
+    opt = Options(alg, abstol_, reltol_, Tcontrol_, odesys, ng, vis_, control_, k_th_)
     return opt
 end
 
@@ -484,7 +501,13 @@ julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true; ng=true, vis="HP", contro
 ```
 """
 function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
-    opt = Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis, control, k_th)
+    Tcontrol_ = _canonical_option_string(Tcontrol, ("inlet", "outlet"), "Tcontrol")
+    vis_ = _canonical_option_string(vis, ("Blumberg", "HP"), "vis")
+    control_ = _canonical_option_string(control, ("Pressure", "Flow"), "control")
+    abstol_ = _validate_positive_option(abstol, "abstol")
+    reltol_ = _validate_positive_option(reltol, "reltol")
+    k_th_ = _validate_positive_option(k_th, "k_th")
+    opt = Options(alg, abstol_, reltol_, Tcontrol_, odesys, ng, vis_, control_, k_th_)
     return opt
 end
 
