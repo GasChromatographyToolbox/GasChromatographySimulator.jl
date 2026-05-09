@@ -123,6 +123,7 @@ end
     prog_conv = GasChromatographySimulator.Program([40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0], [400000.0, 10.0, 5000.0, 500000.0, 20.0], L; pout="vacuum", time_unit="min")
     prog_conv_s_atm = GasChromatographySimulator.Program([40.0, 1.0*60.0, 5.0/60.0, 280.0, 2.0*60.0, 20.0/60.0, 320.0, 2.0*60.0], [400000.0, 10.0*60.0, 5000.0/60.0, 500000.0, 20.0*60.0], L; pout="atmosphere", time_unit="s")
     @test_throws ArgumentError GasChromatographySimulator.Program([40.0, 1.0], [400000.0, 10.0], L; pout="ambient")
+    @test_throws ArgumentError GasChromatographySimulator.Program([40.0, 1.0], [400000.0, 10.0], L; time_unit="sec")
     @test prog_conv.temp_steps == [40.0, 40.0, 85.0, 185.0, 280.0, 280.0, 280.0, 320.0, 320.0]
     @test prog_conv.time_steps == prog_conv_s_atm.time_steps
     @test prog_conv.pout_steps == prog_conv_s_atm.pout_steps .- 101300
@@ -175,6 +176,10 @@ end
     @test par.col.L == L
     @test par.prog.gf(0.0) == par.prog.gf(L) + par.prog.a_gf[:,1]
     @test par.prog.T_itp(0.0, 0.0) == temp_steps[1] + 273.15
+    @test_throws ArgumentError GasChromatographySimulator.Parameters(col, prog, GasChromatographySimulator.Substance[], opt)
+    sub_dup = [sub[1], sub[1]]
+    @test_logs (:warn, r"Duplicate substance names detected") GasChromatographySimulator.Parameters(col, prog, sub_dup, opt)
+    @test_throws ArgumentError GasChromatographySimulator.Substance("X", "1", Inf, 1.0, 1.0, 1e-3, "ann", 1e-6, 0.0, 0.0)
     @test par.prog.T_itp(L, sum(time_steps)) == temp_steps[end] - ΔT_steps[end] + 273.15
     @test par.sub[1].Cag == GasChromatographySimulator.diffusivity(GasChromatographySimulator.CAS_identification(par.sub[1].name), "He")
     @test  isapprox(par.sub[2].Cag, GasChromatographySimulator.diffusivity(156.31, 11, 24, 0, 0, 0, "He"), atol=1e-6)
