@@ -57,6 +57,11 @@ end
     @test_throws ArgumentError GasChromatographySimulator.Options(abstol=0.0)
     @test_throws ArgumentError GasChromatographySimulator.Options(reltol=-1e-3)
     @test_throws ArgumentError GasChromatographySimulator.Options(k_th=0.0)
+    # column validation / normalization
+    @test GasChromatographySimulator.Column(L, d, df, sp, "he").gas == "He"
+    @test_throws ArgumentError GasChromatographySimulator.Column(0.0, d, df, sp, gas)
+    @test_throws ArgumentError GasChromatographySimulator.Column(L, -d, df, sp, gas)
+    @test_throws ArgumentError GasChromatographySimulator.Column(L, d, -df, sp, gas)
 
     # Column
     a_d = [d]
@@ -80,6 +85,14 @@ end
     @test prog_c.T_itp != prog_c_ng.T_itp
     @test prog.Fpin_itp == prog_c.Fpin_itp
     @test prog.pout_itp == prog_c.pout_itp
+    # program validation checks
+    bad_ts = copy(time_steps); bad_ts[2] = -1.0
+    bad_fp = copy(pin_steps); bad_fp[2] = -1.0
+    @test_throws ArgumentError GasChromatographySimulator.Program(bad_ts, temp_steps, pin_steps, pout_steps, col.L)
+    @test_throws ArgumentError GasChromatographySimulator.Program(time_steps, temp_steps, bad_fp, pout_steps, col.L)
+    @test_throws ArgumentError GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [ΔT_steps x₀_steps L₀_steps], "inlet", col.L)
+    @test_throws ArgumentError GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, a_gf, "middle", col.L)
+    @test_throws ArgumentError GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, 0.0)
 
     # conventional program
     TP0 = [40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0]
@@ -109,6 +122,7 @@ end
 
     prog_conv = GasChromatographySimulator.Program([40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0], [400000.0, 10.0, 5000.0, 500000.0, 20.0], L; pout="vacuum", time_unit="min")
     prog_conv_s_atm = GasChromatographySimulator.Program([40.0, 1.0*60.0, 5.0/60.0, 280.0, 2.0*60.0, 20.0/60.0, 320.0, 2.0*60.0], [400000.0, 10.0*60.0, 5000.0/60.0, 500000.0, 20.0*60.0], L; pout="atmosphere", time_unit="s")
+    @test_throws ArgumentError GasChromatographySimulator.Program([40.0, 1.0], [400000.0, 10.0], L; pout="ambient")
     @test prog_conv.temp_steps == [40.0, 40.0, 85.0, 185.0, 280.0, 280.0, 280.0, 320.0, 320.0]
     @test prog_conv.time_steps == prog_conv_s_atm.time_steps
     @test prog_conv.pout_steps == prog_conv_s_atm.pout_steps .- 101300
