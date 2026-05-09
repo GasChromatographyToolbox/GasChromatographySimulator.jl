@@ -7,16 +7,22 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Validation helpers for canonical string normalization and numeric sanity checks across constructors (positive/non-negative and finite value guards).
 - Finite-value checks in `Substance` construction for core thermodynamic and timing parameters.
+- New non-gradient `Program` overloads for conventional GC without explicit column length:
+  - `Program(time_steps, temp_steps, Fpin_steps, pout_steps)`
+  - `Program(TP, FpinP; pout="vacuum", time_unit="min")`
 
 ### Changed
 - `Options` now performs case-insensitive normalization for `Tcontrol`, `vis`, and `control`, validates positive tolerances (`abstol`, `reltol`, `k_th`), and applies a light solver-object check for `alg` (with warning for non-recommended algorithms).
 - `Column` constructors now validate `L > 0`, `d > 0`, `df >= 0` and normalize `gas` case-insensitively (`He`, `H2`, `N2`).
 - `Program` constructors now validate step-array finiteness/non-negativity, `a_gf` shape, positive `L`, normalized `Tcontrol`, normalized `time_unit` (`min` or `s`), and stricter `pout` handling (`vacuum` / `atmosphere` / non-negative numeric).
 - `Parameters` now emits a warning (instead of throwing an error) when duplicate substance names are provided in `sub`, while still rejecting empty `sub`.
+- Documentation now includes explicit usage/examples for the new no-`L` `Program` constructor workflows (issue #147-style calls).
 
 ### Tests
 - Added regression tests for `Options` normalization/validation and warning behavior for non-recommended algorithms.
 - Added regression tests for `Column`, `Program`, `Parameters`, and `Substance` constructor validation paths, including duplicate-name warning assertions.
+- Added simulation-level regression tests showing no-`L` non-gradient `Program` constructors reproduce explicit-`L` results (`tR`, `τR`).
+- Hardened cross-platform stability of the `odesys=true` vs `odesys=false` comparison with a combined relative/absolute tolerance.
 
 ## 0.6.0 - 2026-01-24
 

@@ -19,7 +19,19 @@ GasChromatographySimulator.Program(time_steps::Array{<:Real, 1}, temp_steps::Arr
 ```
 
 ```@docs
+GasChromatographySimulator.Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1})
+```
+
+```@docs
 GasChromatographySimulator.Program(time_steps::Array{<:Real, 1}, temp_steps::Array{<:Real, 1}, pin_steps::Array{<:Real, 1}, pout_steps::Array{<:Real, 1}, a_gf::Array{<:Real, 2}, Tcontrol, L)
+```
+
+```@docs
+GasChromatographySimulator.Program(TP, FpinP, L; pout="vacuum", time_unit="min")
+```
+
+```@docs
+GasChromatographySimulator.Program(TP, FpinP; pout="vacuum", time_unit="min")
 ```
 
 ```@docs
