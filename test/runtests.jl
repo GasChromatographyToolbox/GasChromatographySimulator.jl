@@ -18,6 +18,7 @@ L₀_steps = L.*ones(length(time_steps))
 db_path = joinpath("..", "data")#joinpath(pwd(), "data")#string(@__DIR__, "/data")
 db = "Database_test.csv"
 db_unc = "Database_test_uncertainty.csv"
+struct DummyAlg end
 
 @testset "gradient function check" begin
     # Gradient function for d
@@ -46,6 +47,10 @@ end
     @test opt_norm.Tcontrol == "inlet"
     @test opt_norm.vis == "HP"
     @test opt_norm.control == "Flow"
+    @test opt_norm.alg isa typeof(GasChromatographySimulator.OwrenZen5())
+    @test GasChromatographySimulator.Options(alg=GasChromatographySimulator.Tsit5()).alg isa typeof(GasChromatographySimulator.Tsit5())
+    @test_logs (:warn, r"recommended solver set") GasChromatographySimulator.Options(alg=DummyAlg())
+    @test_throws ArgumentError GasChromatographySimulator.Options(alg="OwrenZen5")
     @test_throws ArgumentError GasChromatographySimulator.Options(Tcontrol="middle")
     @test_throws ArgumentError GasChromatographySimulator.Options(vis="Sutherland")
     @test_throws ArgumentError GasChromatographySimulator.Options(control="massflow")
