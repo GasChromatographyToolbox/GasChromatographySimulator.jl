@@ -81,15 +81,22 @@ end
     prog = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, gf, a_gf, T_itp, pin_itp, pout_itp)
     prog_c = GasChromatographySimulator.constructor_Program(time_steps, temp_steps, pin_steps, pout_steps, ΔT_steps, x₀_steps, L₀_steps, α_steps, opt.Tcontrol, col.L)
     prog_c_ng = GasChromatographySimulator.constructor_Program(time_steps, temp_steps, pin_steps, pout_steps, col.L) # without gradient
+    prog_c_ng_noL = GasChromatographySimulator.constructor_Program(time_steps, temp_steps, pin_steps, pout_steps) # without gradient, no explicit L
     @test prog.T_itp == prog_c.T_itp
     @test prog_c.T_itp != prog_c_ng.T_itp
     @test prog.Fpin_itp == prog_c.Fpin_itp
     @test prog.pout_itp == prog_c.pout_itp
+    @test prog_c_ng_noL.time_steps == prog_c_ng.time_steps
+    @test prog_c_ng_noL.temp_steps == prog_c_ng.temp_steps
+    @test prog_c_ng_noL.Fpin_steps == prog_c_ng.Fpin_steps
+    @test prog_c_ng_noL.pout_steps == prog_c_ng.pout_steps
     # program validation checks
     bad_ts = copy(time_steps); bad_ts[2] = -1.0
     bad_fp = copy(pin_steps); bad_fp[2] = -1.0
     @test_throws ArgumentError GasChromatographySimulator.Program(bad_ts, temp_steps, pin_steps, pout_steps, col.L)
+    @test_throws ArgumentError GasChromatographySimulator.Program(bad_ts, temp_steps, pin_steps, pout_steps)
     @test_throws ArgumentError GasChromatographySimulator.Program(time_steps, temp_steps, bad_fp, pout_steps, col.L)
+    @test_throws ArgumentError GasChromatographySimulator.Program(time_steps, temp_steps, bad_fp, pout_steps)
     @test_throws ArgumentError GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, [ΔT_steps x₀_steps L₀_steps], "inlet", col.L)
     @test_throws ArgumentError GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, a_gf, "middle", col.L)
     @test_throws ArgumentError GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, 0.0)
@@ -122,11 +129,21 @@ end
 
     prog_conv = GasChromatographySimulator.Program([40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0], [400000.0, 10.0, 5000.0, 500000.0, 20.0], L; pout="vacuum", time_unit="min")
     prog_conv_s_atm = GasChromatographySimulator.Program([40.0, 1.0*60.0, 5.0/60.0, 280.0, 2.0*60.0, 20.0/60.0, 320.0, 2.0*60.0], [400000.0, 10.0*60.0, 5000.0/60.0, 500000.0, 20.0*60.0], L; pout="atmosphere", time_unit="s")
+    prog_conv_noL = GasChromatographySimulator.Program([40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0], [400000.0, 10.0, 5000.0, 500000.0, 20.0]; pout="vacuum", time_unit="min")
     @test_throws ArgumentError GasChromatographySimulator.Program([40.0, 1.0], [400000.0, 10.0], L; pout="ambient")
     @test_throws ArgumentError GasChromatographySimulator.Program([40.0, 1.0], [400000.0, 10.0], L; time_unit="sec")
+    @test_throws ArgumentError GasChromatographySimulator.Program([40.0, 1.0], [400000.0, 10.0]; pout="ambient", time_unit="min")
+    @test_throws ArgumentError GasChromatographySimulator.Program([40.0, 1.0], [400000.0, 10.0]; pout="vacuum", time_unit="sec")
     @test prog_conv.temp_steps == [40.0, 40.0, 85.0, 185.0, 280.0, 280.0, 280.0, 320.0, 320.0]
     @test prog_conv.time_steps == prog_conv_s_atm.time_steps
     @test prog_conv.pout_steps == prog_conv_s_atm.pout_steps .- 101300
+    @test prog_conv_noL.time_steps == prog_conv.time_steps
+    @test prog_conv_noL.temp_steps == prog_conv.temp_steps
+    @test prog_conv_noL.Fpin_steps == prog_conv.Fpin_steps
+    @test prog_conv_noL.pout_steps == prog_conv.pout_steps
+    tmid = sum(prog_conv_noL.time_steps)/2
+    @test prog_conv_noL.T_itp(0.0, tmid) == prog_conv_noL.T_itp(0.14342, tmid)
+    @test prog_conv_noL.T_itp(0.0, tmid) == prog_conv_noL.T_itp(1.0, tmid)
 
     TP = [40.0, 1.0, 5.0, 200.0, 0.0, 10.0, 280.0, 2.0, 20.0, 320.0, 2.0]
     FpinP = [400000.0, 10.0, 5000.0, 500000.0, 20.0]
@@ -266,6 +283,27 @@ end
     results_o_ng = GasChromatographySimulator.simulate(par_o_ng)
     @test isapprox(results_o_ng[1].tR[1], 87.41, atol=1e-2)
     @test isapprox(results_o_ng[1].τR[2], 0.590, atol=1e-3)
+
+    # regression: no-L non-gradient Program constructors should match explicit-L behavior
+    prog_ng_explicitL = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, col.L)
+    prog_ng_noL = GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps)
+    par_ng_explicitL = GasChromatographySimulator.Parameters(col, prog_ng_explicitL, sub, opt_ng)
+    par_ng_noL = GasChromatographySimulator.Parameters(col, prog_ng_noL, sub, opt_ng)
+    res_ng_explicitL = GasChromatographySimulator.simulate(par_ng_explicitL)
+    res_ng_noL = GasChromatographySimulator.simulate(par_ng_noL)
+    @test all(isapprox.(res_ng_explicitL[1].tR, res_ng_noL[1].tR, atol=1e-3))
+    @test all(isapprox.(res_ng_explicitL[1].τR, res_ng_noL[1].τR, atol=1e-4))
+
+    TP_ng = GasChromatographySimulator.temperature_program(time_steps, temp_steps; time_unit="s")
+    FpinP_ng = GasChromatographySimulator.temperature_program(time_steps, pin_steps; time_unit="s")
+    prog_conv_explicitL = GasChromatographySimulator.Program(TP_ng, FpinP_ng, col.L; pout="vacuum", time_unit="s")
+    prog_conv_noL = GasChromatographySimulator.Program(TP_ng, FpinP_ng; pout="vacuum", time_unit="s")
+    par_conv_explicitL = GasChromatographySimulator.Parameters(col, prog_conv_explicitL, sub, opt_ng)
+    par_conv_noL = GasChromatographySimulator.Parameters(col, prog_conv_noL, sub, opt_ng)
+    res_conv_explicitL = GasChromatographySimulator.simulate(par_conv_explicitL)
+    res_conv_noL = GasChromatographySimulator.simulate(par_conv_noL)
+    @test all(isapprox.(res_conv_explicitL[1].tR, res_conv_noL[1].tR, atol=1e-3))
+    @test all(isapprox.(res_conv_explicitL[1].τR, res_conv_noL[1].τR, atol=1e-4))
 
     Name = [sub[i].name for i in 1:length(sub)]
     CAS = [sub[i].CAS for i in 1:length(sub)]
