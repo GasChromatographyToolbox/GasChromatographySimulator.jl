@@ -49,7 +49,7 @@ Different methods exist to construct the Program structure, depending on the usa
 
 ### Without thermal gradient
 
-Without a thermal gradientthe temperature is the same at every column position (uniform) at the same time. This is the normal case for conventional GC. One example of such a program can be achieved by the following method [`GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, L)`](@ref), which constructs the Program structure:
+Without a thermal gradient the temperature is the same at every column position (uniform) at the same time. This is the normal case for conventional GC. One example of such a program can be achieved by the following method [`GasChromatographySimulator.Program(time_steps, temp_steps, pin_steps, pout_steps, L)`](@ref), which constructs the Program structure:
 
 ```@example ex
 prog = GasChromatographySimulator.Program(  [0.0, 60.0, 600.0, 120.0],
@@ -67,6 +67,30 @@ The first array `time_steps` defines the time steps (in s), the second array `te
 The first time step is always zero (t₁ = 0.0 s) and the following time steps define the time that passes until the next step. In the example the second time step is t₂ = 60 seconds long and in this time the temperature stays constant at 40°C. With the next time step (t₃ = 600 s) the temperature changes from T₂ = 40°C linearly to T₃ = 300°C. In the last time step (t₄ = 120 s) the temperature is again kept constant at 300°C. The pressure program is defined in the same way. The inlet pressure changes similarly at the time steps, while the outlet pressure is constant.
 
 The four arrays for time steps, temperatures and the two pressures (or flow and outlet pressure) must have the same number of elements, otherwise the construction of the Program structure gives an error message. Complex programs with several different heating ramps and temperature plateaus, as well as programed pressures, e.g. pressure pulses, can be realized by adding the temperature/pressure values at additional time steps. 
+
+For non-gradient use-cases (`ng=true` workflows), an overload without explicit column length is also available:
+
+```@example ex
+prog_noL = GasChromatographySimulator.Program(
+    [0.0, 60.0, 360.0, 600.0],
+    [40.0, 40.0, 250.0, 250.0],
+    [150000.0, 150000.0, 150000.0, 150000.0],
+    [101325.0, 101325.0, 101325.0, 101325.0]
+)
+nothing # hide
+```
+
+For conventional program notation, an overload without explicit `L` is also available:
+
+```@example ex
+prog_conv_noL = GasChromatographySimulator.Program(
+    [40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0],
+    [400000.0, 10.0, 5000.0, 500000.0, 20.0];
+    pout="vacuum",
+    time_unit="min"
+)
+nothing # hide
+```
 
 #### Conventional program notation
 
