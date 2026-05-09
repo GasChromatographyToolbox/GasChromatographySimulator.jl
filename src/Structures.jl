@@ -47,6 +47,12 @@ function _validate_program_inputs(ts, Ts, Fpis, pos, agf)
     size(agf, 2) == 4 || throw(ArgumentError("`a_gf` must have 4 columns ([ΔT, x₀, L₀, α]); got size $(size(agf))."))
 end
 
+function _canonical_time_unit_string(time_unit)
+    tu = lowercase(strip(String(time_unit)))
+    tu in ("min", "s") || throw(ArgumentError("Invalid `time_unit`: `$time_unit`. Allowed values are `\"min\"` or `\"s\"`."))
+    return tu
+end
+
 """
     Column(L, d, a_d, df, a_df, sp, gas)
 
@@ -148,7 +154,13 @@ struct Substance
     ann::String         # annotations, e.g. the source of the data from which Tchar, θchar and ΔCp were estimated
     Cag                 # diffusitivity constant of analyt in a gas, calculate from structure (or from measurements)
     t₀                  # initial time in s  	
-    τ₀                  # initial peak width in s   
+    τ₀                  # initial peak width in s
+    Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀) = begin
+        for (val, n) in ((Tchar, "Tchar"), (θchar, "θchar"), (ΔCp, "ΔCp"), (φ₀, "φ₀"), (Cag, "Cag"), (t₀, "t₀"), (τ₀, "τ₀"))
+            isfinite(_value_real(val)) || throw(ArgumentError("`$n` must be finite, got `$val`."))
+        end
+        new(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀)
+    end
 end
 
 """
@@ -205,6 +217,14 @@ struct Parameters
     prog::Program
     sub::Array{Substance,1}
     opt::Options
+    Parameters(col, prog, sub, opt) = begin
+        length(sub) > 0 || throw(ArgumentError("`sub` must not be empty."))
+        names = [s.name for s in sub]
+        if length(names) != length(unique(names))
+            @warn "Duplicate substance names detected in `sub`. Name-based matching utilities (for example comparison helpers) may become ambiguous."
+        end
+        new(col, prog, sub, opt)
+    end
 end
 # ---End-Structures---
 
@@ -365,15 +385,16 @@ function `gf(x)` and the temperature interpolation `T_itp(x,t)`.
 function Program(TP::Array{<:Real, 1}, FpinP::Array{<:Real, 1}, poutP::Array{<:Real, 1}, ΔTP::Array{<:Real, 1}, x₀P::Array{<:Real, 1}, L₀P::Array{<:Real, 1}, αP::Array{<:Real, 1}, Tcontrol::String, L::Real; time_unit="min")
     # using as gradient function the exponential model 'gf_exp(x,a_gf,Tcontrol)
     Tcontrol_ = _canonical_option_string(Tcontrol, ("inlet", "outlet"), "Tcontrol")
+    time_unit_ = _canonical_time_unit_string(time_unit)
     _validate_positive_real(L, "L")
     ts = Array{Array{Real,1}}(undef, 7)
-    ts[1], Ts = GasChromatographySimulator.conventional_program(TP; time_unit=time_unit)
-    ts[2], Fps = GasChromatographySimulator.conventional_program(FpinP; time_unit=time_unit)
-    ts[3], pouts = GasChromatographySimulator.conventional_program(poutP; time_unit=time_unit)
-    ts[4], ΔTs = GasChromatographySimulator.conventional_program(ΔTP; time_unit=time_unit)
-    ts[5], x₀s = GasChromatographySimulator.conventional_program(x₀P; time_unit=time_unit)
-    ts[6], L₀s = GasChromatographySimulator.conventional_program(L₀P; time_unit=time_unit)
-    ts[7], αs = GasChromatographySimulator.conventional_program(αP; time_unit=time_unit)
+    ts[1], Ts = GasChromatographySimulator.conventional_program(TP; time_unit=time_unit_)
+    ts[2], Fps = GasChromatographySimulator.conventional_program(FpinP; time_unit=time_unit_)
+    ts[3], pouts = GasChromatographySimulator.conventional_program(poutP; time_unit=time_unit_)
+    ts[4], ΔTs = GasChromatographySimulator.conventional_program(ΔTP; time_unit=time_unit_)
+    ts[5], x₀s = GasChromatographySimulator.conventional_program(x₀P; time_unit=time_unit_)
+    ts[6], L₀s = GasChromatographySimulator.conventional_program(L₀P; time_unit=time_unit_)
+    ts[7], αs = GasChromatographySimulator.conventional_program(αP; time_unit=time_unit_)
     time_steps = Real[]
     for i=1:7
         time_steps = GasChromatographySimulator.common_time_steps(time_steps, ts[i])
@@ -461,8 +482,9 @@ julia> Program((40.0, 1.0, 5.0, 280.0, 2.0, 20.0, 320.0, 2.0),
 """
 function Program(TP, FpinP, L; pout="vacuum", time_unit="min")
     _validate_positive_real(L, "L")
-    ts1, Ts = GasChromatographySimulator.conventional_program(TP; time_unit=time_unit)
-    ts2, Fps = GasChromatographySimulator.conventional_program(FpinP; time_unit=time_unit)
+    time_unit_ = _canonical_time_unit_string(time_unit)
+    ts1, Ts = GasChromatographySimulator.conventional_program(TP; time_unit=time_unit_)
+    ts2, Fps = GasChromatographySimulator.conventional_program(FpinP; time_unit=time_unit_)
     # remove additional 0.0 which are not at the first position
     ts1_ = ts1[[1; findall(0.0.!=ts1)]]
 	Ts_ = Ts[[1; findall(0.0.!=ts1)]]
