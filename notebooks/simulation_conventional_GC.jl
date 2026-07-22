@@ -1,17 +1,19 @@
 ### A Pluto.jl notebook ###
-# v0.19.41
+# v0.20.20
 
 using Markdown
 using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
-    quote
+    #! format: off
+    return quote
         local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
+    #! format: on
 end
 
 # ╔═╡ 115b320f-be42-4116-a40a-9cf1b55d39b5
@@ -182,36 +184,6 @@ end
 # ╔═╡ 115fa61e-8e82-42b2-8eea-9c7e21d97ea8
 opt = GasChromatographySimulator.Options(;abstol=1e-8, reltol=1e-5, ng=true, vis=opt_values[1], control=opt_values[2]);
 
-# ╔═╡ c26c1ea7-575f-495d-86bc-987aca991664
-function UI_TP(n_ramp)
-	PlutoUI.combine() do Child
-		@htl("""
-		<table>
-			<tr>
-				<th>ramp [°C/min]</th>
-				<th>T [°C]</th>
-				<th>hold [min]</th>
-			</tr>
-			<tr>
-				<td></td>
-				<td><center>$(Child(NumberField(0.0:0.1:400.0; default=40.0)))</center></td>
-				<td><center>$(Child(NumberField(0.0:0.1:100.0; default=1.0)))</center></td>
-			</tr>
-			$([
-				@htl("
-					<tr>
-						<td><center>$(Child(NumberField(0.0:0.1:100.0; default=5.0)))</center></td>
-						<td><center>$(Child(NumberField(0.0:0.1:400.0; default=((i+1)*100.0))))</center></td>
-						<td><center>$(Child(NumberField(0.0:0.1:100.0; default=1.0)))</center></td>
-					</tr>
-				")
-				for i=1:n_ramp
-			])
-		</table>
-		""")
-	end
-end
-
 # ╔═╡ 50f1bd7f-a479-453d-a8ea-57c37a4e330c
 function UI_Program(n_ramp, opt)
 	if opt.control == "Pressure"
@@ -332,6 +304,36 @@ end
 begin
 	plotly()
 	GasChromatographySimulator.local_plots(xx, yy, solution, par)
+end
+
+# ╔═╡ c26c1ea7-575f-495d-86bc-987aca991664
+function UI_TP(n_ramp)
+	PlutoUI.combine() do Child
+		@htl("""
+		<table>
+			<tr>
+				<th>ramp [°C/min]</th>
+				<th>T [°C]</th>
+				<th>hold [min]</th>
+			</tr>
+			<tr>
+				<td></td>
+				<td><center>$(Child(NumberField(0.0:0.1:400.0; default=40.0)))</center></td>
+				<td><center>$(Child(NumberField(0.0:0.1:100.0; default=1.0)))</center></td>
+			</tr>
+			$([
+				@htl("
+					<tr>
+						<td><center>$(Child(NumberField(0.0:0.1:100.0; default=5.0)))</center></td>
+						<td><center>$(Child(NumberField(0.0:0.1:400.0; default=((i+1)*100.0))))</center></td>
+						<td><center>$(Child(NumberField(0.0:0.1:100.0; default=1.0)))</center></td>
+					</tr>
+				")
+				for i=1:n_ramp
+			])
+		</table>
+		""")
+	end
 end
 
 # ╔═╡ 69cf18dd-a7b5-4f29-a8d2-e35420242db9
