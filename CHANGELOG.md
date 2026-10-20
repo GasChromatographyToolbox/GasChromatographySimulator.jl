@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Changed
+- `plate_height` uses the absolute mobile-phase velocity, so a reversed flow no longer produces a negative plate height. Diameter and film thickness, whether numbers or functions of `x`, are read through `profile`.
+
 ## 0.6.1 - 2026-05-09
 
 ### Added

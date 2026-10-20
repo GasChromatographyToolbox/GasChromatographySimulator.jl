@@ -210,6 +210,13 @@ end
     H__ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, 0.0, 0.0, 0.0, par.sub[3].φ₀, par.sub[3].Cag)
     @test H == H_
     @test H > H__
+    @test GasChromatographySimulator.profile(d, 0.0) == d
+    @test GasChromatographySimulator.profile(x -> 2*x, 3.0) == 6.0
+    H_num = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d(0.0), par.col.df(0.0), par.col.gas, par.sub[3].Tchar, par.sub[3].θchar, par.sub[3].ΔCp, par.sub[3].φ₀, par.sub[3].Cag)
+    @test H_num == H_
+    # swapped end pressures reverse the flow; plate height stays positive
+    H_rev = GasChromatographySimulator.plate_height(0.5*L, 0.0, par.prog.T_itp, par.prog.pout_itp, par.prog.Fpin_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[3].Tchar, par.sub[3].θchar, par.sub[3].ΔCp, par.sub[3].φ₀, par.sub[3].Cag)
+    @test H_rev > 0
 
     # control="Flow"
     opt_F = GasChromatographySimulator.Options(control="Flow")

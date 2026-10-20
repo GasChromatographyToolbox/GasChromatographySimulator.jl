@@ -760,6 +760,15 @@ function retention_factor(x, t, col::Column, prog::Program, sub::Substance, opt:
 end
 
 """
+    profile(g, x)
+
+Value of a column profile at position `x`. A `Number` is constant along
+the column. Any other profile is called as `g(x)`.
+"""
+profile(g::Number, x) = g
+profile(g, x) = g(x)
+
+"""
     plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
 
 Calculate the plate height of the solute at position `x` at time `t`
@@ -772,8 +781,8 @@ according to the Golay equation.
 * `Fpin_itp`: Interpolated (linear) Flow F(t) resp. inlet pressure `pin(t)`.
 * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
 * `L`: Length of the capillary measured in m (meter).
-* `d`: Diameter of the GC column, in m.
-* `df`: Film thickness of the GC column, in m.
+* `d`: Diameter of the GC column, in m. A number, or a function of position `x`.
+* `df`: Film thickness of the GC column, in m. A number, or a function of position `x`.
 * `gas`: Name of the mobile phase gas.
 * `Tchar`: Characteristic temperature of the solute, in K.
 * `θchar`: Characteristic parameters of the solute, in °C.
@@ -787,12 +796,13 @@ or with a gradient (`ng = false`).
 * `vis`: used model for viscosity "Blumberg" or "HP".
 * `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
-``H(x,t) = 2 \\frac{D_M}{u_M} + \\frac{d^2}{96}\\left(6 μ^2-16 μ +11
-\\right) \\frac{u_M}{D_M} + \\frac{2}{3} d_f^2 μ(1-μ) \\frac{u_M}{D_S}``
+``H(x,t) = 2 \\frac{D_M}{|u_M|} + \\frac{d^2}{96}\\left(6 μ^2-16 μ +11
+\\right) \\frac{|u_M|}{D_M} + \\frac{2}{3} d_f^2 μ(1-μ) \\frac{|u_M|}{D_S}``
 
 with ``D_M`` the diffusion coefficient of the solute in the mobile phase,
 ``D_S`` the diffusion coefficient of the solute in the stationary phase,
-``u_M`` the velocity of the mobile phase and μ the mobility of the solute.
+``|u_M|`` the absolute velocity of the mobile phase and μ the mobility of the solute.
+The absolute value keeps ``H`` positive when the flow is reversed.
 
 ``D_S`` is correlated to ``D_M`` by: 
 
@@ -800,9 +810,9 @@ with ``D_M`` the diffusion coefficient of the solute in the mobile phase,
 
 **TODO**: alternative correlations?
 
-``u_M`` is realated to the residency of the mobile phase ``r_M``:
+``|u_M|`` is the absolute value of the inverse residency of the mobile phase ``r_M``:
 
-``u_M = \\frac{1}{r_M}``
+``|u_M| = \\frac{1}{|r_M|}``
 
 μ is correlated to the retention factor ``k``:
 
@@ -811,53 +821,15 @@ with ``D_M`` the diffusion coefficient of the solute in the mobile phase,
 See also: [`diffusion_mobile`](@ref), [`mobile_phase_residency`](@ref), [`retention_factor`](@ref)
 """
 function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
-    id = d(x)# - 2.0*df(x)
-    uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
+    dx = profile(d, x)# - 2.0*profile(df, x)
+    dfx = profile(df, x)
+    uM = abs(1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control))
     μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th=k_th))
     DM = diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=ng, vis=vis, control=control)
     DS = DM/10000
     H1 = 2*DM/uM
-    H2 = id^2/96*(6*μ^2-16*μ+11)*uM/DM
-    H3 = 2/3*df(x)^2*μ*(1-μ)*uM/DS
-    H = H1 + H2 + H3
-    return H
-end
-
-function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d::Number, df::Number, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
-    id = d# - 2.0*df
-    uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
-    μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th=k_th))
-    DM = diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=ng, vis=vis, control=control)
-    DS = DM/10000
-    H1 = 2*DM/uM
-    H2 = id^2/96*(6*μ^2-16*μ+11)*uM/DM
-    H3 = 2/3*df^2*μ*(1-μ)*uM/DS
-    H = H1 + H2 + H3
-    return H
-end
-
-function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df::Number, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
-    id = d(x)# - 2.0*df
-    uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
-    μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th=k_th))
-    DM = diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=ng, vis=vis, control=control)
-    DS = DM/10000
-    H1 = 2*DM/uM
-    H2 = id^2/96*(6*μ^2-16*μ+11)*uM/DM
-    H3 = 2/3*df^2*μ*(1-μ)*uM/DS
-    H = H1 + H2 + H3
-    return H
-end
-
-function plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d::Number, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
-    id = d# - 2.0*df(x)
-    uM = 1/mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
-    μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th=k_th))
-    DM = diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=ng, vis=vis, control=control)
-    DS = DM/10000
-    H1 = 2*DM/uM
-    H2 = id^2/96*(6*μ^2-16*μ+11)*uM/DM
-    H3 = 2/3*df(x)^2*μ*(1-μ)*uM/DS
+    H2 = dx^2/96*(6*μ^2-16*μ+11)*uM/DM
+    H3 = 2/3*dfx^2*μ*(1-μ)*uM/DS
     H = H1 + H2 + H3
     return H
 end
