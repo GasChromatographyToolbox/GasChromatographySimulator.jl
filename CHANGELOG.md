@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Added
+- Time-domain migration: `mobile_phase_velocity`, `solute_velocity`, `temporal_dispersion_rate`, `solving_migration_time`, `solving_bandvariance_time`, `solving_odesystem_time`. Diameter and film thickness are read through `profile`. A vacuum outlet stays on the position-domain solvers: the flow cannot reverse, and `u_s` and `σ²` diverge at `x = L`.
+- `Substance` fields `x₀` and `σ₀`, defaulting to `0`, so existing ten-argument constructors stay valid.
+
 ### Changed
 - `plate_height` uses the absolute mobile-phase velocity, so a reversed flow no longer produces a negative plate height. Diameter and film thickness, whether numbers or functions of `x`, are read through `profile`.
 - `flow_restriction` reads the diameter through `profile` and differentiates the integral at its upper limit, so `∂κ/∂x` no longer sends a dual number into `QuadGK`.

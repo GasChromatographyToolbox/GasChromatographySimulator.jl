@@ -143,6 +143,68 @@ the column. Any other profile is called as `g(x)`.
 profile(g::Number, x) = g
 profile(g, x) = g(x)
 
+"""
+    time_domain_exit_callback(L, t₀, p; vel=nothing)
+
+Callback that terminates a time-domain solve when the band leaves the
+column. Root `1` is `x - L` and root `2` is `x`. The solve stops only on
+an outward crossing: `x = L` while ``u_s > 0``, or `x = 0` while
+``u_s < 0`` and `t > t₀`. A crossing in the other direction, and the
+initial condition sitting on `x = 0`, do not stop the solve.
+
+`p` has the layout of [`odesystem_time!`](@ref) and of
+[`solving_migration_time`](@ref):
+`(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)`.
+Pass `vel(x, t)` to supply the solute velocity instead of building it from `p`.
+The state may be a scalar position or the vector `(x, σ²)`.
+
+See also: [`solving_migration_time`](@ref), [`solving_odesystem_time`](@ref), [`solute_velocity`](@ref)
+"""
+function time_domain_exit_callback(L, t₀, p; vel = nothing)
+    # p = (
+	#	L, d, df, gas, # 1-4
+	#	T_itp, Fpin_itp, pout_itp, # 5-7 
+	#	Tchar, θchar, ΔCp, φ₀, Cag, # 8-12
+	#	opt # 13
+	#)
+    # If vel is nothing, build it from that p-layout.
+    uS = if vel === nothing
+        (x, t) -> solute_velocity(
+            x, t, p[5], p[6], p[7], p[1], p[2], p[3], p[4], p[8], p[9], p[10], p[11]; ng=p[13].ng, vis=p[13].vis, control=p[13].control,
+        )
+    else
+        vel
+    end
+    function condition(out, u, t, integrator)
+        x = u isa Number ? u : u[1]   # scalar x or (x, σ²)
+        out[1] = x - L
+        out[2] = x
+    end
+    function affect!(integrator, idx)
+        x = integrator.u isa Number ? integrator.u : integrator.u[1]
+        t = integrator.t
+        us = uS(x, t)
+        outward = (idx == 1 && us > 0) || (idx == 2 && us < 0 && t > t₀)
+        outward && SciMLBase.terminate!(integrator)
+    end
+    return SciMLBase.VectorContinuousCallback(condition, affect!, 2)
+end
+
+"""
+    program_knots(T_itp, t₀, t_end)
+
+Program times strictly between `t₀` and `t_end`, used as `tstops` of the
+time-domain solvers. `T_itp.grid[2]` already holds the absolute times
+(`cumsum` of the program step durations). This function does not cumsum
+that grid again.
+
+See also: [`solving_migration_time`](@ref), [`temperature_interpolation`](@ref)
+"""
+function program_knots(T_itp, t₀, t_end)
+    knots = T_itp.grid[2]
+    return knots[t₀ .< knots .< t_end]
+end
+
 #---Begin-Simple-Linear-Interpolation-Implementation---
 """
     SimpleLinearInterpolation

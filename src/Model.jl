@@ -758,6 +758,162 @@ function retention_factor(x, t, col::Column, prog::Program, sub::Substance, opt:
 end
 
 """
+    mobile_phase_velocity(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
+
+Calculate the velocity of the mobile phase at position `x` at time `t`.
+This is the signed inverse of [`mobile_phase_residency`](@ref). It stays
+finite when `pin = pout`, where the residency is singular.
+
+# Arguments
+* `x`: Position along the GC column, in m.
+* `t`: Time in s.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`.
+* `Fpin_itp`: Interpolated (linear) Flow F(t) resp. inlet pressure `pin(t)`.
+* `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
+* `L`: Length of the capillary measured in m (meter).
+* `d`: Diameter of the GC column, in m. A number, or a function of position `x`.
+* `gas`: Name of the mobile phase gas.
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`)
+or with a gradient (`ng = false`).
+* `vis`: used model for viscosity "Blumberg" or "HP".
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program.
+
+For `control = "Pressure"`
+
+``u_M(x,t) = \\frac{1}{64}\\frac{T(x,t)}{κ_L d(x)^2}\\frac{p_{in}(t)^2-p_{out}(t)^2}{p(x,t)}``
+
+and for `control = "Flow"`
+
+``u_M(x,t) = \\frac{4}{\\pi}\\frac{p_n}{T_n}\\frac{F(t)}{d(x)^2}\\frac{T(x,t)}{p(x,t)}``
+
+with ``κ_L`` the flow restriction of the whole column. ``u_M`` is negative
+when `pin < pout`. When `pin² = pout²`, ``u_M = 0``.
+
+See also: [`mobile_phase_residency`](@ref), [`pressure`](@ref), [`flow_restriction`](@ref), [`profile`](@ref)
+"""
+function mobile_phase_velocity(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
+    dx = profile(d, x)
+    if control == "Pressure"
+        pin_itp = Fpin_itp
+        pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control="Pressure")
+        κL = flow_restriction(L, t, T_itp, d, gas; ng=ng, vis=vis)
+        uM = 1/64*T_itp(x, t)/(κL*dx^2)*(pin_itp(t)^2-pout_itp(t)^2)/pp
+    elseif control == "Flow"
+        F_itp = Fpin_itp
+        pp = pressure(x, t, T_itp, F_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control="Flow")
+        uM = 4/π * pn/Tn * F_itp(t)/(dx^2) * T_itp(x,t)/pp
+    end
+    return uM # in m/s
+end
+
+function mobile_phase_velocity(x, t, par::Parameters)
+    uM = mobile_phase_velocity(x, t, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.gas; ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control)
+    return uM
+end
+
+"""
+    solute_velocity(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=false, vis="Blumberg", control="Pressure")
+
+Calculate the velocity of the solute at position `x` at time `t`.
+
+# Arguments
+* `x`: Position along the GC column, in m.
+* `t`: Time in s.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`.
+* `Fpin_itp`: Interpolated (linear) Flow F(t) resp. inlet pressure `pin(t)`.
+* `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
+* `L`: Length of the capillary measured in m (meter).
+* `d`: Diameter of the GC column, in m. A number, or a function of position `x`.
+* `df`: Film thickness of the GC column, in m. A number, or a function of position `x`.
+* `gas`: Name of the mobile phase gas.
+* `Tchar`: Characteristic temperature of the solute, in K.
+* `θchar`: Characteristic parameters of the solute, in °C.
+* `ΔCp`: Change of the isobaric heat capacity of the solute moving from the mobile to the
+stationary phase, in J mol⁻¹ K⁻¹.
+* `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the
+thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`)
+or with a gradient (`ng = false`).
+* `vis`: used model for viscosity "Blumberg" or "HP".
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program.
+
+``u_s(x,t) = \\frac{u_M(x,t)}{1+k(x,t)}``
+
+The retention factor is not clamped by `k_th`. A cold, highly retained band
+has ``u_s ≈ 0``, which is a regular state of the time-domain solver.
+
+See also: [`mobile_phase_velocity`](@ref), [`retention_factor`](@ref)
+"""
+function solute_velocity(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=false, vis="Blumberg", control="Pressure")
+    uM = mobile_phase_velocity(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
+    k = retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀; k_th=Inf)
+    return uM/(1 + k)
+end
+
+function solute_velocity(x, t, col::Column, prog::Program, sub::Substance, opt::Options)
+    uS = solute_velocity(x, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; ng=opt.ng, vis=opt.vis, control=opt.control)
+    return uS
+end
+
+"""
+    temporal_dispersion_rate(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure")
+
+Calculate the temporal dispersion rate of the solute at position `x` at time `t`.
+This is the Golay plate height times the solute speed, written so that it
+stays finite at ``u_M = 0``. It is the source term of `dσ²/dt` in the
+time-domain solver.
+
+# Arguments
+* `x`: Position along the GC column, in m.
+* `t`: Time in s.
+* `T_itp`: Interpolated (linear) temperature `T(x,t)`.
+* `Fpin_itp`: Interpolated (linear) Flow F(t) resp. inlet pressure `pin(t)`.
+* `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
+* `L`: Length of the capillary measured in m (meter).
+* `d`: Diameter of the GC column, in m. A number, or a function of position `x`.
+* `df`: Film thickness of the GC column, in m. A number, or a function of position `x`.
+* `gas`: Name of the mobile phase gas.
+* `Tchar`: Characteristic temperature of the solute, in K.
+* `θchar`: Characteristic parameters of the solute, in °C.
+* `ΔCp`: Change of the isobaric heat capacity of the solute moving from the mobile to the
+stationary phase, in J mol⁻¹ K⁻¹.
+* `φ₀`: Dimensionless film thickness (φ ≈ df/d) of the column for which the
+thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
+* `Cag`: diffusivity constant of solute `a` in gas `g`.
+* `ng`: Option to calculate the simulation without a gradient (`ng = true`)
+or with a gradient (`ng = false`).
+* `vis`: used model for viscosity "Blumberg" or "HP".
+* `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program.
+
+``\\mathcal{D} = 2 D_M μ + \\frac{d^2}{96}(6μ^3-16μ^2+11μ)\\frac{u_M^2}{D_M}
++ \\frac{2}{3} d_f^2 μ^2 (1-μ) \\frac{u_M^2}{D_S}``
+
+with ``μ = 1/(1+k)`` and ``D_S = D_M/10000``. At ``u_M = 0`` the mass-transfer
+terms vanish and ``\\mathcal{D} = 2 D_M/(1+k)``. `k` is not clamped by `k_th`.
+
+See also: [`plate_height`](@ref), [`mobile_phase_velocity`](@ref), [`diffusion_mobile`](@ref), [`profile`](@ref)
+"""
+function temporal_dispersion_rate(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure")
+    # 𝒟 = H |u_s|, expanded so the longitudinal term does not divide by u_M.
+    dx = profile(d, x)
+    dfx = profile(df, x)
+    uM = mobile_phase_velocity(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control=control)
+    μ = 1/(1 + retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀, k_th=Inf))
+    DM = diffusion_mobile(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas, Cag; ng=ng, vis=vis, control=control)
+    DS = DM/10000
+    𝒟1 = 2*DM*μ
+    𝒟2 = dx^2/96*(6*μ^3-16*μ^2+11*μ)*uM^2/DM
+    𝒟3 = 2/3*dfx^2*μ^2*(1-μ)*uM^2/DS
+    𝒟 = 𝒟1 + 𝒟2 + 𝒟3
+    return 𝒟
+end
+
+function temporal_dispersion_rate(x, t, col::Column, prog::Program, sub::Substance, opt::Options)
+    𝒟 = temporal_dispersion_rate(x, t, prog.T_itp, prog.Fpin_itp, prog.pout_itp, col.L, col.d, col.df, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag; ng=opt.ng, vis=opt.vis, control=opt.control)
+    return 𝒟
+end
+
+"""
     plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
 
 Calculate the plate height of the solute at position `x` at time `t`

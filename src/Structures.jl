@@ -126,7 +126,7 @@ struct Program{Fgf<:Function}
 end
 
 """
-    Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀)
+    Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀, x₀=0, σ₀=0)
 
 Structure to describe the properties of a solute, which migrates through the GC Column. These datas are in most cases read from a database with the function `load_solute_database()`.
 
@@ -141,6 +141,8 @@ Structure to describe the properties of a solute, which migrates through the GC 
 * `Cag`: The diffusitivity constant of the solute `a` in the mobile phase `g` (in...). It is calculated by the function `diffusitivity()`.
 * `t₀`: Initial time of the solute (in s) at the start of the simulation.
 * `τ₀`: Initial peak width of the solute (in s) at the start of the simulation. 
+* `x₀`: Initial position of the solute along the column, in m. Used by the time-domain solver. Default `0` (the `x = 0` end).
+* `σ₀`: Initial spatial band width of the solute, in m. Used by the time-domain solver. Default `0`. Independent of `τ₀`.
 
 See also: [`load_solute_database`](@ref)
 """
@@ -155,11 +157,13 @@ struct Substance
     Cag                 # diffusitivity constant of analyt in a gas, calculate from structure (or from measurements)
     t₀                  # initial time in s  	
     τ₀                  # initial peak width in s
-    Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀) = begin
-        for (val, n) in ((Tchar, "Tchar"), (θchar, "θchar"), (ΔCp, "ΔCp"), (φ₀, "φ₀"), (Cag, "Cag"), (t₀, "t₀"), (τ₀, "τ₀"))
-            isfinite(_value_real(val)) || throw(ArgumentError("`$n` must be finite, got `$val`."))
+    x₀                  # initial start position on column in m (needs time-domain solver)
+    σ₀                  # initial band width in m (needs time-domain solver)
+    Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀, x₀=0, σ₀=0) = begin
+        for (val, n) in ((Tchar, "Tchar"), (θchar, "θchar"), (ΔCp, "ΔCp"), (φ₀, "φ₀"), (Cag, "Cag"), (t₀, "t₀"), (τ₀, "τ₀"), (x₀, "x₀"), (σ₀, "σ₀"))
+            isfinite(GasChromatographySimulator._value_real(val)) || throw(ArgumentError("`$n` must be finite, got `$val`."))
         end
-        new(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀)
+        new(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀, x₀, σ₀)
     end
 end
 
