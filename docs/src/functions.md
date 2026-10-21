@@ -85,6 +85,18 @@ GasChromatographySimulator.plate_height
 ```
 
 ```@docs
+GasChromatographySimulator.mobile_phase_velocity
+```
+
+```@docs
+GasChromatographySimulator.solute_velocity
+```
+
+```@docs
+GasChromatographySimulator.temporal_dispersion_rate
+```
+
+```@docs
 GasChromatographySimulator.diffusion_mobile
 ```
 
@@ -120,6 +132,36 @@ GasChromatographySimulator.odesystem_r!
 
 ```@docs
 GasChromatographySimulator.peakode
+```
+
+## Time-domain solving
+
+```@docs
+GasChromatographySimulator.solving_migration_time
+```
+
+```@docs
+GasChromatographySimulator.solving_bandvariance_time
+```
+
+```@docs
+GasChromatographySimulator.solving_odesystem_time
+```
+
+```@docs
+GasChromatographySimulator.odesystem_time!
+```
+
+```@docs
+GasChromatographySimulator.bandode
+```
+
+```@docs
+GasChromatographySimulator.time_domain_exit_callback
+```
+
+```@docs
+GasChromatographySimulator.program_knots
 ```
 
 ## Results
@@ -191,6 +233,10 @@ GasChromatographySimulator.setting_prog
 ```
 
 ## Helper functions
+
+```@docs
+GasChromatographySimulator.profile
+```
 
 ```@docs
 GasChromatographySimulator.temperature_interpolation

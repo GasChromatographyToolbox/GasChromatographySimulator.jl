@@ -164,7 +164,7 @@ In the section [Self-defined gradient function](@ref) in [Notes](@ref) an exampl
 
 ## Substance parameters
 
-A third set of parameters, [`GasChromatographySimulator.Substance`](@ref), is used to store the informations about the substances which are separated in the simulated GC-run. The stored information are the name, the CAS-number, three thermodynamic parameters (`Tchar` `θchar` `ΔCp`, see also [`[5]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References)), the dimensionless film thickness (df/d) of the Column for which the thermodynamic parameters were estimated, the diffusivity (calculated from the molecular formula, number of rings in the molecule and mol mass, which are extracted using [ChemicalIdentifiers.jl](https://github.com/longemen3000/ChemicalIdentifiers.jl) from an external database), the injection time and initial peak width. For several substances an array of the type [`GasChromatographySimulator.Substance`](@ref) is used.
+A third set of parameters, [`GasChromatographySimulator.Substance`](@ref), is used to store the informations about the substances which are separated in the simulated GC-run. The stored information are the name, the CAS-number, three thermodynamic parameters (`Tchar` `θchar` `ΔCp`, see also [`[5]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References)), the dimensionless film thickness (df/d) of the Column for which the thermodynamic parameters were estimated, the diffusivity (calculated from the molecular formula, number of rings in the molecule and mol mass, which are extracted using [ChemicalIdentifiers.jl](https://github.com/longemen3000/ChemicalIdentifiers.jl) from an external database), the injection time and initial peak width. `x₀` and `σ₀` default to `0`. They are the initial position and the initial spatial width used by the [Time-domain migration](@ref) solver. For several substances an array of the type [`GasChromatographySimulator.Substance`](@ref) is used.
 
 With the function [`GasChromatographySimulator.load_solute_database`](@ref) the data for selected substances and a selected stationary phase is loaded from an external database (a .csv-file).
 
@@ -206,7 +206,9 @@ The second ODE describes the development of the temporal peak variance ``\tau^2(
 
 Hereby is ``r(x,t)`` the inverse velocity of the substance (``1/u(x,t)``, also called residency) and ``H(x,t)`` is the local plate height. For more information about the physical model see the [`docstrings of the physical model`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/functions/#Physical-Model) and the references [`[6]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References) and [`[7]`](https://GasChromatographyToolbox.github.io/GasChromatographySimulator.jl/dev/references/#References).
 
-With the argument `odesys` of [`GasChromatographySimulator.Options`](@ref) the two differential equations can be solved as a system of ODEs (`odesys = true`) or separately, using the solution of the first ODE to solve the second ODE (`odesys = false`).   
+With the argument `odesys` of [`GasChromatographySimulator.Options`](@ref) the two differential equations can be solved as a system of ODEs (`odesys = true`) or separately, using the solution of the first ODE to solve the second ODE (`odesys = false`).
+
+These equations are the default. They are also the ones to use for a vacuum outlet. A band that stops or reverses, with a finite pressure at both ends, is integrated in laboratory time instead. That formulation is a separate entry point and is described in [Time-domain migration](@ref). `odesys` does not select it.   
 
 With the function [`GasChromatographySimulator.simulate`](@ref) the simulation is initiated.
 
