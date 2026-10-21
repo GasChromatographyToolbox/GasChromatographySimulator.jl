@@ -166,6 +166,18 @@ end
     sub = GasChromatographySimulator.load_solute_database(db_path, db, col.sp, col.gas, solutes, init_t, init_τ)
     @test sub[1].CAS == "124-18-5"
     @test sub[2].Tchar == 124.75 + 273.15
+    @test sub[1].x₀ == 0
+    @test sub[1].σ₀ == 0
+    sub_xs = GasChromatographySimulator.load_solute_database(db_path, db, col.sp, col.gas, ["C10", "C11"], zeros(2), zeros(2); x₀=[0.1, 0.2], σ₀=[0.01, 0.02])
+    @test sub_xs[1].x₀ == 0.1
+    @test sub_xs[1].σ₀ == 0.01
+    @test sub_xs[2].x₀ == 0.2
+    @test sub_xs[2].σ₀ == 0.02
+    sub_pad = @test_logs (:warn, r"do not match") GasChromatographySimulator.load_solute_database(db_path, db, col.sp, col.gas, ["C10", "C11"], zeros(2), zeros(2); x₀=[0.25], σ₀=[0.05])
+    @test sub_pad[1].x₀ == 0.25
+    @test sub_pad[1].σ₀ == 0.05
+    @test sub_pad[2].x₀ == 0
+    @test sub_pad[2].σ₀ == 0
 
     # no stationary phase & other gas for diffusivity
     # H2
