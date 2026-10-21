@@ -212,6 +212,13 @@ end
     @test H > H__
     @test GasChromatographySimulator.profile(d, 0.0) == d
     @test GasChromatographySimulator.profile(x -> 2*x, 3.0) == 6.0
+    xκ = 0.5*L
+    κ_fun = GasChromatographySimulator.flow_restriction(xκ, 0.0, par.prog.T_itp, par.col.d, par.col.gas; ng=false)
+    κ_num = GasChromatographySimulator.flow_restriction(xκ, 0.0, par.prog.T_itp, d, par.col.gas; ng=false)
+    @test κ_fun ≈ κ_num
+    ∂κ∂x = GasChromatographySimulator.ForwardDiff.derivative(x -> GasChromatographySimulator.flow_restriction(x, 0.0, par.prog.T_itp, d, gas; ng=false), xκ)
+    ∂κ∂x_ref = GasChromatographySimulator.viscosity(xκ, 0.0, par.prog.T_itp, gas)*par.prog.T_itp(xκ, 0.0)/d^4
+    @test ∂κ∂x ≈ ∂κ∂x_ref
     H_num = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d(0.0), par.col.df(0.0), par.col.gas, par.sub[3].Tchar, par.sub[3].θchar, par.sub[3].ΔCp, par.sub[3].φ₀, par.sub[3].Cag)
     @test H_num == H_
     # swapped end pressures reverse the flow; plate height stays positive

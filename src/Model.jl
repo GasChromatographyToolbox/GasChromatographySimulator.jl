@@ -73,7 +73,7 @@ Calculate the flow restriction ``κ`` up to position `x` at time `t`.
 * `x`: Position along the GC column, in m.
 * `t`: Time in s.
 * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-* `d`: Diameter of the GC column, in m. Can be a function of position `x`.
+* `d`: Diameter of the GC column, in m. A number, or a function of position `x`.
 * `gas`: Name of the mobile phase gas.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`,
     eq. 2)
@@ -87,30 +87,28 @@ Eq. 1
 
 with ``η(x,t)`` the viscosity of the mobile phase gas.
 
-See also: [`viscosity`](@ref)
+See also: [`viscosity`](@ref), [`profile`](@ref)
 """
 function flow_restriction(x, t, T_itp, d, gas; ng=false, vis="Blumberg")
     if ng==true
-        κ = x*GasChromatographySimulator.viscosity(x, t, T_itp, gas, vis=vis)*T_itp(x, t)*d(x)^-4
+        κ = x*GasChromatographySimulator.viscosity(x, t, T_itp, gas, vis=vis)*T_itp(x, t)*profile(d, x)^-4
     else
-		p = (t, )# d) if `d` is function of `x` it cannot be part of `p` 
-        f(y, p) = GasChromatographySimulator.viscosity(y, p[1], T_itp, gas, vis=vis)*T_itp(y, p[1])*d(y)^-4
-        domain = (zero(x), x)  # Use zero(x) to get a zero of the same type as x
+        # Integrate on the plain value of x. A dual upper limit has no QuadGK rule.
+        # ∂κ/∂x is the integrand at x, so put that partial back after the solve.
+        p = (t,)
+        f(y, p) = GasChromatographySimulator.viscosity(y, p[1], T_itp, gas, vis=vis)*T_itp(y, p[1])*profile(d, y)^-4
+        xval = ForwardDiff.value(x)
+        domain = (zero(xval), xval)
         prob = IntegralProblem(f, domain, p)
-        κ = solve(prob, GasChromatographySimulator.QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
-    end
-    return κ
-end
-
-function flow_restriction(x, t, T_itp, d::Number, gas; ng=false, vis="Blumberg")
-    if ng==true
-        κ = x*GasChromatographySimulator.viscosity(x, t, T_itp, gas, vis=vis)*T_itp(x, t)*d^-4
-    else
-		p = (t, d)
-        f(y, p) = GasChromatographySimulator.viscosity(y, p[1], T_itp, gas, vis=vis)*T_itp(y, p[1])*p[2]^-4
-        domain = (zero(x), x)  # Use zero(x) to get a zero of the same type as x
-        prob = IntegralProblem(f, domain, p)
-        κ = solve(prob, GasChromatographySimulator.QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
+        κval = solve(prob, GasChromatographySimulator.QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
+        # The upper-limit correction is only needed while differentiating in x.
+        # Julia compiles the Float64 call separately, so the simulation never evaluates it.
+        if x isa ForwardDiff.Dual
+            ∂κ∂x = ForwardDiff.value(f(xval, p))
+            κ = κval + (x - xval)*∂κ∂x
+        else
+            κ = κval
+        end
     end
     return κ
 end
@@ -760,19 +758,10 @@ function retention_factor(x, t, col::Column, prog::Program, sub::Substance, opt:
 end
 
 """
-    profile(g, x)
-
-Value of a column profile at position `x`. A `Number` is constant along
-the column. Any other profile is called as `g(x)`.
-"""
-profile(g::Number, x) = g
-profile(g, x) = g(x)
-
-"""
     plate_height(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
 
 Calculate the plate height of the solute at position `x` at time `t`
-according to the Golay equation.
+according to the Golay equation. The plate height is the spatial dispersion rate of the solute.
 
 # Arguments
 * `x`: Position along the GC column, in m.

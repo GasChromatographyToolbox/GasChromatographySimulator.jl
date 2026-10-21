@@ -134,6 +134,15 @@ function same_length(a, b)
 	end
 end
 
+"""
+    profile(g, x)
+
+Value of a column profile at position `x`. A `Number` is constant along
+the column. Any other profile is called as `g(x)`.
+"""
+profile(g::Number, x) = g
+profile(g, x) = g(x)
+
 #---Begin-Simple-Linear-Interpolation-Implementation---
 """
     SimpleLinearInterpolation

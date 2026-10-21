@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - `plate_height` uses the absolute mobile-phase velocity, so a reversed flow no longer produces a negative plate height. Diameter and film thickness, whether numbers or functions of `x`, are read through `profile`.
+- `flow_restriction` reads the diameter through `profile` and differentiates the integral at its upper limit, so `∂κ/∂x` no longer sends a dual number into `QuadGK`.
 
 ## 0.6.1 - 2026-05-09
 
