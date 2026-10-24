@@ -17,6 +17,7 @@ A fourth set of parameters, [`GasChromatographySimulator.Options`](@ref), holds 
 - `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 
 For guidance on choosing an ODE solver, see [ODE Solvers](@ref).
+For chaining columns or program phases on one capillary, see [Segment handoff](@ref).
 
 The default options can be initialized by calling:
 ```@example ex

@@ -39,6 +39,8 @@ A vacuum outlet, `pout = 0`, cannot reverse the flow. `pin² − pout²` stays p
 
 `t₀` is still the start time. `τ₀` and `σ₀` are independent. The position-domain solvers read `τ₀` and always start at `x = 0`. The time-domain solvers read `x₀` and `σ₀`. If the caller has a temporal injection width and the band is moving, convert once at the call: ``\sigma_0 = \tau_0\,|u_s(x_0, t_0)|``.
 
+When chaining capillaries or phases, see [Segment handoff](@ref): junctions pass ``(t_R, \tau_R)``; a continuous capillary keeps ``(x, \sigma)``.
+
 The default end time is the last absolute program time, `prog.T_itp.grid[2][end]`. Pass `t_end` to stop earlier. Program knots strictly between `t₀` and `t_end` are passed to the solver as `tstops`.
 
 ## Solvers
