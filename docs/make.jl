@@ -13,6 +13,8 @@ makedocs(
                 "Home" => "index.md",
                 "Installation" => "installation.md",
                 "Usage" => "usage.md",
+                "Time-domain migration" => "time_domain.md",
+                "Segment handoff" => "segment_handoff.md",
                 "ODE Solvers" => "ode_solvers.md",
                 "Examples" => "examples.md",
                 "Additional features" => "additional.md",

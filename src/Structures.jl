@@ -126,7 +126,7 @@ struct Program{Fgf<:Function}
 end
 
 """
-    Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀)
+    Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀, x₀=0, σ₀=0)
 
 Structure to describe the properties of a solute, which migrates through the GC Column. These datas are in most cases read from a database with the function `load_solute_database()`.
 
@@ -141,6 +141,8 @@ Structure to describe the properties of a solute, which migrates through the GC 
 * `Cag`: The diffusitivity constant of the solute `a` in the mobile phase `g` (in...). It is calculated by the function `diffusitivity()`.
 * `t₀`: Initial time of the solute (in s) at the start of the simulation.
 * `τ₀`: Initial peak width of the solute (in s) at the start of the simulation. 
+* `x₀`: Initial position of the solute along the column, in m. Used by the time-domain solver. Default `0` (the `x = 0` end).
+* `σ₀`: Initial spatial band width of the solute, in m. Used by the time-domain solver. Default `0`. Independent of `τ₀`.
 
 See also: [`load_solute_database`](@ref)
 """
@@ -155,16 +157,18 @@ struct Substance
     Cag                 # diffusitivity constant of analyt in a gas, calculate from structure (or from measurements)
     t₀                  # initial time in s  	
     τ₀                  # initial peak width in s
-    Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀) = begin
-        for (val, n) in ((Tchar, "Tchar"), (θchar, "θchar"), (ΔCp, "ΔCp"), (φ₀, "φ₀"), (Cag, "Cag"), (t₀, "t₀"), (τ₀, "τ₀"))
-            isfinite(_value_real(val)) || throw(ArgumentError("`$n` must be finite, got `$val`."))
+    x₀                  # initial start position on column in m (needs time-domain solver)
+    σ₀                  # initial band width in m (needs time-domain solver)
+    Substance(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀, x₀=0, σ₀=0) = begin
+        for (val, n) in ((Tchar, "Tchar"), (θchar, "θchar"), (ΔCp, "ΔCp"), (φ₀, "φ₀"), (Cag, "Cag"), (t₀, "t₀"), (τ₀, "τ₀"), (x₀, "x₀"), (σ₀, "σ₀"))
+            isfinite(GasChromatographySimulator._value_real(val)) || throw(ArgumentError("`$n` must be finite, got `$val`."))
         end
-        new(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀)
+        new(name, CAS, Tchar, θchar, ΔCp, φ₀, ann, Cag, t₀, τ₀, x₀, σ₀)
     end
 end
 
 """
-    Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis, control, k_th)
+    Options(alg, abstol, reltol, Tcontrol, odesys, ng, vis, control, k_th, domain)
 
 Structure describing some general options for the simulation. 
 
@@ -173,13 +177,19 @@ Structure describing some general options for the simulation.
 * `abstol`: The absolute tolerance for the ODE solver. Recommended value 1e-6 to 1e-8 (use 1e-8 for high-accuracy solvers like `Vern9()`).
 * `reltol`: The relative tolerance for the ODE solver. Recommended value 1e-3 to 1e-5 (use 1e-5 for high-accuracy solvers like `Vern9()`).
 * `Tcontrol`: Option defining at which point of the column the temperature program is calculated. The options are `inlet` (x=0) and `outlet` (x=L).
-* `odesys`: Combine the ODEs for migration and peak-width into a system of ODEs (`odesys = true`) or solve the two ODEs separately (`odesys = false`).
+* `odesys`: Combine migration and band-width ODEs into one system (`odesys = true`) or solve them
+  separately (`odesys = false`). Applies to both `:spatial` (``t(z)``/``τ²(z)``) and `:temporal`
+  (``x(t)``/``σ²(t)``). Callers that need only the band center (e.g. retention fitting) can use
+  [`solving_migration`](@ref) / [`solving_migration_time`](@ref) directly and skip the width ODE.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`) or with a gradient (`ng = false`).
 * `vis`: Used model of viscosity. `HP` is a second-order polynomial taken from the HP flow calculator. `Blumberg` is an emperical formula according to the book
     `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH).
 * `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program.
 * `k_th`: Threshold for the maximum of the retention factor. If the calculated retention factor is bigger than `k_th` than the retention factor is set to the value `k_th`.
     This is done to avoid to small step widths in the solver for highly retained soultes at the beginning of a GC program. 
+* `domain`: Independent variable of the migration ODEs. `:spatial` (default) integrates ``t(z)`` / ``τ²(z)``.
+  `:temporal` integrates ``x(t)`` / ``σ²(t)`` so the band may reverse when both end pressures are finite.
+  Vacuum-like outlets (`pout/pin < 0.1`) stay on `:spatial`.
 
 **TODO**: add option for the retention model ('ABC', 'K-centric')
 
@@ -196,6 +206,7 @@ struct Options
     vis::String         # viscosity model 'HP' or 'Blumberg'
     control::String     # control of the 'Flow' or of the inlet 'Pressure' during the program
     k_th                # threshold for the max. possible retention factor
+    domain::Symbol      # `:spatial` (default) or `:temporal`
 end
 
 """
@@ -575,7 +586,7 @@ function Program(TP, FpinP; pout="vacuum", time_unit="min")
 end
 
 """
-    Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
+    Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg", control="Pressure", k_th=1e12, domain=:spatial)
 
 Construct the structure `Options` with default values. 
 
@@ -593,6 +604,7 @@ Construct the structure `Options` with default values.
     `Temperature-programmed Gas Chromatography` by Leonid M. Blumberg (2010, Wiley-VCH) 
 * `control`: Control of the "Flow" or of the "Pressure" (at column inlet) during the program
 * `k_th`: Threshold for the maxima allowed value of retention factor.
+* `domain`: `:spatial` (default) or `:temporal` — independent variable of the migration ODEs.
 
 For more informations about the arguments `alg`, `abstol` and `reltol` see
 the documentation of the DifferentialEquations.jl package.
@@ -637,7 +649,12 @@ function _validate_ode_algorithm(alg)
     return alg
 end
 
-function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
+function _validate_domain(domain)
+    domain in (:spatial, :temporal) || throw(ArgumentError("`domain` must be `:spatial` or `:temporal`, got `$domain`."))
+    return domain
+end
+
+function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", odesys=true, ng=false, vis="Blumberg", control="Pressure", k_th=1e12, domain=:spatial)
     alg_ = _validate_ode_algorithm(alg)
     Tcontrol_ = _canonical_option_string(Tcontrol, ("inlet", "outlet"), "Tcontrol")
     vis_ = _canonical_option_string(vis, ("Blumberg", "HP"), "vis")
@@ -645,7 +662,8 @@ function Options(;alg=OwrenZen5(), abstol=1e-6, reltol=1e-3, Tcontrol="inlet", o
     abstol_ = _validate_positive_option(abstol, "abstol")
     reltol_ = _validate_positive_option(reltol, "reltol")
     k_th_ = _validate_positive_option(k_th, "k_th")
-    opt = Options(alg_, abstol_, reltol_, Tcontrol_, odesys, ng, vis_, control_, k_th_)
+    domain_ = _validate_domain(domain)
+    opt = Options(alg_, abstol_, reltol_, Tcontrol_, odesys, ng, vis_, control_, k_th_, domain_)
     return opt
 end
 
@@ -681,7 +699,7 @@ julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true)
 julia> Options(OwrenZen3(), 1e-7, 1e-4, "inlet", true; ng=true, vis="HP", control="Flow")
 ```
 """
-function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg", control="Pressure", k_th=1e12)
+function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg", control="Pressure", k_th=1e12, domain=:spatial)
     alg_ = _validate_ode_algorithm(alg)
     Tcontrol_ = _canonical_option_string(Tcontrol, ("inlet", "outlet"), "Tcontrol")
     vis_ = _canonical_option_string(vis, ("Blumberg", "HP"), "vis")
@@ -689,7 +707,8 @@ function Options(alg, abstol, reltol, Tcontrol, odesys; ng=false, vis="Blumberg"
     abstol_ = _validate_positive_option(abstol, "abstol")
     reltol_ = _validate_positive_option(reltol, "reltol")
     k_th_ = _validate_positive_option(k_th, "k_th")
-    opt = Options(alg_, abstol_, reltol_, Tcontrol_, odesys, ng, vis_, control_, k_th_)
+    domain_ = _validate_domain(domain)
+    opt = Options(alg_, abstol_, reltol_, Tcontrol_, odesys, ng, vis_, control_, k_th_, domain_)
     return opt
 end
 

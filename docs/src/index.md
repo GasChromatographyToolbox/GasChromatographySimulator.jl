@@ -44,6 +44,8 @@ The manual is structured as followed:
 Pages = [
     "installation.md",
     "usage.md",
+    "time_domain.md",
+    "segment_handoff.md",
     "ode_solvers.md",
     "examples.md",
     "functions.md",

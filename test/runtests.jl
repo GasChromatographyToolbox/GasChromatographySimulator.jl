@@ -166,6 +166,18 @@ end
     sub = GasChromatographySimulator.load_solute_database(db_path, db, col.sp, col.gas, solutes, init_t, init_τ)
     @test sub[1].CAS == "124-18-5"
     @test sub[2].Tchar == 124.75 + 273.15
+    @test sub[1].x₀ == 0
+    @test sub[1].σ₀ == 0
+    sub_xs = GasChromatographySimulator.load_solute_database(db_path, db, col.sp, col.gas, ["C10", "C11"], zeros(2), zeros(2); x₀=[0.1, 0.2], σ₀=[0.01, 0.02])
+    @test sub_xs[1].x₀ == 0.1
+    @test sub_xs[1].σ₀ == 0.01
+    @test sub_xs[2].x₀ == 0.2
+    @test sub_xs[2].σ₀ == 0.02
+    sub_pad = @test_logs (:warn, r"do not match") GasChromatographySimulator.load_solute_database(db_path, db, col.sp, col.gas, ["C10", "C11"], zeros(2), zeros(2); x₀=[0.25], σ₀=[0.05])
+    @test sub_pad[1].x₀ == 0.25
+    @test sub_pad[1].σ₀ == 0.05
+    @test sub_pad[2].x₀ == 0
+    @test sub_pad[2].σ₀ == 0
 
     # no stationary phase & other gas for diffusivity
     # H2
@@ -210,6 +222,20 @@ end
     H__ = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d, par.col.df, par.col.gas, 0.0, 0.0, 0.0, par.sub[3].φ₀, par.sub[3].Cag)
     @test H == H_
     @test H > H__
+    @test GasChromatographySimulator.profile(d, 0.0) == d
+    @test GasChromatographySimulator.profile(x -> 2*x, 3.0) == 6.0
+    xκ = 0.5*L
+    κ_fun = GasChromatographySimulator.flow_restriction(xκ, 0.0, par.prog.T_itp, par.col.d, par.col.gas; ng=false)
+    κ_num = GasChromatographySimulator.flow_restriction(xκ, 0.0, par.prog.T_itp, d, par.col.gas; ng=false)
+    @test κ_fun ≈ κ_num
+    ∂κ∂x = GasChromatographySimulator.ForwardDiff.derivative(x -> GasChromatographySimulator.flow_restriction(x, 0.0, par.prog.T_itp, d, gas; ng=false), xκ)
+    ∂κ∂x_ref = GasChromatographySimulator.viscosity(xκ, 0.0, par.prog.T_itp, gas)*par.prog.T_itp(xκ, 0.0)/d^4
+    @test ∂κ∂x ≈ ∂κ∂x_ref
+    H_num = GasChromatographySimulator.plate_height(0.0, 0.0, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp, par.col.L, par.col.d(0.0), par.col.df(0.0), par.col.gas, par.sub[3].Tchar, par.sub[3].θchar, par.sub[3].ΔCp, par.sub[3].φ₀, par.sub[3].Cag)
+    @test H_num == H_
+    # swapped end pressures reverse the flow; plate height stays positive
+    H_rev = GasChromatographySimulator.plate_height(0.5*L, 0.0, par.prog.T_itp, par.prog.pout_itp, par.prog.Fpin_itp, par.col.L, par.col.d, par.col.df, par.col.gas, par.sub[3].Tchar, par.sub[3].θchar, par.sub[3].ΔCp, par.sub[3].φ₀, par.sub[3].Cag)
+    @test H_rev > 0
 
     # control="Flow"
     opt_F = GasChromatographySimulator.Options(control="Flow")
@@ -901,6 +927,155 @@ end
     unique_indices = GasChromatographySimulator.deduplicate_knots!(x_end_dup_copy; move_knots=true)
     @test x_end_dup_copy[3] != x_end_dup_copy[4]  # Last duplicate should be modified
     @test abs(x_end_dup_copy[3] - x_end_dup_copy[4]) < 1e-9  # But very close
+end
+
+@testset "time-domain migration" begin
+    Ltd = 1.0
+    dtd = 0.25e-3
+    dftd = 0.25e-6
+    col = GasChromatographySimulator.Column(Ltd, dtd, dftd, "DB5", "He")
+    prog = GasChromatographySimulator.Program([0.0, 60.0, 120.0], [100.0, 100.0, 100.0], [150000.0, 150000.0, 150000.0], [120000.0, 120000.0, 120000.0])
+    prog_rev = GasChromatographySimulator.Program([0.0, 60.0, 120.0], [100.0, 100.0, 100.0], [120000.0, 120000.0, 120000.0], [150000.0, 150000.0, 150000.0])
+    prog_hold = GasChromatographySimulator.Program([0.0, 60.0, 120.0], [100.0, 100.0, 100.0], [150000.0, 150000.0, 150000.0], [150000.0, 150000.0, 150000.0])
+    sub = GasChromatographySimulator.Substance("test1", "1-1-1", 400.0, 30.0, 100.0, 1e-3, "test", 1e-6, 0.0, 0.0)
+    sub_mid = GasChromatographySimulator.Substance("test1", "1-1-1", 400.0, 30.0, 100.0, 1e-3, "test", 1e-6, 0.0, 0.0, 0.5, 0.1)
+    opt = GasChromatographySimulator.Options()
+    @test sub.x₀ == 0
+    @test sub.σ₀ == 0
+    @test sub_mid.x₀ == 0.5
+    @test sub_mid.σ₀ == 0.1
+
+    # absolute knots are already on T_itp.grid[2]; a second cumsum would drop 60 s
+    prog_k = GasChromatographySimulator.Program([0.0, 30.0, 30.0, 30.0], fill(100.0, 4), fill(150000.0, 4), fill(120000.0, 4))
+    @test collect(GasChromatographySimulator.program_knots(prog_k.T_itp, 0.0, prog_k.T_itp.grid[2][end])) == [30.0, 60.0]
+
+    par = GasChromatographySimulator.Parameters(col, prog, [sub], opt)
+    uM_in = GasChromatographySimulator.mobile_phase_velocity(0.0, 0.0, par)
+    uM_out = GasChromatographySimulator.mobile_phase_velocity(Ltd, 0.0, par)
+    rM_in = GasChromatographySimulator.mobile_phase_residency(0.0, 0.0, par)
+    rM_out = GasChromatographySimulator.mobile_phase_residency(Ltd, 0.0, par)
+    @test uM_in ≈ 1/rM_in
+    @test uM_out ≈ 1/rM_out
+    @test uM_in > 0
+
+    par_rev = GasChromatographySimulator.Parameters(col, prog_rev, [sub], opt)
+    uM_rev = GasChromatographySimulator.mobile_phase_velocity(0.5*Ltd, 0.0, par_rev)
+    rM_rev = GasChromatographySimulator.mobile_phase_residency(0.5*Ltd, 0.0, par_rev)
+    @test uM_rev < 0
+    @test uM_rev ≈ 1/rM_rev
+
+    par_hold = GasChromatographySimulator.Parameters(col, prog_hold, [sub], opt)
+    @test GasChromatographySimulator.mobile_phase_velocity(0.0, 0.0, par_hold) == 0
+    @test GasChromatographySimulator.mobile_phase_velocity(Ltd, 0.0, par_hold) == 0
+    @test GasChromatographySimulator.solute_velocity(0.5*Ltd, 0.0, col, prog_hold, sub, opt) == 0
+
+    d_fun(x) = dtd
+    df_fun(x) = dftd
+    u_num = GasChromatographySimulator.mobile_phase_velocity(0.5*Ltd, 0.0, prog.T_itp, prog.Fpin_itp, prog.pout_itp, Ltd, dtd, col.gas)
+    u_fun = GasChromatographySimulator.mobile_phase_velocity(0.5*Ltd, 0.0, prog.T_itp, prog.Fpin_itp, prog.pout_itp, Ltd, d_fun, col.gas)
+    @test u_num ≈ u_fun
+    𝒟_num = GasChromatographySimulator.temporal_dispersion_rate(0.5*Ltd, 0.0, prog.T_itp, prog.Fpin_itp, prog.pout_itp, Ltd, dtd, dftd, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag)
+    𝒟_fun = GasChromatographySimulator.temporal_dispersion_rate(0.5*Ltd, 0.0, prog.T_itp, prog.Fpin_itp, prog.pout_itp, Ltd, d_fun, df_fun, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag)
+    @test 𝒟_num ≈ 𝒟_fun
+    df_var(x) = dftd*(1 + 0.2*x/Ltd)
+    𝒟_var = GasChromatographySimulator.temporal_dispersion_rate(0.5*Ltd, 0.0, prog.T_itp, prog.Fpin_itp, prog.pout_itp, Ltd, dtd, df_var, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag)
+    @test 𝒟_var != 𝒟_num
+
+    # parked band: only longitudinal diffusion remains
+    x_hold = 0.5*Ltd
+    𝒟_hold = GasChromatographySimulator.temporal_dispersion_rate(x_hold, 0.0, prog_hold.T_itp, prog_hold.Fpin_itp, prog_hold.pout_itp, Ltd, dtd, dftd, col.gas, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag)
+    DM_hold = GasChromatographySimulator.diffusion_mobile(x_hold, 0.0, prog_hold.T_itp, prog_hold.Fpin_itp, prog_hold.pout_itp, Ltd, dtd, col.gas, sub.Cag)
+    k_hold = GasChromatographySimulator.retention_factor(x_hold, 0.0, prog_hold.T_itp, dtd, dftd, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀; k_th=Inf)
+    @test 𝒟_hold ≈ 2*DM_hold/(1 + k_hold)
+    @test 𝒟_hold > 0
+
+    sol_classic = GasChromatographySimulator.solving_migration(col, prog, sub, opt)
+    sol_time = GasChromatographySimulator.solving_migration_time(col, prog, sub, opt)
+    @test sol_time.retcode == GasChromatographySimulator.SciMLBase.ReturnCode.Terminated
+    @test isapprox(sol_classic.u[end], sol_time.t[end]; atol=opt.abstol, rtol=opt.reltol)
+    @test isapprox(sol_time.u[end], Ltd; atol=opt.abstol, rtol=opt.reltol)
+
+    # film-thickness function, forward only
+    sol_classic_df = GasChromatographySimulator.solving_migration(Ltd, dtd, df_var, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.t₀, opt)
+    sol_time_df = GasChromatographySimulator.solving_migration_time(Ltd, dtd, df_var, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, 0.0, sub.t₀, opt)
+    @test isapprox(sol_classic_df.u[end], sol_time_df.t[end]; atol=opt.abstol, rtol=opt.reltol)
+
+    # leave the column at the inlet under reversed pressure
+    sol_short = GasChromatographySimulator.solving_migration_time(Ltd, dtd, dftd, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, 0.0, sub.t₀, opt; t_end=1.0)
+    @test sol_short.retcode == GasChromatographySimulator.SciMLBase.ReturnCode.Success
+    @test 0 < sol_short.u[end] < Ltd
+    sol_back = GasChromatographySimulator.solving_migration_time(Ltd, dtd, dftd, col.gas, prog_rev.T_itp, prog_rev.Fpin_itp, prog_rev.pout_itp, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sol_short.u[end], sub.t₀, opt)
+    @test sol_back.retcode == GasChromatographySimulator.SciMLBase.ReturnCode.Terminated
+    @test isapprox(sol_back.u[end], 0.0; atol=opt.abstol, rtol=opt.reltol)
+
+    # pin = pout holds the band, and σ² grows at the parked rate
+    sub_park = GasChromatographySimulator.Substance("test1", "1-1-1", 400.0, 30.0, 100.0, 1e-3, "test", 1e-6, 0.0, 0.0, sol_short.u[end], 0.0)
+    sol_park = GasChromatographySimulator.solving_migration_time(col, prog_hold, sub_park, opt; t_end=10.0)
+    @test sol_park.retcode == GasChromatographySimulator.SciMLBase.ReturnCode.Success
+    @test sol_park.u[end] ≈ sol_park.u[begin]
+    σ_park = GasChromatographySimulator.solving_bandvariance_time(sol_park, col, prog_hold, sub_park, opt)
+    Δt = σ_park.t[end] - σ_park.t[begin]
+    𝒟_park = GasChromatographySimulator.temporal_dispersion_rate(sol_short.u[end], 0.0, col, prog_hold, sub, opt)
+    @test isapprox(σ_park.u[end] - σ_park.u[begin], 𝒟_park*Δt; atol=opt.abstol, rtol=opt.reltol)
+
+    # outlet temporal width matches the position-domain peak variance
+    σ_fwd = GasChromatographySimulator.solving_bandvariance_time(sol_time, col, prog, sub, opt)
+    τ_pos = GasChromatographySimulator.solving_peakvariance(sol_classic, col, prog, sub, opt)
+    u_exit = GasChromatographySimulator.solute_velocity(Ltd, sol_time.t[end], col, prog, sub, opt)
+    τ_time = sqrt(σ_fwd.u[end])/abs(u_exit)
+    @test isapprox(τ_time, sqrt(τ_pos.u[end]); atol=opt.abstol, rtol=opt.reltol)
+
+    sol_sys = GasChromatographySimulator.solving_odesystem_r(col, prog, sub, opt)
+    sol_sys_t = GasChromatographySimulator.solving_odesystem_time(col, prog, sub, opt)
+    @test sol_sys_t.retcode == GasChromatographySimulator.SciMLBase.ReturnCode.Terminated
+    @test isapprox(sol_sys.u[end][1], sol_sys_t.t[end]; atol=opt.abstol, rtol=opt.reltol)
+    u_exit_sys = GasChromatographySimulator.solute_velocity(Ltd, sol_sys_t.t[end], col, prog, sub, opt)
+    @test isapprox(sqrt(sol_sys_t.u[end][2])/abs(u_exit_sys), sqrt(sol_sys.u[end][2]); atol=opt.abstol, rtol=opt.reltol)
+
+    # simulate + peaklist_temporal (coupled)
+    opt_t = GasChromatographySimulator.Options(domain=:temporal)
+    par_t = GasChromatographySimulator.Parameters(col, prog, [sub], opt_t)
+    @test GasChromatographySimulator.use_temporal_domain(opt_t, par_t)
+    @test !GasChromatographySimulator.vacuum_like_outlet(par_t)
+    pl_t, sol_t = GasChromatographySimulator.simulate(par_t)
+    @test names(pl_t) == ["No", "Name", "CAS", "tR", "τR", "TR", "σR", "x_end", "exit_end", "uR", "kR", "Res", "Δs", "warning", "Annotations"]
+    @test pl_t.exit_end[1] ≈ Ltd
+    @test pl_t.x_end[1] ≈ Ltd
+    @test isapprox(pl_t.tR[1], sol_sys_t.t[end]; atol=opt_t.abstol, rtol=opt_t.reltol)
+    @test isapprox(pl_t.τR[1], sqrt(sol_sys_t.u[end][2])/abs(u_exit_sys); atol=opt_t.abstol, rtol=opt_t.reltol)
+
+    # simulate + peaklist_temporal (separate migration / band)
+    opt_t_sep = GasChromatographySimulator.Options(domain=:temporal, odesys=false)
+    par_t_sep = GasChromatographySimulator.Parameters(col, prog, [sub], opt_t_sep)
+    pl_sep, sol_sep, band_sep = GasChromatographySimulator.simulate(par_t_sep)
+    @test length(sol_sep) == 1
+    @test length(band_sep) == 1
+    @test pl_sep.exit_end[1] ≈ Ltd
+    @test isapprox(pl_sep.tR[1], sol_time.t[end]; atol=opt_t_sep.abstol, rtol=opt_t_sep.reltol)
+    pl_sep2 = GasChromatographySimulator.peaklist_temporal(sol_sep, band_sep, par_t_sep)
+    @test pl_sep2.tR[1] == pl_sep.tR[1]
+    @test pl_sep2.σR[1] == pl_sep.σR[1]
+
+    # reverse exit through inlet
+    sub_rev = GasChromatographySimulator.Substance("test1", "1-1-1", 400.0, 30.0, 100.0, 1e-3, "test", 1e-6, 0.0, 0.0, sol_short.u[end], 0.0)
+    par_rev_t = GasChromatographySimulator.Parameters(col, prog_rev, [sub_rev], opt_t)
+    pl_rev, _ = GasChromatographySimulator.simulate(par_rev_t)
+    @test pl_rev.exit_end[1] ≈ 0.0
+    @test isapprox(pl_rev.x_end[1], 0.0; atol=opt_t.abstol, rtol=opt_t.reltol)
+    @test isfinite(pl_rev.tR[1])
+
+    # vacuum-like outlet: keep spatial even if :temporal was requested
+    prog_vac = GasChromatographySimulator.Program([0.0, 60.0], [100.0, 100.0], [150000.0, 150000.0], [0.0, 0.0])
+    par_vac = GasChromatographySimulator.Parameters(col, prog_vac, [sub], opt_t)
+    @test GasChromatographySimulator.vacuum_like_outlet(par_vac)
+    pl_vac, sol_vac = @test_logs (:warn, r"pout/pin < 0.1") GasChromatographySimulator.simulate(par_vac)
+    @test !(:exit_end in Symbol.(names(pl_vac)))
+    @test isfinite(pl_vac.tR[1])
+    @test sol_vac[1].t[end] ≈ Ltd
+
+    @test_throws ArgumentError GasChromatographySimulator.simulate(
+        Ltd, dtd, dftd, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp,
+        ["test1"], ["1-1-1"], ["test"], [400.0], [30.0], [100.0], [1e-3], [1e-6], [0.0], [0.0], opt_t)
 end
 
 println("Test run successful.")

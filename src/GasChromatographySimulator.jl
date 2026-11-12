@@ -327,30 +327,32 @@ function CAS_identification(Name; show_info=false)
 end
 
 """
-    load_solute_database(db_path, db, sp, gas, solutes, t₀, τ₀) 
+    load_solute_database(db_path, db, sp, gas, solutes, t₀, τ₀; x₀=zeros(length(solutes)), σ₀=zeros(length(solutes)))
 
 Load the data of `solutes` for the stationary phase `sp` and the mobile
 phase `gas` from the database file `db` (located in `db_path`) into an array
-of the structure `Substance`. The row number of the selected solutes in the loaded database are added to the annotations of the `Substance` structure. 
+of the structure `Substance`. The row number of the selected solutes in the loaded database are added to the annotations of the `Substance` structure.
 
 # Arguments
 * `db_path::String`: Path to the database file.
-* `db::String`: Name of the database file. 
+* `db::String`: Name of the database file.
 * `sp::String`: Name of the stationary phase.
 * `gas::String`: Name of the mobile phase.
 * `solutes::Array{<:AbstractString,1}`: Name of the solutes.
 * `t₀::Array{<:Real,1}`: Initial start times of the solutes.
-* `τ₀::Array{<:Real,1}`: Initial peak widths of the solutes. 
+* `τ₀::Array{<:Real,1}`: Initial peak widths of the solutes.
+* `x₀`: Initial positions along the column, in m. Optional. Default is a vector of zeros with the same length as `solutes`.
+* `σ₀`: Initial spatial band widths, in m. Optional. Default is a vector of zeros with the same length as `solutes`.
 
 # Examples
 ```julia
 julia> sub = load_solute_database("path/to/the/file", "db.csv", "DB5", "He", ["C10", "C11"], [0.0, 0.0], [0.5, 0.5])
 ```
 """
-function load_solute_database(db_path::String, db::String, sp::String, gas::String, solutes::Array{<:AbstractString,1}, t₀::Array{<:Real,1}, τ₀::Array{<:Real,1})
-	# load the information about a solute from a data base and collecting these informations in the 
+function load_solute_database(db_path::String, db::String, sp::String, gas::String, solutes::Array{<:AbstractString,1}, t₀::Array{<:Real,1}, τ₀::Array{<:Real,1}; x₀=zeros(length(solutes)), σ₀=zeros(length(solutes)))
+	# load the information about a solute from a data base and collecting these informations in the
     # structure Substance
-    # 
+    #
 	# db_path ... Path to the database file
 	# db ... Name of the database
 	# sp ... Name of the stationary phase
@@ -358,9 +360,11 @@ function load_solute_database(db_path::String, db::String, sp::String, gas::Stri
 	# solutes ... Names of the solutes for which the informations should be used
     # τ₀ ... initial values of the peak width for the solutes
     # t₀ ... initial values of the time for the solutes
+    # x₀ ... initial positions, optional, default 0
+    # σ₀ ... initial spatial band widths, optional, default 0
 	db_dataframe = DataFrame(CSV.File(string(db_path,"/",db), header=1, silencewarnings=true, stringtype=String))
     insertcols!(db_dataframe, 1, :No => collect(1:length(db_dataframe.Name)))
-    sub = load_solute_database(db_dataframe, sp, gas, solutes, t₀, τ₀)
+    sub = load_solute_database(db_dataframe, sp, gas, solutes, t₀, τ₀; x₀=x₀, σ₀=σ₀)
 	return sub
 end
 
@@ -436,18 +440,22 @@ end
 
 # new version
 """
-	load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
+	load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_; x₀=zeros(length(solutes_)), σ₀=zeros(length(solutes_)))
 
 New function to load the data for the substances `solutes_` from the database `db_` for the stationary phase `sp_` and mobile phase `gas_` with initial time `t₀_` and initial peak width `τ₀_`. The parameters `solutes_`, `t₀_` and `τ₀_` must be vectors of the same length. Acceptable values for `solutes_` are either the substance names, CAS numbers or the number No from the database.
 
+`x₀` and `σ₀` are optional vectors of the initial position (m) and the initial spatial band width (m). Both default to zeros of the same length as `solutes_`. A shorter vector is padded with zeros. A longer vector is truncated.
+
 The loaded data is returned as a vector of the GasChromatographySimulator.Substance structure.
 """
-function load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
-	# check for same size of solutes_, t₀_ and τ₀_:
-	if (length(solutes_) != length(t₀_)) || (length(solutes_) != length(τ₀_))
-		@warn "Number of solutes ($(length(solutes_))), t₀ ($(length(t₀_))) and τ₀ ($(length(τ₀_))) do not match. Missing values of t₀ or τ₀ will be added with value 0.0 s. Additional values of t₀ or τ₀ will be skipped."
+function load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_; x₀=zeros(length(solutes_)), σ₀=zeros(length(solutes_)))
+	# check for same size of solutes_, t₀_, τ₀_, x₀ and σ₀:
+	if (length(solutes_) != length(t₀_)) || (length(solutes_) != length(τ₀_)) || (length(solutes_) != length(x₀)) || (length(solutes_) != length(σ₀))
+		@warn "Number of solutes ($(length(solutes_))), t₀ ($(length(t₀_))), τ₀ ($(length(τ₀_))), x₀ ($(length(x₀))) and σ₀ ($(length(σ₀))) do not match. Missing values will be added with value 0. Additional values will be skipped."
         t₀_ = same_length(t₀_, solutes_)
         τ₀_ = same_length(τ₀_, solutes_)
+        x₀ = same_length(x₀, solutes_)
+        σ₀ = same_length(σ₀, solutes_)
 	end	
     ## remove solutes with missing CAS and give warning
     if true in ismissing.(db_.CAS) 
@@ -486,6 +494,8 @@ function load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
 		end
        	t₀ = t₀_[i_db_i_solutes]
         τ₀ = τ₀_[i_db_i_solutes]
+        x₀s = x₀[i_db_i_solutes]
+        σ₀s = σ₀[i_db_i_solutes]
 	else
 		# 1. Filter the stationary phase
         db_filtered = filter([:Phase] => x -> x==sp_, db)
@@ -494,6 +504,8 @@ function load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
 			#extracted_db = DataFrame()
 			i_db = Int[]
 			i_solutes_not_found = collect(1:length(solutes_))
+			x₀s = Float64[]
+			σ₀s = Float64[]
 			sub = GasChromatographySimulator.Substance[]
 		else
 			i_db, i_solutes_not_found, i_db_i_solutes = find_index_in_database(solutes_, db_filtered)
@@ -555,6 +567,8 @@ function load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
 			end
 	        t₀ = [t₀_[i_db_i_solutes[x]] for x in 1:length(i_db_i_solutes)]
 	        τ₀ = [τ₀_[i_db_i_solutes[x]] for x in 1:length(i_db_i_solutes)]
+	        x₀s = [x₀[i_db_i_solutes[x]] for x in 1:length(i_db_i_solutes)]
+	        σ₀s = [σ₀[i_db_i_solutes[x]] for x in 1:length(i_db_i_solutes)]
 		end
 	end
 	sub = [GasChromatographySimulator.Substance(Name[x],
@@ -566,7 +580,9 @@ function load_solute_database(db_, sp_, gas_, solutes_, t₀_, τ₀_)
                             Annotation[x],
                             Cag[x], 
                             t₀[x],
-                            τ₀[x]) for x in 1:length(i_db)]
+                            τ₀[x],
+                            x₀s[x],
+                            σ₀s[x]) for x in 1:length(i_db)]
 	return unique(sub) # remove duplicates
 end
 

@@ -1,5 +1,124 @@
 #---Begin-Solving-Functions---
 """
+    vacuum_like_outlet(par) -> Bool
+
+True when ``\\min(p_\\mathrm{out})/\\max(p_\\mathrm{in}) < 0.1``. Those programs stay on the
+spatial (`:spatial`) solver even if `opt.domain == :temporal` (§11.2).
+"""
+function vacuum_like_outlet(par::Parameters)
+	pin_max = maximum(par.prog.Fpin_steps)
+	pout_min = minimum(par.prog.pout_steps)
+	pin_max > 0 && pout_min / pin_max < 0.1
+end
+
+function use_temporal_domain(opt::Options, par::Parameters)
+	opt.domain === :temporal || return false
+	if vacuum_like_outlet(par)
+		@warn "`domain=:temporal` requested but pout/pin < 0.1; using spatial solver."
+		return false
+	end
+	return true
+end
+
+"""
+    peaklist_temporal(sol, par)
+    peaklist_temporal(sol, band, par)
+
+Exit record for a `:temporal` solve. First form: coupled [`solving_odesystem_time`](@ref)
+state ``(x, σ²)``. Second form: separate [`solving_migration_time`](@ref) + [`solving_bandvariance_time`](@ref).
+Columns include `tR`, `τR`, `σR`, `x_end`, `uR`, and `exit_end` (`0.0`, `L`, or `NaN` if not eluted).
+Not interchangeable with the spatial [`peaklist`](@ref) (``t(z)`` / ``τ²(z)``).
+"""
+function peaklist_temporal(sol, par)
+	n = length(par.sub)
+	# Coupled system: u = (x, σ²)
+	_peaklist_temporal(sol, par, i -> sol[i].u[end][1], i -> sol[i].u[end][2])
+end
+
+function peaklist_temporal(sol, band, par)
+	n = length(par.sub)
+	# Separate solves: sol.u = x, band.u = σ²
+	_peaklist_temporal(sol, par, i -> sol[i].u[end], i -> band[i].u[end])
+end
+
+function _peaklist_temporal(sol, par, x_of, σ2_of)
+	n = length(par.sub)
+	L = par.col.L
+	x0 = x_of(1)
+	T = typeof(x0)
+	No = Array{Union{Missing,Int}}(undef, n)
+	Name = Array{String}(undef, n); CAS = Array{String}(undef, n)
+	tR = Array{T}(undef, n); TR = Array{T}(undef, n); σR = Array{T}(undef, n)
+	x_end = Array{T}(undef, n); uR = Array{T}(undef, n); τR = Array{T}(undef, n)
+	kR = Array{T}(undef, n); exit_end = Array{T}(undef, n)
+	warning = fill("", n); Annotations = Array{String}(undef, n)
+	Res = fill(NaN, n); Δs = fill(NaN, n)
+	for i = 1:n
+		Name[i] = par.sub[i].name; CAS[i] = string(par.sub[i].CAS)
+		x_end[i] = x_of(i)
+		σR[i] = real(sqrt(Complex(σ2_of(i))))
+		t_final = sol[i].t[end]
+		eluted = sol[i].retcode == SciMLBase.ReturnCode.Terminated
+		if eluted
+			tR[i] = t_final
+			TR[i] = par.prog.T_itp(x_end[i], t_final) - 273.15
+			uR[i] = solute_velocity(x_end[i], t_final, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp,
+				par.col.L, par.col.d, par.col.df, par.col.gas,
+				par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀;
+				ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control)
+			τR[i] = σR[i] / abs(uR[i])
+			kR[i] = retention_factor(x_end[i], t_final, par.prog.T_itp, par.col.d, par.col.df,
+				par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
+			exit_end[i] = abs(x_end[i] - L) < abs(x_end[i]) ? L : zero(T)
+		else
+			tR[i] = NaN; TR[i] = NaN; uR[i] = NaN; τR[i] = NaN; kR[i] = NaN; exit_end[i] = NaN
+			warning[i] = sol[i].retcode == SciMLBase.ReturnCode.Success ? "not eluted" : "solver stopped: $(sol[i].retcode)"
+		end
+		No[i] = try; parse(Int, split(par.sub[i].ann, ", ")[end]); catch; try; parse(Int, split(par.sub[i].ann, ", No: ")[end]); catch; missing; end; end
+		Annotations[i] = par.sub[i].ann
+	end
+	df = sort!(DataFrame(No=No, Name=Name, CAS=CAS, tR=tR, τR=τR, TR=TR,
+		σR=σR, x_end=x_end, exit_end=exit_end, uR=uR, kR=kR, warning=warning, Annotations=Annotations), :tR)
+	for i = 1:n-1
+		(isnan(df.tR[i]) || isnan(df.tR[i+1])) && continue
+		Res[i] = (df.tR[i+1] - df.tR[i]) / (2 * (df.τR[i+1] + df.τR[i]))
+		Δs[i] = (df.tR[i+1] - df.tR[i]) / (df.τR[i+1] - df.τR[i]) * log(df.τR[i+1] / df.τR[i])
+	end
+	df[!, :Res] = Res; df[!, :Δs] = Δs
+	return select(df, [:No, :Name, :CAS, :tR, :τR, :TR, :σR, :x_end, :exit_end, :uR, :kR, :Res, :Δs, :warning, :Annotations])
+end
+
+"""
+    solve_temporal_multithreads(par; kwargs...)
+
+Solve ``x(t)`` and ``σ²(t)`` together ([`solving_odesystem_time`](@ref)) for each solute (threaded).
+"""
+function solve_temporal_multithreads(par; t_end=par.prog.T_itp.grid[2][end], kwargs...)
+	n = length(par.sub)
+	sol = Array{Any}(undef, n)
+	Threads.@threads for i = 1:n
+		sol[i] = solving_odesystem_time(par.col, par.prog, par.sub[i], par.opt; t_end=t_end, kwargs...)
+	end
+	return sol
+end
+
+"""
+    solve_temporal_separate_multithreads(par; kwargs...)
+
+Solve ``x(t)`` then ``σ²(t)`` separately ([`solving_migration_time`](@ref), [`solving_bandvariance_time`](@ref)).
+"""
+function solve_temporal_separate_multithreads(par; t_end=par.prog.T_itp.grid[2][end], kwargs...)
+	n = length(par.sub)
+	sol = Array{Any}(undef, n)
+	band = Array{Any}(undef, n)
+	Threads.@threads for i = 1:n
+		sol[i] = solving_migration_time(par.col, par.prog, par.sub[i], par.opt; t_end=t_end, kwargs...)
+		band[i] = solving_bandvariance_time(sol[i], par.col, par.prog, par.sub[i], par.opt; kwargs...)
+	end
+	return sol, band
+end
+
+"""
     simulate(par::Parameters; kwargs...)
 
 Simulate the GC system defined by the structure `par`.
@@ -7,14 +126,27 @@ Simulate the GC system defined by the structure `par`.
 Alternative call:
 `simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp,Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)`
 
-Note: Based on the option for `odesys` the result is different. For `odesys =
-true` the result is a dataframe (the peaklist) and the solution of the ODEs
-as a system (solution structure from DifferentialEquations.jl). If `odesys =
-false` the result is a dataframe (the peaklist) and the two solutions of the
-ODEs for time ``t(z)`` and peak variance ``τ²(z)``. `kwargs...` to pass additional options to the ODE solve function as named tuples.
+`domain` selects the independent variable; `odesys` selects coupled vs separate ODEs in either domain:
+
+| `domain` | `odesys=true` | `odesys=false` |
+|--|--|--|
+| `:spatial` (default) | ``t(z), τ²(z)`` system → `pl, sol` | separate → `pl, sol, peak` |
+| `:temporal` | ``x(t), σ²(t)`` system → `pl, sol` | separate → `pl, sol, band` |
+
+Vacuum-like outlets (`pout/pin < 0.1`) stay on `:spatial`. `kwargs...` pass to the ODE solver.
 """
 function simulate(par; kwargs...)
-    if par.opt.odesys==true
+	if use_temporal_domain(par.opt, par)
+		if par.opt.odesys
+			sol = solve_temporal_multithreads(par; kwargs...)
+			pl = peaklist_temporal(sol, par)
+			return pl, sol
+		else
+			sol, band = solve_temporal_separate_multithreads(par; kwargs...)
+			pl = peaklist_temporal(sol, band, par)
+			return pl, sol, band
+		end
+	elseif par.opt.odesys==true
         sol = solve_system_multithreads(par; kwargs...)
     	pl = GasChromatographySimulator.peaklist(sol, par)
         return pl, sol
@@ -26,6 +158,7 @@ function simulate(par; kwargs...)
 end
 
 function simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
+	opt.domain === :temporal && throw(ArgumentError("`simulate(...)` with flattened arguments supports only `domain=:spatial`. Build a `Parameters` object for `:temporal`."))
     if opt.odesys==true
         sol = solve_system_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
     	# TODO: either create par from the input variables 
@@ -37,7 +170,7 @@ function simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tcha
 		sol, peak = solve_separate_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
     	pl = GasChromatographySimulator.peaklist(sol, peak, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, opt)
         return pl, sol, peak
-	end
+    end
 end
 
 """
@@ -368,5 +501,222 @@ function peakode(z, t, τ², L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θ
     end
     
     return H_val * r_val^2 + 2*τ²*∂r∂t
+end
+
+"""
+    solving_migration_time(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, x₀, t₀, opt; t_end=T_itp.grid[2][end], kwargs...)
+
+Solve the migration ``x(t)`` of one solute. The independent variable is
+laboratory time. The solve stops at an outward exit (`x = L` while
+``u_s > 0``, or `x = 0` while ``u_s < 0``) or at `t_end` if the band is
+still inside the column.
+
+`kwargs...` are passed to the ODE solver. `tstops` are the program knots
+strictly between `t₀` and `t_end`.
+
+Alternative call:
+`solving_migration_time(col::Column, prog::Program, sub::Substance, opt::Options; t_end=prog.T_itp.grid[2][end], kwargs...)`
+
+The initial position is `x₀` (or `sub.x₀`). The initial time is `t₀`
+(or `sub.t₀`). The default `t_end` is the last absolute program time.
+`T_itp.grid[2]` already stores those times.
+
+A vacuum outlet (`pout = 0`) cannot reverse the flow. Use
+[`solving_migration`](@ref) for that program. At `x = L` the local
+pressure is zero, so ``u_s → ∞``. This solver is for a finite pressure at
+both ends (forward elution, a pause, or `pin < pout`).
+
+Note: The result is the solution structure from DifferentialEquations.jl.
+`sol.t` is time and `sol.u` is position.
+
+See also: [`solute_velocity`](@ref), [`time_domain_exit_callback`](@ref), [`program_knots`](@ref)
+"""
+function solving_migration_time(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, x₀, t₀, opt; t_end=T_itp.grid[2][end], kwargs...)
+
+    p = (
+		L, d, df, gas, # 1-4
+		T_itp, Fpin_itp, pout_itp, # 5-7 
+		Tchar, θchar, ΔCp, φ₀, NaN, # 8-12
+		opt # 13
+	)
+	
+	f_zt(z,p,t) = solute_velocity(z, t, p[5], p[6], p[7], p[1], p[2], p[3], p[4], p[8], p[9], p[10], p[11]; ng=p[13].ng, vis=p[13].vis, control=p[13].control)
+    u0 = x₀
+	tspan = (t₀, t_end)
+    knots = program_knots(T_itp, t₀, t_end)
+
+    # stop at the outlet or the inlet, whichever the band is leaving through
+    cb = time_domain_exit_callback(L, t₀, p; vel = nothing)
+
+	prob_zt = ODEProblem(f_zt, u0, tspan, p)
+	solution_zt = solve(prob_zt; alg=opt.alg, abstol=opt.abstol, reltol=opt.reltol,
+            callback=cb, tstops=knots, kwargs...)
+    return solution_zt
+end
+
+function solving_migration_time(col::Column, prog::Program, sub::Substance, opt::Options; t_end=prog.T_itp.grid[2][end], kwargs...)
+    solution_zt = solving_migration_time(col.L, col.d, col.df, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.x₀, sub.t₀, opt; t_end=t_end, kwargs...)
+    return solution_zt
+end
+
+"""
+    bandode(z, t, σ², L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)
+
+Right-hand side for the spatial band variance ``σ²(t)`` at position `z`
+and time `t`.
+
+``\\frac{dσ^2}{dt} = \\mathcal{D}(z,t) + 2 σ^2 \\frac{∂u_s}{∂x}(z,t)``
+
+``∂u_s/∂x`` is taken at fixed time. The gradient term keeps its sign.
+``\\mathcal{D}`` stays non-negative, including when the band reverses.
+
+See also: [`temporal_dispersion_rate`](@ref), [`solute_velocity`](@ref), [`solving_bandvariance_time`](@ref)
+"""
+function bandode(z, t, σ², L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)
+	𝒟 = temporal_dispersion_rate(z, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀, Cag; ng=opt.ng, vis=opt.vis, control=opt.control)
+
+	uS(x) = solute_velocity(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control)
+	∂uS∂x = ForwardDiff.derivative(uS, z)
+
+	return 𝒟 + 2*σ²*∂uS∂x
+end
+
+function bandode(z, t, σ², col::Column, prog::Program, sub::Substance, opt::Options)
+    return bandode(z, t, σ², col.L, col.d, col.df, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag, opt)
+end
+
+"""
+    solving_bandvariance_time(solution_zt, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, σ₀, opt; kwargs...)
+
+Solve the spatial band variance ``σ²(t)`` along a migration `solution_zt`
+from [`solving_migration_time`](@ref). The time span is the span of that
+solution, so the variance is not integrated after the band has left the
+column. There is no exit callback: position is already known.
+
+`kwargs...` are passed to the ODE solver.
+
+Alternative call:
+`solving_bandvariance_time(solution_zt, col, prog, sub, opt; kwargs...)`
+
+The initial variance is `σ₀^2` (or `sub.σ₀^2`).
+
+Note: The result is the solution structure from DifferentialEquations.jl.
+`sol.t` is time and `sol.u` is ``σ²``.
+
+See also: [`bandode`](@ref), [`solving_migration_time`](@ref)
+"""
+function solving_bandvariance_time(solution_zt, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, σ₀, opt; kwargs...)
+	z(t) = solution_zt(t)
+	p = (L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)
+	f_σ²t(σ²,p,t) = bandode(z(t), t, σ², p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13])
+	σ²₀ = σ₀^2
+	tspan = (solution_zt.t[begin], solution_zt.t[end])
+	knots = program_knots(T_itp, solution_zt.t[begin], solution_zt.t[end])
+	
+	prob_σ²t = ODEProblem(f_σ²t, σ²₀, tspan, p)
+	solution_σ²t = solve(prob_σ²t, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol, tstops=knots; kwargs...)
+	return solution_σ²t
+end
+
+function solving_bandvariance_time(solution_zt, col, prog, sub, opt; kwargs...)
+    solution_σ²t = solving_bandvariance_time(solution_zt, col.L, col.d, col.df, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp, sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag, sub.σ₀, opt; kwargs...)
+    return solution_σ²t
+end
+
+"""
+    odesystem_time!(du, u, p, t)
+
+The ODE system for migration ``x(t)`` and spatial band variance ``σ²(t)``.
+
+``\\frac{dx}{dt} = u_s(x, t)``
+
+``\\frac{dσ^2}{dt} = \\mathcal{D}(x,t) + 2 σ^2 \\frac{∂u_s}{∂x}(x,t)``
+
+The state is `(x, σ²)`. Parameter order in `p` matches [`odesystem_r!`](@ref):
+`(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)`.
+
+See also: [`solving_odesystem_time`](@ref), [`bandode`](@ref), [`solute_velocity`](@ref)
+"""
+function odesystem_time!(du, u, p, t)
+    L, d, df, gas = p[1], p[2], p[3], p[4]
+    T_itp, Fpin_itp, pout_itp = p[5], p[6], p[7]
+    Tchar, θchar, ΔCp, φ₀, Cag = p[8], p[9], p[10], p[11], p[12]
+    opt = p[13]
+
+    x = u[1]
+    σ² = u[2]
+
+    du[1] = solute_velocity(x, t, T_itp, Fpin_itp, pout_itp, L, d, df, gas, Tchar, θchar, ΔCp, φ₀; ng=opt.ng, vis=opt.vis, control=opt.control)
+    du[2] = bandode(x, t, σ², L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, opt)
+end
+
+"""
+    solving_odesystem_time(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, x₀, σ₀, opt; t_end=T_itp.grid[2][end], kwargs...)
+
+Solve the migration ``x(t)`` and the spatial band variance ``σ²(t)`` as one
+ODE system. The solve stops at an outward exit or at `t_end` if the band
+is still inside the column.
+
+`kwargs...` are passed to the ODE solver.
+
+Alternative call:
+`solving_odesystem_time(col::Column, prog::Program, sub::Substance, opt::Options; t_end=prog.T_itp.grid[2][end], kwargs...)`
+
+Initial values are `x₀` and `σ₀` (or `sub.x₀` and `sub.σ₀`) at time `t₀`
+(or `sub.t₀`). The default `t_end` is the last absolute program time.
+
+A vacuum outlet (`pout = 0`) cannot reverse the flow. Use
+[`solving_odesystem_r`](@ref) for that program. At `x = L` the local
+pressure is zero, so ``u_s → ∞`` and ``σ² → ∞``. The finite outlet width
+there is the temporal width from the position-domain solver. This solver
+is for a finite pressure at both ends (forward elution, a pause, or
+`pin < pout`).
+
+Note: The result is the solution structure from DifferentialEquations.jl.
+`sol.t` is time and `sol.u` is `(x, σ²)`.
+
+See also: [`odesystem_time!`](@ref), [`solving_migration_time`](@ref), [`solving_bandvariance_time`](@ref)
+"""
+function solving_odesystem_time(
+	L, d, df, gas, 
+	T_itp, Fpin_itp, pout_itp, 
+	Tchar, θchar, ΔCp, φ₀, Cag, 
+	t₀, x₀, σ₀, 
+	opt; 
+	t_end=T_itp.grid[2][end], kwargs...
+)
+	u0 = [x₀; σ₀^2]
+	tspan = (t₀, t_end)
+	knots = program_knots(T_itp, t₀, t_end)
+
+	p = (
+		L, d, df, gas, 
+		T_itp, Fpin_itp, pout_itp, 
+		Tchar, θchar, ΔCp, φ₀, Cag, 
+		opt
+	)
+    cb = time_domain_exit_callback(L, t₀, p)
+	
+	prob = ODEProblem(odesystem_time!, u0, tspan, p)
+    solution = solve(prob, alg=opt.alg, abstol=opt.abstol,reltol=opt.reltol, callback=cb, tstops=knots; kwargs...)
+	return solution
+end
+
+function solving_odesystem_time(
+	col::GasChromatographySimulator.Column, 
+	prog::GasChromatographySimulator.Program, 
+	sub::GasChromatographySimulator.Substance, 
+	opt::GasChromatographySimulator.Options; 
+	t_end=prog.T_itp.grid[2][end], kwargs...
+)
+	solution = solving_odesystem_time(
+		col.L, col.d, col.df, col.gas, 
+		prog.T_itp, prog.Fpin_itp, prog.pout_itp, 
+		sub.Tchar, sub.θchar, sub.ΔCp, sub.φ₀, sub.Cag, 
+		sub.t₀, sub.x₀, sub.σ₀, 
+		opt; 
+		t_end=t_end, kwargs...
+	)
+	return solution
 end
 #---End-Solving-Functions---
