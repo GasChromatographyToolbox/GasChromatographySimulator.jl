@@ -1,5 +1,124 @@
 #---Begin-Solving-Functions---
 """
+    vacuum_like_outlet(par) -> Bool
+
+True when ``\\min(p_\\mathrm{out})/\\max(p_\\mathrm{in}) < 0.1``. Those programs stay on the
+spatial (`:spatial`) solver even if `opt.domain == :temporal` (§11.2).
+"""
+function vacuum_like_outlet(par::Parameters)
+	pin_max = maximum(par.prog.Fpin_steps)
+	pout_min = minimum(par.prog.pout_steps)
+	pin_max > 0 && pout_min / pin_max < 0.1
+end
+
+function use_temporal_domain(opt::Options, par::Parameters)
+	opt.domain === :temporal || return false
+	if vacuum_like_outlet(par)
+		@warn "`domain=:temporal` requested but pout/pin < 0.1; using spatial solver."
+		return false
+	end
+	return true
+end
+
+"""
+    peaklist_temporal(sol, par)
+    peaklist_temporal(sol, band, par)
+
+Exit record for a `:temporal` solve. First form: coupled [`solving_odesystem_time`](@ref)
+state ``(x, σ²)``. Second form: separate [`solving_migration_time`](@ref) + [`solving_bandvariance_time`](@ref).
+Columns include `tR`, `τR`, `σR`, `x_end`, `uR`, and `exit_end` (`0.0`, `L`, or `NaN` if not eluted).
+Not interchangeable with the spatial [`peaklist`](@ref) (``t(z)`` / ``τ²(z)``).
+"""
+function peaklist_temporal(sol, par)
+	n = length(par.sub)
+	# Coupled system: u = (x, σ²)
+	_peaklist_temporal(sol, par, i -> sol[i].u[end][1], i -> sol[i].u[end][2])
+end
+
+function peaklist_temporal(sol, band, par)
+	n = length(par.sub)
+	# Separate solves: sol.u = x, band.u = σ²
+	_peaklist_temporal(sol, par, i -> sol[i].u[end], i -> band[i].u[end])
+end
+
+function _peaklist_temporal(sol, par, x_of, σ2_of)
+	n = length(par.sub)
+	L = par.col.L
+	x0 = x_of(1)
+	T = typeof(x0)
+	No = Array{Union{Missing,Int}}(undef, n)
+	Name = Array{String}(undef, n); CAS = Array{String}(undef, n)
+	tR = Array{T}(undef, n); TR = Array{T}(undef, n); σR = Array{T}(undef, n)
+	x_end = Array{T}(undef, n); uR = Array{T}(undef, n); τR = Array{T}(undef, n)
+	kR = Array{T}(undef, n); exit_end = Array{T}(undef, n)
+	warning = fill("", n); Annotations = Array{String}(undef, n)
+	Res = fill(NaN, n); Δs = fill(NaN, n)
+	for i = 1:n
+		Name[i] = par.sub[i].name; CAS[i] = string(par.sub[i].CAS)
+		x_end[i] = x_of(i)
+		σR[i] = real(sqrt(Complex(σ2_of(i))))
+		t_final = sol[i].t[end]
+		eluted = sol[i].retcode == SciMLBase.ReturnCode.Terminated
+		if eluted
+			tR[i] = t_final
+			TR[i] = par.prog.T_itp(x_end[i], t_final) - 273.15
+			uR[i] = solute_velocity(x_end[i], t_final, par.prog.T_itp, par.prog.Fpin_itp, par.prog.pout_itp,
+				par.col.L, par.col.d, par.col.df, par.col.gas,
+				par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀;
+				ng=par.opt.ng, vis=par.opt.vis, control=par.opt.control)
+			τR[i] = σR[i] / abs(uR[i])
+			kR[i] = retention_factor(x_end[i], t_final, par.prog.T_itp, par.col.d, par.col.df,
+				par.sub[i].Tchar, par.sub[i].θchar, par.sub[i].ΔCp, par.sub[i].φ₀)
+			exit_end[i] = abs(x_end[i] - L) < abs(x_end[i]) ? L : zero(T)
+		else
+			tR[i] = NaN; TR[i] = NaN; uR[i] = NaN; τR[i] = NaN; kR[i] = NaN; exit_end[i] = NaN
+			warning[i] = sol[i].retcode == SciMLBase.ReturnCode.Success ? "not eluted" : "solver stopped: $(sol[i].retcode)"
+		end
+		No[i] = try; parse(Int, split(par.sub[i].ann, ", ")[end]); catch; try; parse(Int, split(par.sub[i].ann, ", No: ")[end]); catch; missing; end; end
+		Annotations[i] = par.sub[i].ann
+	end
+	df = sort!(DataFrame(No=No, Name=Name, CAS=CAS, tR=tR, τR=τR, TR=TR,
+		σR=σR, x_end=x_end, exit_end=exit_end, uR=uR, kR=kR, warning=warning, Annotations=Annotations), :tR)
+	for i = 1:n-1
+		(isnan(df.tR[i]) || isnan(df.tR[i+1])) && continue
+		Res[i] = (df.tR[i+1] - df.tR[i]) / (2 * (df.τR[i+1] + df.τR[i]))
+		Δs[i] = (df.tR[i+1] - df.tR[i]) / (df.τR[i+1] - df.τR[i]) * log(df.τR[i+1] / df.τR[i])
+	end
+	df[!, :Res] = Res; df[!, :Δs] = Δs
+	return select(df, [:No, :Name, :CAS, :tR, :τR, :TR, :σR, :x_end, :exit_end, :uR, :kR, :Res, :Δs, :warning, :Annotations])
+end
+
+"""
+    solve_temporal_multithreads(par; kwargs...)
+
+Solve ``x(t)`` and ``σ²(t)`` together ([`solving_odesystem_time`](@ref)) for each solute (threaded).
+"""
+function solve_temporal_multithreads(par; t_end=par.prog.T_itp.grid[2][end], kwargs...)
+	n = length(par.sub)
+	sol = Array{Any}(undef, n)
+	Threads.@threads for i = 1:n
+		sol[i] = solving_odesystem_time(par.col, par.prog, par.sub[i], par.opt; t_end=t_end, kwargs...)
+	end
+	return sol
+end
+
+"""
+    solve_temporal_separate_multithreads(par; kwargs...)
+
+Solve ``x(t)`` then ``σ²(t)`` separately ([`solving_migration_time`](@ref), [`solving_bandvariance_time`](@ref)).
+"""
+function solve_temporal_separate_multithreads(par; t_end=par.prog.T_itp.grid[2][end], kwargs...)
+	n = length(par.sub)
+	sol = Array{Any}(undef, n)
+	band = Array{Any}(undef, n)
+	Threads.@threads for i = 1:n
+		sol[i] = solving_migration_time(par.col, par.prog, par.sub[i], par.opt; t_end=t_end, kwargs...)
+		band[i] = solving_bandvariance_time(sol[i], par.col, par.prog, par.sub[i], par.opt; kwargs...)
+	end
+	return sol, band
+end
+
+"""
     simulate(par::Parameters; kwargs...)
 
 Simulate the GC system defined by the structure `par`.
@@ -7,14 +126,27 @@ Simulate the GC system defined by the structure `par`.
 Alternative call:
 `simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp,Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)`
 
-Note: Based on the option for `odesys` the result is different. For `odesys =
-true` the result is a dataframe (the peaklist) and the solution of the ODEs
-as a system (solution structure from DifferentialEquations.jl). If `odesys =
-false` the result is a dataframe (the peaklist) and the two solutions of the
-ODEs for time ``t(z)`` and peak variance ``τ²(z)``. `kwargs...` to pass additional options to the ODE solve function as named tuples.
+`domain` selects the independent variable; `odesys` selects coupled vs separate ODEs in either domain:
+
+| `domain` | `odesys=true` | `odesys=false` |
+|--|--|--|
+| `:spatial` (default) | ``t(z), τ²(z)`` system → `pl, sol` | separate → `pl, sol, peak` |
+| `:temporal` | ``x(t), σ²(t)`` system → `pl, sol` | separate → `pl, sol, band` |
+
+Vacuum-like outlets (`pout/pin < 0.1`) stay on `:spatial`. `kwargs...` pass to the ODE solver.
 """
 function simulate(par; kwargs...)
-    if par.opt.odesys==true
+	if use_temporal_domain(par.opt, par)
+		if par.opt.odesys
+			sol = solve_temporal_multithreads(par; kwargs...)
+			pl = peaklist_temporal(sol, par)
+			return pl, sol
+		else
+			sol, band = solve_temporal_separate_multithreads(par; kwargs...)
+			pl = peaklist_temporal(sol, band, par)
+			return pl, sol, band
+		end
+	elseif par.opt.odesys==true
         sol = solve_system_multithreads(par; kwargs...)
     	pl = GasChromatographySimulator.peaklist(sol, par)
         return pl, sol
@@ -26,6 +158,7 @@ function simulate(par; kwargs...)
 end
 
 function simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
+	opt.domain === :temporal && throw(ArgumentError("`simulate(...)` with flattened arguments supports only `domain=:spatial`. Build a `Parameters` object for `:temporal`."))
     if opt.odesys==true
         sol = solve_system_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
     	# TODO: either create par from the input variables 
@@ -37,7 +170,7 @@ function simulate(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tcha
 		sol, peak = solve_separate_multithreads(L, d, df, gas, T_itp, Fpin_itp, pout_itp, Tchar, θchar, ΔCp, φ₀, Cag, t₀, τ₀, opt; kwargs...)
     	pl = GasChromatographySimulator.peaklist(sol, peak, L, d, df, gas, T_itp, Fpin_itp, pout_itp, Name, CAS, ann, Tchar, θchar, ΔCp, φ₀, opt)
         return pl, sol, peak
-	end
+    end
 end
 
 """
