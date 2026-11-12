@@ -4,14 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.6.2 - 2026-11-12
+
 ### Added
-- Time-domain migration: `mobile_phase_velocity`, `solute_velocity`, `temporal_dispersion_rate`, `solving_migration_time`, `solving_bandvariance_time`, `solving_odesystem_time`. Diameter and film thickness are read through `profile`. A vacuum outlet stays on the position-domain solvers: the flow cannot reverse, and `u_s` and `σ²` diverge at `x = L`.
+- Temporal (time-domain) migration: `mobile_phase_velocity`, `solute_velocity`, `temporal_dispersion_rate`, `solving_migration_time`, `solving_bandvariance_time`, `solving_odesystem_time`, `peaklist_temporal`. Diameter and film thickness are read through `profile`. A vacuum outlet stays on the spatial solvers: the flow cannot reverse, and `u_s` and `σ²` diverge at `x = L`.
+- `Options.domain`: `:spatial` (default) or `:temporal`. `simulate` selects spatial ``t(z)``/``τ²(z)`` or temporal ``x(t)``/``σ²(t)``; `odesys` still chooses coupled vs separate ODEs in either domain. Vacuum-like `pout/pin < 0.1` falls back to `:spatial`.
 - `Substance` fields `x₀` and `σ₀`, defaulting to `0`, so existing ten-argument constructors stay valid.
 - `load_solute_database` accepts optional `x₀` and `σ₀` vectors, defaulting to zeros. Existing calls that pass only `t₀` and `τ₀` are unchanged.
+- Docs: `docs/src/time_domain.md`, `docs/src/segment_handoff.md`.
 
 ### Changed
 - `plate_height` uses the absolute mobile-phase velocity, so a reversed flow no longer produces a negative plate height. Diameter and film thickness, whether numbers or functions of `x`, are read through `profile`.
 - `flow_restriction` reads the diameter through `profile` and differentiates the integral at its upper limit, so `∂κ/∂x` no longer sends a dual number into `QuadGK`.
+- `pressure`, `flow`, `inlet_pressure`, `holdup_time`, `mobile_phase_residency`, and `retention_factor` also read `d`/`df` through `profile`; Number-specific overloads and `isa` branches are removed.
+- Docs: `Options.domain` switches `simulate`; temporal results use `peaklist_temporal`.
 
 ## 0.6.1 - 2026-05-09
 
