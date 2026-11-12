@@ -139,6 +139,10 @@ end
 
 Value of a column profile at position `x`. A `Number` is constant along
 the column. Any other profile is called as `g(x)`.
+
+Use this for column diameter `d` and film thickness `df` wherever either
+may be a number or a function of `x`. Prefer it over `isa` checks or
+extra methods for `::Number` vs callable arguments.
 """
 profile(g::Number, x) = g
 profile(g, x) = g(x)
