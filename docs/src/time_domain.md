@@ -1,16 +1,16 @@
 # Time-domain migration
 
-[`GasChromatographySimulator.simulate`](@ref) integrates along the column. Position runs from the inlet `x = 0` to the outlet `x = L`, and the unknowns are the time `t(x)` and the temporal peak variance `τ²(x)`. That is the default, and it is the solver to use for a vacuum outlet.
+By default [`GasChromatographySimulator.simulate`](@ref) integrates along the column (`Options.domain = :spatial`). Position runs from the inlet `x = 0` to the outlet `x = L`, and the unknowns are the time `t(x)` and the temporal peak variance `τ²(x)`. That path is also required for a vacuum outlet.
 
-The functions on this page integrate in laboratory time. The unknowns are the band position `x(t)` and the spatial variance `σ²(t)`. Use them when both end pressures stay finite and the band may stop or travel back toward `x = 0`:
+Set `Options(domain=:temporal)` (or call the solvers on this page directly) to integrate in laboratory time. The unknowns are then the band position `x(t)` and the spatial variance `σ²(t)`. Use that when both end pressures stay finite and the band may stop or travel back toward `x = 0`:
 
 - a pause, `pin = pout`, where the band stays in place
 - a reversal, `pin < pout`, where the band leaves through `x = 0`
 - a capillary trap that is loaded in one direction and emptied in the other
 
-`Options` does not switch `simulate` onto these equations. Call the time-domain functions yourself.
+`odesys` still chooses a coupled ODE system vs separate migration and width ODEs in either domain. Vacuum-like outlets (`pout/pin < 0.1`) keep `simulate` on `:spatial` even if `:temporal` was requested.
 
-The model is the same linear isotherm and equilibrium retention factor as the position-domain solver. It predicts where a trace-level molecule sits and when it leaves. It does not predict the sample volume that saturates a trap.
+The model is the same linear isotherm and equilibrium retention factor as the spatial solver. It predicts where a trace-level molecule sits and when it leaves. It does not predict the sample volume that saturates a trap.
 
 ## Equations
 
@@ -53,7 +53,7 @@ The default end time is the last absolute program time, `prog.T_itp.grid[2][end]
 
 An outward exit terminates the solve: `x = L` while `u_s > 0`, or `x = 0` while `u_s < 0`. The return code is then `Terminated`, and `sol.t[end]` is the exit time. If the band is still inside at `t_end`, the return code is `Success` and `sol.u[end]` is the position (and `σ²`, for the combined system) at that time.
 
-[`GasChromatographySimulator.peaklist`](@ref) and [`GasChromatographySimulator.sol_extraction`](@ref) read a position-domain solution, where `sol.t` is position. Do not pass a time-domain solution to them.
+[`GasChromatographySimulator.peaklist`](@ref) and [`GasChromatographySimulator.sol_extraction`](@ref) read a spatial (`:spatial`) solution, where `sol.t` is position. For a temporal solve use [`GasChromatographySimulator.peaklist_temporal`](@ref) (also returned by `simulate` when `domain=:temporal`).
 
 ## Example
 
