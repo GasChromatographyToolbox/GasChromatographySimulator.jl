@@ -1031,6 +1031,51 @@ end
     @test isapprox(sol_sys.u[end][1], sol_sys_t.t[end]; atol=opt.abstol, rtol=opt.reltol)
     u_exit_sys = GasChromatographySimulator.solute_velocity(Ltd, sol_sys_t.t[end], col, prog, sub, opt)
     @test isapprox(sqrt(sol_sys_t.u[end][2])/abs(u_exit_sys), sqrt(sol_sys.u[end][2]); atol=opt.abstol, rtol=opt.reltol)
+
+    # simulate + peaklist_temporal (coupled)
+    opt_t = GasChromatographySimulator.Options(domain=:temporal)
+    par_t = GasChromatographySimulator.Parameters(col, prog, [sub], opt_t)
+    @test GasChromatographySimulator.use_temporal_domain(opt_t, par_t)
+    @test !GasChromatographySimulator.vacuum_like_outlet(par_t)
+    pl_t, sol_t = GasChromatographySimulator.simulate(par_t)
+    @test names(pl_t) == ["No", "Name", "CAS", "tR", "τR", "TR", "σR", "x_end", "exit_end", "uR", "kR", "Res", "Δs", "warning", "Annotations"]
+    @test pl_t.exit_end[1] ≈ Ltd
+    @test pl_t.x_end[1] ≈ Ltd
+    @test isapprox(pl_t.tR[1], sol_sys_t.t[end]; atol=opt_t.abstol, rtol=opt_t.reltol)
+    @test isapprox(pl_t.τR[1], sqrt(sol_sys_t.u[end][2])/abs(u_exit_sys); atol=opt_t.abstol, rtol=opt_t.reltol)
+
+    # simulate + peaklist_temporal (separate migration / band)
+    opt_t_sep = GasChromatographySimulator.Options(domain=:temporal, odesys=false)
+    par_t_sep = GasChromatographySimulator.Parameters(col, prog, [sub], opt_t_sep)
+    pl_sep, sol_sep, band_sep = GasChromatographySimulator.simulate(par_t_sep)
+    @test length(sol_sep) == 1
+    @test length(band_sep) == 1
+    @test pl_sep.exit_end[1] ≈ Ltd
+    @test isapprox(pl_sep.tR[1], sol_time.t[end]; atol=opt_t_sep.abstol, rtol=opt_t_sep.reltol)
+    pl_sep2 = GasChromatographySimulator.peaklist_temporal(sol_sep, band_sep, par_t_sep)
+    @test pl_sep2.tR[1] == pl_sep.tR[1]
+    @test pl_sep2.σR[1] == pl_sep.σR[1]
+
+    # reverse exit through inlet
+    sub_rev = GasChromatographySimulator.Substance("test1", "1-1-1", 400.0, 30.0, 100.0, 1e-3, "test", 1e-6, 0.0, 0.0, sol_short.u[end], 0.0)
+    par_rev_t = GasChromatographySimulator.Parameters(col, prog_rev, [sub_rev], opt_t)
+    pl_rev, _ = GasChromatographySimulator.simulate(par_rev_t)
+    @test pl_rev.exit_end[1] ≈ 0.0
+    @test isapprox(pl_rev.x_end[1], 0.0; atol=opt_t.abstol, rtol=opt_t.reltol)
+    @test isfinite(pl_rev.tR[1])
+
+    # vacuum-like outlet: keep spatial even if :temporal was requested
+    prog_vac = GasChromatographySimulator.Program([0.0, 60.0], [100.0, 100.0], [150000.0, 150000.0], [0.0, 0.0])
+    par_vac = GasChromatographySimulator.Parameters(col, prog_vac, [sub], opt_t)
+    @test GasChromatographySimulator.vacuum_like_outlet(par_vac)
+    pl_vac, sol_vac = @test_logs (:warn, r"pout/pin < 0.1") GasChromatographySimulator.simulate(par_vac)
+    @test !(:exit_end in Symbol.(names(pl_vac)))
+    @test isfinite(pl_vac.tR[1])
+    @test sol_vac[1].t[end] ≈ Ltd
+
+    @test_throws ArgumentError GasChromatographySimulator.simulate(
+        Ltd, dtd, dftd, col.gas, prog.T_itp, prog.Fpin_itp, prog.pout_itp,
+        ["test1"], ["1-1-1"], ["test"], [400.0], [30.0], [100.0], [1e-3], [1e-6], [0.0], [0.0], opt_t)
 end
 
 println("Test run successful.")
