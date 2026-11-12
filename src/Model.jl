@@ -30,7 +30,7 @@ with ``κ(x,t)`` the flow restriction up to position `x` at time `t` and
 ``κ_L(t) = κ(x=L,t)`` the flow restriction of the whole column at
 time `t`.
 
-See also: [`flow_restriction`](@ref)
+See also: [`flow_restriction`](@ref), [`profile`](@ref)
 """
 function pressure(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
     if ng==true
@@ -39,11 +39,8 @@ function pressure(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blu
             pp = real(sqrt(Complex(pin_itp(t)^2 - x/L*(pin_itp(t)^2-pout_itp(t)^2))))
         elseif control == "Flow"
             F_itp = Fpin_itp
-            if isa(d, Function) 
-                pp = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(x, t, T_itp, gas, vis=vis)* T_itp(x,t)/d(x)^4 * F_itp(t) * (L - x))))
-            else
-                pp = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(x, t, T_itp, gas, vis=vis)* T_itp(x,t)/d^4 * F_itp(t) * (L - x))))
-            end
+            dx = profile(d, x)
+            pp = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(x, t, T_itp, gas, vis=vis)* T_itp(x,t)/dx^4 * F_itp(t) * (L - x))))
         end
     else
         if control == "Pressure"
@@ -274,23 +271,9 @@ function inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="
         pin = Fpin_itp(t)
     elseif control == "Flow"
         F_itp = Fpin_itp
-        if ng == true 
-            pin = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(0.0, t, T_itp, gas; vis="Blumberg") * T_itp(0.0, t) * L / d(0.0)^4 * F_itp(t))))
-        else
-            κL = flow_restriction(L, t, T_itp, d, gas, vis=vis)
-            pin = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * κL * F_itp(t))))
-        end
-    end
-    return pin
-end
-
-function inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d::Number, gas; ng=false, vis="Blumberg", control="Pressure")
-    if control == "Pressure"
-        pin = Fpin_itp(t)
-    elseif control == "Flow"
-        F_itp = Fpin_itp
-        if ng == true 
-            pin = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(0.0, t, T_itp, gas; vis="Blumberg") * T_itp(0.0, t) * L / d^4 * F_itp(t))))
+        if ng == true
+            d0 = profile(d, 0.0)
+            pin = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * viscosity(0.0, t, T_itp, gas; vis="Blumberg") * T_itp(0.0, t) * L / d0^4 * F_itp(t))))
         else
             κL = flow_restriction(L, t, T_itp, d, gas, vis=vis)
             pin = real(sqrt(Complex(pout_itp(t)^2 + 256/π * pn/Tn * κL * F_itp(t))))
@@ -345,7 +328,7 @@ Calculate the hold-up time in s at time `t` with a gradient.
 * `pin_itp`: Interpolated (linear) inlet pressure `pin(t)`.
 * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
 * `L`: Length of the capillary measured in m (meter).
-* `d`: Diameter of the GC column, in m.
+* `d`: Diameter of the GC column, in m. A number, or a function of position `x`.
 * `gas`: Name of the mobile phase gas.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`,
     eq. 2)
@@ -359,17 +342,19 @@ d(y)^2\\frac{p(y,t)}{T(y,t)}dy`` Eq. 1
 ``t_M(t) =
 \\frac{128}{3}\\frac{L^2}{d^2}η(t)\\frac{p_{in}(t)^3-p_{out}(t)^3}{(p_{in}(t)^2-p_{out}(t)^2)^2}``
 Eq. 2
+
+See also: [`profile`](@ref)
 """
 function holdup_time(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
     # hold-up time at time t in a temperature program with potential thermal gradient
     if control == "Pressure"
-        #pin(t) = Fpin_itp(t)
         if ng==true
             η = GasChromatographySimulator.viscosity(L, t, T_itp, gas; vis=vis)
-            tM = 128/3*L^2/d(L)^2*η*(Fpin_itp(t)^3-pout_itp(t)^3)/(Fpin_itp(t)^2-pout_itp(t)^2)^2
+            dL = profile(d, L)
+            tM = 128/3*L^2/dL^2*η*(Fpin_itp(t)^3-pout_itp(t)^3)/(Fpin_itp(t)^2-pout_itp(t)^2)^2
         else
             κL = flow_restriction(L, t, T_itp, d, gas; ng=false, vis=vis)
-            f_p(y, p) = d(y)^2*pressure(y, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis=vis, control="Pressure")/T_itp(y, t)
+            f_p(y, p) = profile(d, y)^2*pressure(y, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis=vis, control="Pressure")/T_itp(y, t)
             domain = (0.0, L)
             prob_p = IntegralProblem(f_p, domain)
             integral = solve(prob_p, QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
@@ -379,48 +364,17 @@ function holdup_time(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blu
         if ng==true
             pin = GasChromatographySimulator.inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=true, vis=vis, control="Flow")
             η = GasChromatographySimulator.viscosity(L, t, T_itp, gas; vis=vis)
-            tM = 128/3*L^2/d(L)^2*η*(pin^3-pout_itp(t)^3)/(pin^2-pout_itp(t)^2)^2
+            dL = profile(d, L)
+            tM = 128/3*L^2/dL^2*η*(pin^3-pout_itp(t)^3)/(pin^2-pout_itp(t)^2)^2
         else
-            f_F(y, p) = d(y)^2*pressure(y, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis=vis, control="Flow")/T_itp(y, t)
+            f_F(y, p) = profile(d, y)^2*pressure(y, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis=vis, control="Flow")/T_itp(y, t)
             domain = (0.0, L)
             prob_F = IntegralProblem(f_F, domain)
             integral = solve(prob_F, QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
             tM = π/4 * Tn/pn * integral/Fpin_itp(t)
         end
     end
-    
-    return tM
-end
 
-function holdup_time(t, T_itp, Fpin_itp, pout_itp, L, d::Number, gas; ng=false, vis="Blumberg", control="Pressure")
-    # hold-up time at time t in a temperature program with potential thermal gradient
-    if control == "Pressure"
-        #pin(t) = Fpin_itp(t)
-        if ng==true
-            η = GasChromatographySimulator.viscosity(L, t, T_itp, gas; vis=vis)
-            tM = 128/3*L^2/d^2*η*(Fpin_itp(t)^3-pout_itp(t)^3)/(Fpin_itp(t)^2-pout_itp(t)^2)^2
-        else
-            κL = flow_restriction(L, t, T_itp, d, gas; ng=false, vis=vis)
-            f_p(y, p) = d^2*pressure(y, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis=vis, control="Pressure")/T_itp(y, t)
-            domain = (0.0, L)
-            prob_p = IntegralProblem(f_p, domain)
-            integral = solve(prob_p, QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
-            tM = 64*κL/(Fpin_itp(t)^2-pout_itp(t)^2)*integral
-        end
-    elseif control == "Flow"
-        if ng==true
-            pin = GasChromatographySimulator.inlet_pressure(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=true, vis=vis, control="Flow")
-            η = GasChromatographySimulator.viscosity(L, t, T_itp, gas; vis=vis)
-            tM = 128/3*L^2/d^2*η*(pin^3-pout_itp(t)^3)/(pin^2-pout_itp(t)^2)^2
-        else
-            f_F(y, p) = d^2*pressure(y, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis=vis, control="Flow")/T_itp(y, t)
-            domain = (0.0, L)
-            prob_F = IntegralProblem(f_F, domain)
-            integral = solve(prob_F, QuadGKJL(), reltol=1e-3, abstol=1e-3)[1]
-            tM = π/4 * Tn/pn * integral/Fpin_itp(t)
-        end
-    end
-    
     return tM
 end
 
@@ -474,7 +428,7 @@ Calculate the normalized flow through the GC column in m³/s at time `t`.
 * `Fpin_itp`: Interpolated (linear) Flow F(t) resp. inlet pressure `pin(t)`.
 * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
 * `L`: Length of the capillary measured in m (meter).
-* `d`: Diameter of the GC column, in m.
+* `d`: Diameter of the GC column, in m. A number, or a function of position `x`.
 * `gas`: Name of the mobile phase gas.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`,
     eq. 2)
@@ -495,35 +449,18 @@ with ``T_n`` the normalized temperature (``T_n=(25 + 273.15)``K), ``p_n``
 the normalized pressure (``p_n = 101300`` Pa(a)), ``κ_L`` the flow
 restriction of the column and ``η`` the viscosity
 the mobile phase gas at temperature ``T``.
+
+See also: [`profile`](@ref)
 """
 function flow(t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
 	# normalized Flow at time t in a temperature program with potential thermal
 	# gradient
-    # TODO: test for gradient in d(x)
     if control == "Pressure"
         pin_itp = Fpin_itp
         if ng==true
             η = GasChromatographySimulator.viscosity(L, t, T_itp, gas, vis=vis)
-            F = π/256 * Tn/pn * d(L)^4/L * (pin_itp(t)^2-pout_itp(t)^2)/(η*T_itp(L,t))
-        else
-            κL = flow_restriction(L, t, T_itp, d, gas; ng=false, vis=vis)
-            F = π/256 * Tn/pn * (pin_itp(t)^2-pout_itp(t)^2)/κL
-        end
-    elseif control == "Flow"
-        F = Fpin_itp(t)
-    end
-	return F
-end
-
-function flow(t, T_itp, Fpin_itp, pout_itp, L, d::Number, gas; ng=false, vis="Blumberg", control="Pressure")
-	# normalized Flow at time t in a temperature program with potential thermal
-	# gradient
-    # TODO: test for gradient in d(x)
-    if control == "Pressure"
-        pin_itp = Fpin_itp
-        if ng==true
-            η = GasChromatographySimulator.viscosity(L, t, T_itp, gas, vis=vis)
-            F = π/256 * Tn/pn * d^4/L * (pin_itp(t)^2-pout_itp(t)^2)/(η*T_itp(L,t))
+            dL = profile(d, L)
+            F = π/256 * Tn/pn * dL^4/L * (pin_itp(t)^2-pout_itp(t)^2)/(η*T_itp(L,t))
         else
             κL = flow_restriction(L, t, T_itp, d, gas; ng=false, vis=vis)
             F = π/256 * Tn/pn * (pin_itp(t)^2-pout_itp(t)^2)/κL
@@ -552,7 +489,7 @@ position `x` at time `t`.
 * `Fpin_itp`: Interpolated (linear) Flow F(t) resp. inlet pressure `pin(t)`.
 * `pout_itp`: Interpolated (linear) outlet pressure `pout(t)`.
 * `L`: Length of the capillary measured in m (meter).
-* `d`: Diameter of the GC column, in m.
+* `d`: Diameter of the GC column, in m. A number, or a function of position `x`.
 * `gas`: Name of the mobile phase gas.
 * `ng`: Option to calculate the simulation without a gradient (`ng = true`)
 or with a gradient (`ng = false`).
@@ -565,32 +502,19 @@ with ``T_n`` the normalized temperature (``T_n=(25 + 273.15)``K), ``p_n``
 the normalized pressure (``p_n = 101300`` Pa(a)), ``κ_L`` the flow
 restriction of the column and ``p(x,t)`` the local pressure.
 
-See also: [`pressure`](@ref), [`flow_restriction`](@ref)
+See also: [`pressure`](@ref), [`flow_restriction`](@ref), [`profile`](@ref)
 """
 function mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d, gas; ng=false, vis="Blumberg", control="Pressure")
+    dx = profile(d, x)
     if control == "Pressure"
         pin_itp = Fpin_itp
         pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control="Pressure")
         κL = flow_restriction(L, t, T_itp, d, gas; ng=ng, vis=vis)
-        rM = 64*(pp*(d(x))^2)/T_itp(x, t)*κL/(pin_itp(t)^2-pout_itp(t)^2)
+        rM = 64*(pp*dx^2)/T_itp(x, t)*κL/(pin_itp(t)^2-pout_itp(t)^2)
     elseif control == "Flow"
         F_itp = Fpin_itp
         pp = pressure(x, t, T_itp, F_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control="Flow")
-        rM = π/4 * Tn/pn * d(x)^2/F_itp(t) * pp/T_itp(x,t)
-    end
-    return rM
-end
-
-function mobile_phase_residency(x, t, T_itp, Fpin_itp, pout_itp, L, d::Number, gas; ng=false, vis="Blumberg", control="Pressure")
-    if control == "Pressure"
-        pin_itp = Fpin_itp
-        pp = pressure(x, t, T_itp, pin_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control="Pressure")
-        κL = flow_restriction(L, t, T_itp, d, gas; ng=ng, vis=vis)
-        rM = 64*(pp*d^2)/T_itp(x, t)*κL/(pin_itp(t)^2-pout_itp(t)^2)
-    elseif control == "Flow"
-        F_itp = Fpin_itp
-        pp = pressure(x, t, T_itp, F_itp, pout_itp, L, d, gas; ng=ng, vis=vis, control="Flow")
-        rM = π/4 * Tn/pn * d^2/F_itp(t) * pp/T_itp(x,t)
+        rM = π/4 * Tn/pn * dx^2/F_itp(t) * pp/T_itp(x,t)
     end
     return rM
 end
@@ -654,8 +578,8 @@ position `x` at time `t`.
 * `x`: Position along the GC column, in m.
 * `t`: Time in s.
 * `T_itp`: Interpolated (linear) temperature `T(x,t)`.
-* `d`: Diameter of the GC column, in m.
-* `df`: Film thickness of the GC column, in m.
+* `d`: Diameter of the GC column, in m. A number, or a function of position `x`.
+* `df`: Film thickness of the GC column, in m. A number, or a function of position `x`.
 * `Tchar`: Characteristic temperature of the solute, in K.
 * `θchar`: Characteristic parameters of the solute, in °C.
 * `ΔCp`: Change of the isobaric heat capacity of the solute moving from the mobile to the
@@ -670,6 +594,8 @@ thermodynamic parameters (Tchar, θchar, ΔCp) were estimated.
 with ``R`` the molar gas constant and ``φ`` the dimensionless film thickness
 of the simulated GC Column (``φ = d_f/d``).
 
+See also: [`profile`](@ref)
+
 **TODO**: add option for the retention model ('ABC', 'K-centric')
 """
 function retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀; k_th=1e12)
@@ -681,67 +607,7 @@ function retention_factor(x, t, T_itp, d, df, Tchar, θchar, ΔCp, φ₀; k_th=1
         k = 0.0
     else
         T = T_itp(x, t)
-        φ = df(x)/d(x)
-        C = ΔCp/R
-        lnk₀ = (C + Tchar/θchar) * (Tchar/T - 1) + C*log(T/Tchar)
-        k = φ/φ₀*exp(lnk₀)
-    end
-    if k > k_th
-        k = k_th
-    end
-    return k
-end
-
-function retention_factor(x, t, T_itp, d::Number, df::Number, Tchar, θchar, ΔCp, φ₀; k_th=1e12)
-    # this version of the function, where every parameter is
-    # given to the function separatly seems to be the fastest
-    # version
-    # for now only the ideal thermodynamic model
-    if Tchar == 0.0 && θchar == 0.0 && ΔCp == 0.0 # non-retained solute
-        k = 0.0
-    else
-        T = T_itp(x, t)
-        φ = df/d
-        C = ΔCp/R
-        lnk₀ = (C + Tchar/θchar) * (Tchar/T - 1) + C*log(T/Tchar)
-        k = φ/φ₀*exp(lnk₀)
-    end
-    if k > k_th
-        k = k_th
-    end
-    return k
-end
-
-function retention_factor(x, t, T_itp, d, df::Number, Tchar, θchar, ΔCp, φ₀; k_th=1e12)
-    # this version of the function, where every parameter is
-    # given to the function separatly seems to be the fastest
-    # version
-    # for now only the ideal thermodynamic model
-    if Tchar == 0.0 && θchar == 0.0 && ΔCp == 0.0 # non-retained solute
-        k = 0.0
-    else
-        T = T_itp(x, t)
-        φ = df/d(x)
-        C = ΔCp/R
-        lnk₀ = (C + Tchar/θchar) * (Tchar/T - 1) + C*log(T/Tchar)
-        k = φ/φ₀*exp(lnk₀)
-    end
-    if k > k_th
-        k = k_th
-    end
-    return k
-end
-
-function retention_factor(x, t, T_itp, d::Number, df, Tchar, θchar, ΔCp, φ₀; k_th=1e12)
-    # this version of the function, where every parameter is
-    # given to the function separatly seems to be the fastest
-    # version
-    # for now only the ideal thermodynamic model
-    if Tchar == 0.0 && θchar == 0.0 && ΔCp == 0.0 # non-retained solute
-        k = 0.0
-    else
-        T = T_itp(x, t)
-        φ = df(x)/d
+        φ = profile(df, x)/profile(d, x)
         C = ΔCp/R
         lnk₀ = (C + Tchar/θchar) * (Tchar/T - 1) + C*log(T/Tchar)
         k = φ/φ₀*exp(lnk₀)
