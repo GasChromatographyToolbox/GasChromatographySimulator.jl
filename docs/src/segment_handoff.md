@@ -25,8 +25,8 @@ so the same temporal peak maps to a different ``\sigma`` on each side of the jun
 
 ### Mapping into each solver
 
-- **Position-domain** ([`simulate`](@ref), [`solving_odesystem_r`](@ref)): set [`Substance`](@ref) fields ``t_0`` and ``\tau_0``. Integration starts at ``z = 0``.
-- **Time-domain** ([`solving_odesystem_time`](@ref)): set ``t_0``, ``x_0 = 0``, and convert once at the inlet while the band is moving:
+- **Position-domain** ([`GasChromatographySimulator.simulate`](@ref), [`GasChromatographySimulator.solving_odesystem_r`](@ref)): set [`GasChromatographySimulator.Substance`](@ref) fields ``t_0`` and ``\tau_0``. Integration starts at ``z = 0``.
+- **Time-domain** ([`GasChromatographySimulator.solving_odesystem_time`](@ref)): set ``t_0``, ``x_0 = 0``, and convert once at the inlet while the band is moving:
 
   ``\sigma_0 = \tau_0\,|u_s(0, t_0)|``.
 

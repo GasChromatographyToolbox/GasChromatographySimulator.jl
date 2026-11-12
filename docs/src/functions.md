@@ -173,6 +173,10 @@ GasChromatographySimulator.peaklist(sol, peak, par)
 ```
 
 ```@docs
+GasChromatographySimulator.peaklist_temporal
+```
+
+```@docs
 GasChromatographySimulator.sol_extraction(sol, par)
 ```
 
