@@ -209,7 +209,7 @@ Hereby is ``r(x,t)`` the inverse velocity of the substance (``1/u(x,t)``, also c
 
 With the argument `odesys` of [`GasChromatographySimulator.Options`](@ref) the two differential equations can be solved as a system of ODEs (`odesys = true`) or separately, using the solution of the first ODE to solve the second ODE (`odesys = false`).
 
-These equations are the default. They are also the ones to use for a vacuum outlet. A band that stops or reverses, with a finite pressure at both ends, is integrated in laboratory time instead. That formulation is a separate entry point and is described in [Time-domain migration](@ref). `odesys` does not select it.   
+These equations are the default (`Options.domain = :spatial`). They are also the ones to use for a vacuum outlet. A band that stops or reverses, with a finite pressure at both ends, is integrated in laboratory time instead (`Options.domain = :temporal`, or the solvers in [Time-domain migration](@ref)). `odesys` only chooses coupled vs separate ODEs; it does not select the independent variable.   
 
 With the function [`GasChromatographySimulator.simulate`](@ref) the simulation is initiated.
 
